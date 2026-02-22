@@ -3,12 +3,18 @@ from flask_cors import CORS
 import numpy as np
 import joblib
 import os
-from tensorflow.keras.models import load_model
+import warnings
+warnings.filterwarnings('ignore')
+
+# ปิด TensorFlow logging
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+
+import tensorflow as tf
+from tensorflow import keras
 
 app = Flask(__name__)
-CORS(app)  # เพื่อให้ HTML เรียก API ได้โดยไม่ติดปัญหาความปลอดภัย
+CORS(app)
 
-# 1. โหลดโมเดลและ Scaler (ตรวจสอบชื่อไฟล์ให้ตรงกับที่โหลดมา)
 # หา path ของไฟล์ปัจจุบัน
 base_dir = os.path.dirname(os.path.abspath(__file__))
 model_path = os.path.join(base_dir, 'lstm_pm25_model (2).h5')
@@ -17,17 +23,35 @@ scaler_path = os.path.join(base_dir, 'scaler (2).pkl')
 model = None
 scaler = None
 
-if os.path.exists(model_path) and os.path.exists(scaler_path):
-    model = load_model(model_path)
-    scaler = joblib.load(scaler_path)
-    print("✅ Model and Scaler loaded successfully!")
-    print(f"Model path: {model_path}")
-else:
-    print("❌ Error: Missing model or scaler files!")
-    print(f"Looking for model at: {model_path}")
-    print(f"Looking for scaler at: {scaler_path}")
-    print(f"Current directory: {os.getcwd()}")
-    print(f"Files in base_dir: {os.listdir(base_dir) if os.path.exists(base_dir) else 'N/A'}")
+# โหลด Model และ Scaler
+try:
+    if os.path.exists(model_path) and os.path.exists(scaler_path):
+        # ลองโหลดแบบ legacy ก่อน
+        try:
+            model = keras.models.load_model(model_path, compile=False)
+        except:
+            # ถ้าไม่ได้ ลองโหลดแบบ custom
+            import h5py
+            model = tf.keras.models.load_model(
+                model_path,
+                custom_objects=None,
+                compile=False,
+                options=tf.saved_model.LoadOptions()
+            )
+        
+        scaler = joblib.load(scaler_path)
+        print("✅ Model and Scaler loaded successfully!")
+        print(f"Model path: {model_path}")
+    else:
+        print("❌ Error: Missing model or scaler files!")
+        print(f"Looking for model at: {model_path}")
+        print(f"Looking for scaler at: {scaler_path}")
+        print(f"Current directory: {os.getcwd()}")
+        if os.path.exists(base_dir):
+            print(f"Files in base_dir: {os.listdir(base_dir)}")
+except Exception as e:
+    print(f"❌ Error loading model: {str(e)}")
+    print("Server will start but predictions will not work")
 
 @app.route('/')
 def home():
