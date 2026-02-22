@@ -9,18 +9,42 @@ app = Flask(__name__)
 CORS(app)  # เพื่อให้ HTML เรียก API ได้โดยไม่ติดปัญหาความปลอดภัย
 
 # 1. โหลดโมเดลและ Scaler (ตรวจสอบชื่อไฟล์ให้ตรงกับที่โหลดมา)
-model_path = 'lstm_pm25_model (2).h5'
-scaler_path = 'scaler (2).pkl'
+# หา path ของไฟล์ปัจจุบัน
+base_dir = os.path.dirname(os.path.abspath(__file__))
+model_path = os.path.join(base_dir, 'lstm_pm25_model (2).h5')
+scaler_path = os.path.join(base_dir, 'scaler (2).pkl')
+
+model = None
+scaler = None
 
 if os.path.exists(model_path) and os.path.exists(scaler_path):
     model = load_model(model_path)
     scaler = joblib.load(scaler_path)
     print("✅ Model and Scaler loaded successfully!")
+    print(f"Model path: {model_path}")
 else:
     print("❌ Error: Missing model or scaler files!")
+    print(f"Looking for model at: {model_path}")
+    print(f"Looking for scaler at: {scaler_path}")
+    print(f"Current directory: {os.getcwd()}")
+    print(f"Files in base_dir: {os.listdir(base_dir) if os.path.exists(base_dir) else 'N/A'}")
+
+@app.route('/')
+def home():
+    status = "Ready" if model and scaler else "Model Missing"
+    return jsonify({
+        'status': status,
+        'message': 'PM2.5 Nakhon Phanom API',
+        'endpoints': {
+            '/predict': 'POST - Predict PM2.5 value'
+        }
+    })
 
 @app.route('/predict', methods=['POST'])
 def predict():
+    if model is None or scaler is None:
+        return jsonify({'error': 'Model not loaded'}), 500
+        
     try:
         data = request.get_json()
         # รับข้อมูล 3 วันล่าสุด [v1, v2, v3]
