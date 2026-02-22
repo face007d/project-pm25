@@ -26,18 +26,41 @@ scaler = None
 # โหลด Model และ Scaler
 try:
     if os.path.exists(model_path) and os.path.exists(scaler_path):
-        # ลองโหลดแบบ legacy ก่อน
-        try:
-            model = keras.models.load_model(model_path, compile=False)
-        except:
-            # ถ้าไม่ได้ ลองโหลดแบบ custom
-            import h5py
-            model = tf.keras.models.load_model(
-                model_path,
-                custom_objects=None,
-                compile=False,
-                options=tf.saved_model.LoadOptions()
-            )
+        # แก้ไข model config เพื่อรองรับ Keras ใหม่
+        import h5py
+        import json
+        
+        # อ่าน model config และแก้ไข batch_shape -> shape
+        with h5py.File(model_path, 'r') as f:
+            if 'model_config' in f.attrs:
+                config = json.loads(f.attrs['model_config'])
+                
+                # แก้ไข InputLayer config
+                if 'config' in config and 'layers' in config['config']:
+                    for layer in config['config']['layers']:
+                        if layer.get('class_name') == 'InputLayer':
+                            if 'batch_shape' in layer['config']:
+                                batch_shape = layer['config'].pop('batch_shape')
+                                # แปลง batch_shape เป็น shape (ตัดมิติแรกออก)
+                                layer['config']['batch_input_shape'] = batch_shape
+        
+        # โหลด model ด้วย custom object scope
+        from tensorflow.keras.layers import InputLayer
+        
+        # สร้าง custom InputLayer ที่รองรับ batch_shape
+        class CustomInputLayer(InputLayer):
+            def __init__(self, batch_shape=None, **kwargs):
+                if batch_shape is not None:
+                    kwargs['batch_input_shape'] = batch_shape
+                super().__init__(**kwargs)
+        
+        custom_objects = {'InputLayer': CustomInputLayer}
+        
+        model = keras.models.load_model(
+            model_path, 
+            custom_objects=custom_objects,
+            compile=False
+        )
         
         scaler = joblib.load(scaler_path)
         print("✅ Model and Scaler loaded successfully!")
@@ -51,6 +74,8 @@ try:
             print(f"Files in base_dir: {os.listdir(base_dir)}")
 except Exception as e:
     print(f"❌ Error loading model: {str(e)}")
+    import traceback
+    traceback.print_exc()
     print("Server will start but predictions will not work")
 
 @app.route('/')
