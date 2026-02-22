@@ -12,7 +12,7 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 import tensorflow as tf
 from tensorflow import keras
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder='../frontend', static_url_path='')
 CORS(app)
 
 # หา path ของไฟล์ปัจจุบัน
@@ -73,6 +73,11 @@ except Exception as e:
 
 @app.route('/')
 def home():
+    # Serve frontend HTML
+    return app.send_static_file('index.html')
+
+@app.route('/api')
+def api_status():
     status = "Ready" if model and scaler else "Model Missing"
     return jsonify({
         'status': status,
