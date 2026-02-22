@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PM2.5 Smart Dashboard - Nakhon Phanom</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts: Prompt สำหรับภาษาไทย -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- ApexCharts สำหรับวาดกราฟ -->
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        body { 
+            font-family: 'Prompt', sans-serif; 
+            background-color: #FFFFFF;
+            /* ปรับพื้นหลังเป็นสีขาวหรูหรา มีแสงประกายทองอ่อนๆ ที่มุม */
+            background-image: 
+                radial-gradient(circle at 0% 0%, #FFF5D6 0%, transparent 40%),
+                radial-gradient(circle at 100% 0%, #FFF5D6 0%, transparent 40%),
+                linear-gradient(180deg, #FFFFFF 0%, #FDFBF7 100%);
+        }
+        /* ซ่อนหน้าจอโหลดเมื่อพร้อม */
+        #loader { transition: opacity 0.8s ease-out; }
+        .hidden-fade { opacity: 0; pointer-events: none; }
+        
+        /* Animations สุดอลังการ */
+        @keyframes float {
+            0% { transform: translateY(0px) translateX(0px); }
+            50% { transform: translateY(-15px) translateX(10px); }
+            100% { transform: translateY(0px) translateX(0px); }
+        }
+        @keyframes pulse-gold {
+            0% { box-shadow: 0 0 0 0 rgba(194, 155, 68, 0.4); }
+            70% { box-shadow: 0 0 20px 10px rgba(194, 155, 68, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(194, 155, 68, 0); }
+        }
+        @keyframes shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+        }
+        
+        .gimmick-float { animation: float 6s ease-in-out infinite; }
+        .golden-glow-hover:hover { 
+            box-shadow: 0 15px 35px -5px rgba(194, 155, 68, 0.2), 0 0 15px rgba(194, 155, 68, 0.1); 
+            transform: translateY(-4px);
+        }
+        .text-gradient-gold {
+            background: linear-gradient(90deg, #9C7C33, #D4AF37, #9C7C33);
+            background-size: 200% auto;
+            color: transparent;
+            -webkit-background-clip: text;
+            background-clip: text;
+            animation: shimmer 5s linear infinite;
+        }
+
+        /* ลายน้ำพญานาคแบบประยุกต์ */
+        .naga-watermark {
+            position: absolute;
+            right: -10%;
+            bottom: -20%;
+            width: 300px;
+            height: 300px;
+            opacity: 0.04;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath fill='%23C29B44' d='M50 0C22.4 0 0 22.4 0 50s22.4 50 50 50 50-22.4 50-50S77.6 0 50 0zm0 90C27.9 90 10 72.1 10 50S27.9 10 50 10s40 17.9 40 40-17.9 40-40 40zM30 50c0-11 9-20 20-20s20 9 20 20-9 20-20 20-20-9-20-20zm20-15c-8.3 0-15 6.7-15 15s6.7 15 15 15 15-6.7 15-15-6.7-15-15-15z'/%3E%3Cpath fill='%23C29B44' d='M45 40h10v20H45zM40 45h20v10H40z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            pointer-events: none;
+            z-index: 0;
+        }
+    </style>
+</head>
+<body class="text-gray-800 relative min-h-screen overflow-x-hidden">
+
+    <!-- แถบบาร์สีทองด้านบนสุด (Gold Top Bar) -->
+    <div class="w-full h-10 bg-[#C29B44] border-b border-yellow-600/30 shadow-sm relative z-50"></div>
+
+    <!-- Loading Screen แบบหรูหรา -->
+    <div id="loader" class="fixed inset-0 bg-white z-50 flex flex-col items-center justify-center">
+        <div class="relative w-24 h-24 mb-6">
+            <div class="absolute inset-0 border-4 border-yellow-100 rounded-full"></div>
+            <div class="absolute inset-0 border-4 border-[#C29B44] rounded-full border-t-transparent animate-spin"></div>
+            <i data-lucide="wind" class="absolute inset-0 m-auto text-[#C29B44] w-8 h-8 animate-pulse"></i>
+        </div>
+        <h2 class="text-2xl font-bold text-gradient-gold tracking-wide">NAKHON PHANOM</h2>
+        <p class="text-gray-500 mt-2 font-medium">กำลังเตรียมข้อมูลระบบพยากรณ์อัจฉริยะ...</p>
+    </div>
+
+    <!-- Golden Dust Particles (ใส่ผ่าน JS) -->
+    <div id="particles-container" class="fixed inset-0 pointer-events-none z-0"></div>
+
+    <div id="app-content" class="max-w-6xl mx-auto space-y-8 relative z-10 p-4 md:p-8 hidden">
+        
+        <!-- --- ส่วนหัว (Hero Section): อลังการ ธีมสีทอง --- -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+            
+            <!-- กรอบรูปภาพพญาศรีสัตตนาคราช (Left Column) -->
+            <div class="lg:col-span-4 bg-white/80 backdrop-blur-md rounded-[2rem] p-3 shadow-lg border border-yellow-200/50 flex flex-col items-center justify-center relative overflow-hidden group transition-all duration-500 hover:shadow-2xl hover:shadow-yellow-600/20 h-80 lg:h-auto">
+                <div class="absolute inset-0 bg-gradient-to-t from-[#1A2530]/90 via-transparent to-transparent z-10 rounded-[1.5rem]"></div>
+                <!-- รูปจาก URL ใหม่ที่คุณให้มา -->
+                <img src="https://pukmudmuangthai.com/wp-content/uploads/2020/10/Ao_izard-3422.jpg" alt="พญาศรีสัตตนาคราช นครพนม" class="object-cover object-center w-full h-full rounded-[1.5rem] relative z-0 group-hover:scale-110 transition-transform duration-700" />
+                
+                <!-- Badge เมือง -->
+                <div class="absolute bottom-6 left-6 z-20 transform translate-y-2 group-hover:translate-y-0 transition-transform duration-300">
+                    <div class="flex items-center gap-2 mb-1">
+                        <span class="relative flex h-3 w-3">
+                          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-400 opacity-75"></span>
+                          <span class="relative inline-flex rounded-full h-3 w-3 bg-[#D4AF37]"></span>
+                        </span>
+                        <p class="text-white font-bold text-xl tracking-wide drop-shadow-md">นครพนม</p>
+                    </div>
+                    <p class="text-yellow-300 text-sm font-medium tracking-widest uppercase ml-5">Nakhon Phanom</p>
+                </div>
+            </div>
+
+            <!-- การ์ดแสดงผลหลัก (Right Column) -->
+            <div class="lg:col-span-8 bg-white/90 backdrop-blur-xl rounded-[2rem] p-8 md:p-10 shadow-xl border border-white relative overflow-hidden flex flex-col justify-between">
+                <!-- ลายน้ำ -->
+                <div class="naga-watermark"></div>
+
+                <!-- Header Location & Date -->
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center relative z-10 mb-8">
+                    <div>
+                        <h3 class="text-[#C29B44] font-bold tracking-widest text-sm uppercase mb-2 flex items-center">
+                            <i data-lucide="satellite" class="w-4 h-4 mr-2 animate-pulse"></i> AI Air Quality Forecast
+                        </h3>
+                        <div class="flex items-center text-3xl md:text-4xl font-extrabold text-[#1A2530]">
+                            <i data-lucide="map-pin" class="text-[#C29B44] mr-3 w-8 h-8 md:w-10 md:h-10 gimmick-float"></i>
+                            ริมฝั่งแม่น้ำโขง
+                        </div>
+                    </div>
+                    <div class="mt-4 md:mt-0 bg-gray-100/80 px-4 py-2 rounded-full border border-gray-200 shadow-inner">
+                        <p id="current-date" class="text-[#1A2530] font-semibold tracking-wide text-sm flex items-center">
+                            <i data-lucide="calendar" class="w-4 h-4 mr-2 text-[#C29B44]"></i> -
+                        </p>
+                    </div>
+                </div>
+
+                <!-- 2 Cards: วันนี้ vs พรุ่งนี้ (ดึงความโดดเด่นของพยากรณ์ขึ้นมา) -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 relative z-10 flex-grow">
+                    
+                    <!-- Card 1: ปัจจุบัน -->
+                    <div id="card-current" class="rounded-2xl p-6 border-l-8 relative overflow-hidden golden-glow-hover transition-all duration-300 bg-gray-50 border-gray-300 shadow-sm flex flex-col justify-center">
+                        <div class="flex items-center text-gray-500 font-semibold mb-2">
+                            <i data-lucide="clock" class="w-5 h-5 mr-2"></i> ปัจจุบัน
+                        </div>
+                        <div class="flex items-end gap-3 mt-2">
+                            <span id="current-pm25-val" class="text-6xl md:text-7xl font-black leading-none text-gray-800">0</span>
+                            <span class="text-xl text-gray-500 font-bold mb-2">µg/m³</span>
+                        </div>
+                        <div class="mt-4 inline-flex">
+                            <div id="current-pm25-badge" class="flex items-center px-4 py-2 rounded-xl text-sm font-bold text-white shadow-md bg-gray-400">
+                                <i id="current-pm25-icon" data-lucide="activity" class="w-5 h-5 mr-2"></i>
+                                <span id="current-pm25-text">รอประมวลผล</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Card 2: พยากรณ์พรุ่งนี้ (ไฮไลต์อลังการ) -->
+                    <div id="card-forecast" class="rounded-2xl p-6 border-l-8 relative overflow-hidden golden-glow-hover transition-all duration-300 bg-gradient-to-br from-[#FFFDF5] to-yellow-50/50 border-[#C29B44] shadow-md flex flex-col justify-center">
+                        <!-- แสงวิบวับในพื้นหลังการ์ดพยากรณ์ -->
+                        <div class="absolute top-0 right-0 p-4 opacity-20">
+                            <i data-lucide="sparkles" class="w-16 h-16 text-[#C29B44] animate-spin" style="animation-duration: 10s;"></i>
+                        </div>
+
+                        <div class="flex items-center text-[#C29B44] font-bold mb-2">
+                            <i data-lucide="trending-up" class="w-5 h-5 mr-2"></i> คาดการณ์พรุ่งนี้
+                        </div>
+                        <div class="flex items-end gap-3 mt-2">
+                            <span id="forecast-val" class="text-6xl md:text-7xl font-black leading-none text-transparent bg-clip-text bg-gradient-to-r from-[#D4AF37] to-[#B8860B]">0</span>
+                            <span class="text-xl text-gray-500 font-bold mb-2">µg/m³</span>
+                        </div>
+                        <div class="mt-4 inline-flex relative z-10">
+                            <div id="forecast-badge-status" class="flex items-center px-4 py-2 rounded-xl text-sm font-bold text-white shadow-md bg-[#C29B44]">
+                                <i id="forecast-icon" data-lucide="eye" class="w-5 h-5 mr-2"></i>
+                                <span id="forecast-text">วิเคราะห์ข้อมูล...</span>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+        <!-- --- ระดับอันตราย (Color Bar Indicator) แบบอลังการขึ้น --- -->
+        <div class="bg-white p-8 rounded-[2rem] shadow-lg border border-gray-100 relative golden-glow-hover transition-all duration-300">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-end mb-6">
+                <div>
+                    <h3 class="font-bold text-[#1A2530] text-lg flex items-center">
+                        <i data-lucide="bar-chart-2" class="text-[#C29B44] mr-2"></i> มาตรฐานดัชนีคุณภาพอากาศ (AQI)
+                    </h3>
+                    <p class="text-sm text-gray-500 mt-1">เกณฑ์การเฝ้าระวังผลกระทบต่อสุขภาพ PM2.5</p>
+                </div>
+            </div>
+            
+            <div class="relative w-full h-6 rounded-full flex overflow-hidden shadow-inner bg-gray-100">
+                <div class="h-full flex-1 bg-[#28b4d8] relative group"><div class="absolute inset-0 bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity"></div></div>
+                <div class="h-full flex-1 bg-[#2ecc71] relative group"><div class="absolute inset-0 bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity"></div></div>
+                <div class="h-full flex-1 bg-[#f1c40f] relative group"><div class="absolute inset-0 bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity"></div></div>
+                <div class="h-full flex-1 bg-[#e67e22] relative group"><div class="absolute inset-0 bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity"></div></div>
+                <div class="h-full flex-1 bg-[#e74c3c] relative group"><div class="absolute inset-0 bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity"></div></div>
+            </div>
+            
+            <!-- Marker Position (เข็มชี้) -->
+            <div class="relative w-full h-10 mt-2">
+                <div id="indicator-marker" class="absolute top-0 -ml-4 transition-all duration-1000 ease-out flex flex-col items-center" style="left: 0%;">
+                    <div class="w-0 h-0 border-l-[8px] border-l-transparent border-r-[8px] border-r-transparent border-b-[10px] border-b-[#1A2530] animate-bounce"></div>
+                    <div id="indicator-val" class="bg-[#1A2530] text-white text-sm font-bold px-4 py-1.5 rounded-lg shadow-xl mt-1 whitespace-nowrap border border-gray-600">
+                        0
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- --- Trend Graph --- -->
+        <div class="bg-white p-6 md:p-8 rounded-[2rem] shadow-lg border border-gray-100 golden-glow-hover transition-all duration-300">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="font-bold text-[#1A2530] text-lg flex items-center">
+                    <i data-lucide="line-chart" class="text-[#C29B44] mr-2"></i> แนวโน้มสถานการณ์ฝุ่น 7 วัน
+                </h3>
+            </div>
+            <div id="chart-container" class="h-[350px] w-full"></div>
+        </div>
+
+        <!-- --- Historical Data Table --- -->
+        <div class="bg-white rounded-[2rem] shadow-lg border border-gray-100 overflow-hidden golden-glow-hover transition-all duration-300">
+            <div class="p-6 md:p-8 border-b border-gray-50 flex flex-col sm:flex-row justify-between items-center gap-4 bg-gray-50/50">
+                <h3 class="font-bold text-[#1A2530] text-lg flex items-center">
+                    <i data-lucide="database" class="text-[#C29B44] mr-2"></i> ข้อมูลรายละเอียดรายวัน
+                </h3>
+                <button onclick="handleDownloadCSV()" class="flex items-center bg-gradient-to-r from-[#1A2530] to-[#2C3E50] hover:from-[#C29B44] hover:to-[#D4AF37] text-white px-6 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 w-full sm:w-auto justify-center shadow-md transform hover:scale-105">
+                    <i data-lucide="download" class="w-4 h-4 mr-2"></i>
+                    ดาวน์โหลดรายงาน (CSV)
+                </button>
+            </div>
+            <div class="overflow-x-auto p-2">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="text-gray-400 text-sm border-b border-gray-100">
+                            <th class="p-5 font-semibold whitespace-nowrap">วันที่</th>
+                            <th class="p-5 font-semibold whitespace-nowrap">ประเภท</th>
+                            <th class="p-5 font-semibold text-right whitespace-nowrap">PM2.5 (µg/m³)</th>
+                            <th class="p-5 font-semibold whitespace-nowrap">ระดับคุณภาพอากาศ</th>
+                        </tr>
+                    </thead>
+                    <tbody id="table-body" class="divide-y divide-gray-50">
+                        <!-- JS Insert -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script>
+        // --- เอฟเฟกต์ Golden Dust Particles ---
+        function createParticles() {
+            const container = document.getElementById('particles-container');
+            const particleCount = 25;
+            
+            for(let i = 0; i < particleCount; i++) {
+                const p = document.createElement('div');
+                const size = Math.random() * 6 + 2;
+                p.className = 'absolute rounded-full bg-yellow-400/30 blur-[1px]';
+                p.style.width = `${size}px`;
+                p.style.height = `${size}px`;
+                p.style.left = `${Math.random() * 100}vw`;
+                p.style.top = `${Math.random() * 100}vh`;
+                
+                // สุ่มระยะเวลาการลอยและทิศทาง
+                const duration = Math.random() * 10 + 10;
+                p.style.animation = `float ${duration}s ease-in-out infinite alternate`;
+                p.style.animationDelay = `${Math.random() * 5}s`;
+                
+                container.appendChild(p);
+            }
+        }
+
+        // --- 1. การตั้งค่าระดับ PM2.5 ตามมาตรฐานไทย ---
+        const getPM25Level = (value) => {
+            if (value <= 15.0) return { level: 1, color: '#28b4d8', bgCard: 'bg-cyan-50', text: 'ดีมาก', icon: 'smile' }; 
+            if (value <= 25.0) return { level: 2, color: '#2ecc71', bgCard: 'bg-green-50', text: 'อากาศดี', icon: 'leaf' }; 
+            if (value <= 37.5) return { level: 3, color: '#f1c40f', bgCard: 'bg-yellow-50', text: 'ปานกลาง', icon: 'meh' }; 
+            if (value <= 75.0) return { level: 4, color: '#e67e22', bgCard: 'bg-orange-50', text: 'เริ่มมีผลกระทบ', icon: 'alert-triangle' }; 
+            return { level: 5, color: '#e74c3c', bgCard: 'bg-red-50', text: 'มีผลกระทบต่อสุขภาพ', icon: 'shield-alert' }; 
+        };
+
+        let appData = [];
+
+        // --- 2. ฟังก์ชันดึงข้อมูลจาก API จริง ---
+        async function fetchPM25Data() {
+            const TOKEN = "6e19dc4d73747ab27c397b590fdbd504f1f496fc";
+            const KEYWORD = "nakhon phanom";
+            
+            try {
+                // 1. ค้นหาสถานี (Search API) เพื่อเอา UID
+                const searchUrl = `https://api.waqi.info/search/?token=${TOKEN}&keyword=${encodeURIComponent(KEYWORD)}`;
+                const searchRes = await fetch(searchUrl);
+                const searchData = await searchRes.json();
+
+                if (searchData.status !== "ok" || searchData.data.length === 0) {
+                    throw new Error("ไม่พบข้อมูลสถานีจากคำค้นหา");
+                }
+
+                // เอา UID ของสถานีแรกที่ค้นเจอ
+                const stationUid = searchData.data[0].uid;
+
+                // 2. ดึงข้อมูลแบบละเอียด (Feed API) โดยใช้ UID ที่ได้มา
+                const feedUrl = `https://api.waqi.info/feed/@${stationUid}/?token=${TOKEN}`;
+                const feedRes = await fetch(feedUrl);
+                const feedData = await feedRes.json();
+
+                if (feedData.status !== "ok") {
+                    throw new Error("ดึงข้อมูลสถานีล้มเหลว");
+                }
+
+                const data = feedData.data;
+                let formattedData = [];
+                let idCounter = 1;
+
+                // ฟังก์ชันจัดฟอร์แมตวันที่เป็นแบบไทย (DD/MM/YYYY)
+                const formatDate = (dateStr) => {
+                    const d = new Date(dateStr);
+                    return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear() + 543}`;
+                };
+
+                // วันที่ปัจจุบันสำหรับเปรียบเทียบหา 'วันนี้' และ 'พยากรณ์พรุ่งนี้'
+                const todayStr = data.time.s.split(' ')[0]; // รูปแบบ YYYY-MM-DD
+                const today = new Date(todayStr);
+                today.setHours(0, 0, 0, 0);
+
+                // ดึงข้อมูลรายวัน (WAQI API จะมีทั้งอดีตและอนาคตอยู่ใน array นี้)
+                const dailyForecast = data.forecast?.daily?.pm25 || [];
+
+                dailyForecast.forEach(item => {
+                    const itemDate = new Date(item.day);
+                    itemDate.setHours(0, 0, 0, 0);
+
+                    let type = 'history';
+                    let pm25Val = item.avg; // ใช้ค่าเฉลี่ยรายวันสำหรับอดีตและอนาคต
+
+                    if (itemDate.getTime() === today.getTime()) {
+                        type = 'current';
+                        // สำหรับวันนี้ ใช้ค่า Real-time ล่าสุดจากเซ็นเซอร์จะแม่นยำที่สุด
+                        pm25Val = data.iaqi?.pm25?.v || item.avg; 
+                    } else if (itemDate.getTime() > today.getTime()) {
+                        type = 'forecast';
+                    }
+
+                    formattedData.push({
+                        id: idCounter++,
+                        date: formatDate(item.day),
+                        pm25: parseFloat(pm25Val),
+                        type: type,
+                        rawTimestamp: itemDate.getTime() // เอาไว้ใช้เรียงลำดับ
+                    });
+                });
+
+                // ตรวจสอบความปลอดภัย: ถ้าไม่มีข้อมูล current หลุดมาเลย ให้สร้างขึ้นมาใหม่จากค่าปัจจุบัน
+                if (!formattedData.find(d => d.type === 'current') && data.iaqi?.pm25) {
+                    formattedData.push({
+                        id: idCounter++,
+                        date: formatDate(todayStr),
+                        pm25: parseFloat(data.iaqi.pm25.v),
+                        type: 'current',
+                        rawTimestamp: today.getTime()
+                    });
+                }
+
+                // เรียงข้อมูลตามวันที่จากอดีต -> อนาคต
+                formattedData.sort((a, b) => a.rawTimestamp - b.rawTimestamp);
+
+                // ตัดเอาเฉพาะช่วง 8 วันรอบๆ ปัจจุบัน (ย้อนหลัง 4 วัน, ปัจจุบัน 1, ล่วงหน้า 3 วัน) เพื่อให้กราฟดูสวยงามพอดี
+                const currentIndex = formattedData.findIndex(d => d.type === 'current');
+                if (currentIndex !== -1) {
+                    const startIndex = Math.max(0, currentIndex - 4);
+                    const endIndex = Math.min(formattedData.length, currentIndex + 4);
+                    formattedData = formattedData.slice(startIndex, endIndex);
+                }
+
+                return formattedData;
+                
+            } catch (error) {
+                console.error("การดึง API ล้มเหลว:", error.message);
+                console.log("-> กำลังแสดงข้อมูลจำลอง (Mock Data) แทนเพื่อป้องกันหน้าจอขาว");
+                
+                // ข้อมูลจำลอง (แสดงกรณี API มีปัญหา)
+                return new Promise((resolve) => {
+                    setTimeout(() => {
+                        resolve([
+                            { id: 1, date: '18/02/2569', pm25: 14.5, type: 'history' },
+                            { id: 2, date: '19/02/2569', pm25: 22.0, type: 'history' },
+                            { id: 3, date: '20/02/2569', pm25: 45.2, type: 'history' },
+                            { id: 4, date: '21/02/2569', pm25: 58.0, type: 'history' },
+                            { id: 5, date: '22/02/2569', pm25: 22.4, type: 'current' },
+                            { id: 6, date: '23/02/2569', pm25: 39.7, type: 'forecast' }, 
+                            { id: 7, date: '24/02/2569', pm25: 25.0, type: 'forecast' }, 
+                        ]);
+                    }, 800);
+                });
+            }
+        }
+
+        // --- 3. ฟังก์ชัน Render ข้อมูลลงบนหน้าจอ ---
+        function renderDashboard(data) {
+            appData = data;
+            const currentData = data.find(d => d.type === 'current');
+            const forecastData = data.find(d => d.type === 'forecast'); // หาวันพรุ่งนี้
+
+            // อัปเดต Card ปัจจุบัน
+            if(currentData) {
+                const level = getPM25Level(currentData.pm25);
+                document.getElementById('current-date').innerHTML = `<i data-lucide="calendar" class="w-4 h-4 mr-2 text-[#C29B44]"></i> ${currentData.date}`;
+                
+                const valEl = document.getElementById('current-pm25-val');
+                valEl.textContent = currentData.pm25.toFixed(1);
+                valEl.style.color = level.color;
+
+                const badgeEl = document.getElementById('current-pm25-badge');
+                badgeEl.style.backgroundColor = level.color;
+                badgeEl.innerHTML = `
+                    <i data-lucide="${level.icon}" class="w-5 h-5 mr-2"></i>
+                    <span id="current-pm25-text">${level.text}</span>
+                `;
+
+                // เปลี่ยนสีกรอบซ้ายของการ์ด
+                document.getElementById('card-current').style.borderLeftColor = level.color;
+
+                // อัปเดต Marker (แถบสี 5 ระดับด้านล่าง)
+                const markerPosition = Math.min((currentData.pm25 / 100) * 100, 100);
+                document.getElementById('indicator-marker').style.left = `${markerPosition}%`;
+                document.getElementById('indicator-val').textContent = currentData.pm25;
+            }
+
+            // อัปเดต Card พยากรณ์พรุ่งนี้ (ทำให้โดดเด่นตามรูปภาพอ้างอิง)
+            if(forecastData) {
+                const level = getPM25Level(forecastData.pm25);
+                
+                const fValEl = document.getElementById('forecast-val');
+                fValEl.textContent = forecastData.pm25.toFixed(1); // แสดง 39.7
+                
+                // ไม่ได้เปลี่ยนสี Text ให้เป็นสีตามเกณฑ์ เพราะอยากคงความหรูหราสีทองไว้ที่ตัวเลข
+                // แต่จะไปแสดงสีเกณฑ์ที่ป้าย Badge แทน
+                
+                const fBadgeEl = document.getElementById('forecast-badge-status');
+                fBadgeEl.style.backgroundColor = level.color;
+                fBadgeEl.innerHTML = `
+                    <i data-lucide="${level.icon}" class="w-5 h-5 mr-2"></i>
+                    <span id="forecast-text">${level.text}</span>
+                `;
+
+                // เปลี่ยนสีกรอบซ้ายของการ์ด
+                document.getElementById('card-forecast').style.borderLeftColor = level.color;
+            }
+
+            renderChart(data);
+            renderTable(data);
+            
+            // อัปเดตไอคอนใหม่หลังจากมีการเปลี่ยน DOM
+            if (window.lucide) {
+                window.lucide.createIcons();
+            }
+        }
+
+        // --- 4. ฟังก์ชันวาดกราฟ (อลังการแบบมีเงา) ---
+        function renderChart(data) {
+            const options = {
+                series: [{
+                    name: 'PM2.5',
+                    data: data.map(d => d.pm25)
+                }],
+                chart: {
+                    type: 'area',
+                    height: 350,
+                    toolbar: { show: false },
+                    fontFamily: 'Prompt, sans-serif',
+                    animations: {
+                        enabled: true,
+                        easing: 'easeinout',
+                        speed: 1000,
+                        animateGradually: {
+                            enabled: true,
+                            delay: 150
+                        },
+                        dynamicAnimation: {
+                            enabled: true,
+                            speed: 350
+                        }
+                    }
+                },
+                colors: ['#D4AF37'], // สีทอง
+                fill: {
+                    type: 'gradient',
+                    gradient: {
+                        shadeIntensity: 1,
+                        opacityFrom: 0.5,
+                        opacityTo: 0.0,
+                        stops: [0, 90, 100]
+                    }
+                },
+                dataLabels: { 
+                    enabled: true,
+                    offsetY: -5,
+                    style: {
+                        fontSize: '12px',
+                        fontFamily: 'Prompt',
+                        fontWeight: 'bold',
+                        colors: ['#1A2530']
+                    },
+                    background: {
+                        enabled: true,
+                        foreColor: '#fff',
+                        borderRadius: 4,
+                        padding: 4,
+                        borderWidth: 0,
+                    }
+                },
+                stroke: { curve: 'smooth', width: 4 },
+                xaxis: {
+                    categories: data.map(d => {
+                        if(d.type === 'current') return 'วันนี้';
+                        if(d.type === 'forecast') return d.date; // โชว์วันสำหรับพยากรณ์
+                        return d.date.substring(0,5); // ย่อวันที่
+                    }),
+                    axisBorder: { show: false },
+                    axisTicks: { show: false },
+                    labels: { style: { colors: '#888', fontWeight: 600, fontFamily: 'Prompt' } }
+                },
+                yaxis: {
+                    min: 0,
+                    max: Math.max(...data.map(d => d.pm25)) + 20,
+                    labels: { style: { colors: '#888', fontWeight: 500 } }
+                },
+                grid: {
+                    borderColor: '#f0f0f0',
+                    strokeDashArray: 5,
+                    xaxis: { lines: { show: true } },
+                    yaxis: { lines: { show: true } }
+                },
+                markers: {
+                    size: 5,
+                    colors: ['#fff'],
+                    strokeColors: '#D4AF37',
+                    strokeWidth: 3,
+                    hover: { size: 8 }
+                },
+                annotations: {
+                    yaxis: [{
+                        y: 37.5,
+                        borderColor: '#e74c3c',
+                        strokeDashArray: 4,
+                        label: {
+                            borderColor: 'transparent',
+                            style: { color: '#fff', background: '#e74c3c', fontWeight: 600, fontFamily: 'Prompt', padding: {left: 10, right: 10, top: 4, bottom: 4} },
+                            text: 'เกินมาตรฐาน (37.5)'
+                        }
+                    }]
+                },
+                tooltip: {
+                    theme: 'light',
+                    y: { formatter: function (val) { return val + " µg/m³" } }
+                }
+            };
+
+            const chart = new ApexCharts(document.querySelector("#chart-container"), options);
+            chart.render();
+        }
+
+        // --- 5. ฟังก์ชันสร้างตาราง ---
+        function renderTable(data) {
+            const tbody = document.getElementById('table-body');
+            tbody.innerHTML = '';
+
+            const reversedData = [...data].reverse();
+
+            reversedData.forEach(row => {
+                const level = getPM25Level(row.pm25);
+                
+                let typeHtml = '';
+                let rowClass = 'hover:bg-yellow-50/40 transition-colors duration-300';
+                
+                if (row.type === 'current') {
+                    typeHtml = '<span class="bg-gradient-to-r from-[#C29B44] to-[#D4AF37] text-white px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap shadow-sm">วันนี้</span>';
+                    rowClass += ' bg-yellow-50/30';
+                } else if (row.type === 'forecast') {
+                    typeHtml = '<span class="bg-purple-100 border border-purple-200 text-purple-700 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap">พยากรณ์</span>';
+                } else {
+                    typeHtml = '<span class="text-gray-400 text-xs font-medium whitespace-nowrap px-2">ย้อนหลัง</span>';
+                }
+
+                const tr = document.createElement('tr');
+                tr.className = rowClass;
+                tr.innerHTML = `
+                    <td class="p-5 text-sm font-semibold text-[#1A2530] whitespace-nowrap">${row.date}</td>
+                    <td class="p-5 text-sm">${typeHtml}</td>
+                    <td class="p-5 text-lg font-bold text-[#1A2530] text-right">${row.pm25.toFixed(1)}</td>
+                    <td class="p-5 whitespace-nowrap">
+                        <span class="px-4 py-2 rounded-xl text-xs font-bold text-white inline-flex items-center shadow-md transform hover:scale-105 transition-transform" style="background-color: ${level.color}">
+                            ${level.text}
+                        </span>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // --- 6. ฟังก์ชัน Download CSV ---
+        function handleDownloadCSV() {
+            if (appData.length === 0) return;
+            
+            const headers = ['วันที่', 'ค่า PM2.5 (µg/m³)', 'สถานะ', 'ประเภทข้อมูล'];
+            const csvContent = [
+                headers.join(','),
+                ...appData.map(row => {
+                    const status = getPM25Level(row.pm25).text;
+                    const typeStr = row.type === 'current' ? 'ปัจจุบัน' : row.type === 'forecast' ? 'พยากรณ์' : 'ย้อนหลัง';
+                    return `${row.date},${row.pm25},${status},${typeStr}`;
+                })
+            ].join('\n');
+
+            const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `AQI_Nakhon_Phanom_${new Date().getTime()}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        // --- เริ่มการทำงานเมื่อโหลดหน้าเสร็จ ---
+        document.addEventListener('DOMContentLoaded', async () => {
+            // สร้าง Particles
+            createParticles();
+            lucide.createIcons();
+
+            // ดึงข้อมูล
+            const data = await fetchPM25Data();
+            
+            // แสดงข้อมูล
+            renderDashboard(data);
+
+            // ปิดหน้าจอโหลด เปิดหน้าจอหลัก พร้อม Animation
+            const loader = document.getElementById('loader');
+            const appContent = document.getElementById('app-content');
+            
+            loader.classList.add('hidden-fade');
+            setTimeout(() => {
+                loader.style.display = 'none';
+                appContent.classList.remove('hidden');
+                
+                // ค่อยๆ Fade in เนื้อหา
+                appContent.style.opacity = '0';
+                appContent.style.animation = 'fadeIn 1s forwards';
+                
+                lucide.createIcons(); // รีเฟรช Icon
+            }, 800);
+        });
+        
+        // Add fade in keyframe programmatically
+        const style = document.createElement('style');
+        style.innerHTML = `@keyframes fadeIn { to { opacity: 1; } }`;
+        document.head.appendChild(style);
+    </script>
+</body>
+</html>
