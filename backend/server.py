@@ -26,45 +26,38 @@ scaler = None
 # โหลด Model และ Scaler
 try:
     if os.path.exists(model_path) and os.path.exists(scaler_path):
-        # แก้ไข model config เพื่อรองรับ Keras ใหม่
-        import h5py
-        import json
-        
-        # อ่าน model config และแก้ไข batch_shape -> shape
-        with h5py.File(model_path, 'r') as f:
-            if 'model_config' in f.attrs:
-                config = json.loads(f.attrs['model_config'])
-                
-                # แก้ไข InputLayer config
-                if 'config' in config and 'layers' in config['config']:
-                    for layer in config['config']['layers']:
-                        if layer.get('class_name') == 'InputLayer':
-                            if 'batch_shape' in layer['config']:
-                                batch_shape = layer['config'].pop('batch_shape')
-                                # แปลง batch_shape เป็น shape (ตัดมิติแรกออก)
-                                layer['config']['batch_input_shape'] = batch_shape
-        
-        # โหลด model ด้วย custom object scope
+        # สร้าง custom objects สำหรับ compatibility
         from tensorflow.keras.layers import InputLayer
+        from tensorflow.keras.mixed_precision import Policy
         
-        # สร้าง custom InputLayer ที่รองรับ batch_shape
+        # Custom InputLayer ที่รองรับ batch_shape
         class CustomInputLayer(InputLayer):
             def __init__(self, batch_shape=None, **kwargs):
                 if batch_shape is not None:
                     kwargs['batch_input_shape'] = batch_shape
                 super().__init__(**kwargs)
         
-        custom_objects = {'InputLayer': CustomInputLayer}
+        # Custom DTypePolicy สำหรับ Keras เก่า
+        class DTypePolicy:
+            def __init__(self, name='float32'):
+                self.name = name
         
-        model = keras.models.load_model(
-            model_path, 
-            custom_objects=custom_objects,
-            compile=False
-        )
+        custom_objects = {
+            'InputLayer': CustomInputLayer,
+            'DTypePolicy': DTypePolicy,
+        }
+        
+        # โหลด model
+        with keras.utils.custom_object_scope(custom_objects):
+            model = keras.models.load_model(
+                model_path,
+                compile=False
+            )
         
         scaler = joblib.load(scaler_path)
         print("✅ Model and Scaler loaded successfully!")
         print(f"Model path: {model_path}")
+        print(f"Model summary: {model.summary()}")
     else:
         print("❌ Error: Missing model or scaler files!")
         print(f"Looking for model at: {model_path}")
