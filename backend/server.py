@@ -15,7 +15,7 @@ from tensorflow import keras
 
 # Import database module
 try:
-    from database import get_db
+    from backend.database import get_db
     db = get_db()
     DB_AVAILABLE = True
     print("✅ Database module loaded successfully")
@@ -52,6 +52,15 @@ try:
         class DTypePolicy:
             def __init__(self, name='float32'):
                 self.name = name
+                self._name = name
+                
+            @property
+            def compute_dtype(self):
+                return self.name
+            
+            @property
+            def variable_dtype(self):
+                return self.name
         
         custom_objects = {
             'InputLayer': CustomInputLayer,
