@@ -295,34 +295,25 @@
 
         let appData = [];
 
-        // --- 2. ฟังก์ชันดึงข้อมูลจาก API จริง ---
+        // --- 2. ฟังก์ชันดึงข้อมูลจาก Backend API (Supabase + LSTM Model) ---
         async function fetchPM25Data() {
-            const TOKEN = "6e19dc4d73747ab27c397b590fdbd504f1f496fc";
-            const KEYWORD = "nakhon phanom";
-            
             try {
-                // 1. ค้นหาสถานี (Search API) เพื่อเอา UID
-                const searchUrl = `https://api.waqi.info/search/?token=${TOKEN}&keyword=${encodeURIComponent(KEYWORD)}`;
-                const searchRes = await fetch(searchUrl);
-                const searchData = await searchRes.json();
+                // ดึงข้อมูลจาก Backend API ของเรา
+                const [readingsRes, predictionsRes] = await Promise.all([
+                    fetch('/api/readings?limit=7'),
+                    fetch('/api/predictions?limit=3')
+                ]);
 
-                if (searchData.status !== "ok" || searchData.data.length === 0) {
-                    throw new Error("ไม่พบข้อมูลสถานีจากคำค้นหา");
+                if (!readingsRes.ok || !predictionsRes.ok) {
+                    throw new Error("ไม่สามารถดึงข้อมูลจาก API ได้");
                 }
 
-                // เอา UID ของสถานีแรกที่ค้นเจอ
-                const stationUid = searchData.data[0].uid;
+                const readingsData = await readingsRes.json();
+                const predictionsData = await predictionsRes.json();
 
-                // 2. ดึงข้อมูลแบบละเอียด (Feed API) โดยใช้ UID ที่ได้มา
-                const feedUrl = `https://api.waqi.info/feed/@${stationUid}/?token=${TOKEN}`;
-                const feedRes = await fetch(feedUrl);
-                const feedData = await feedRes.json();
+                const readings = readingsData.data || [];
+                const predictions = predictionsData.data || [];
 
-                if (feedData.status !== "ok") {
-                    throw new Error("ดึงข้อมูลสถานีล้มเหลว");
-                }
-
-                const data = feedData.data;
                 let formattedData = [];
                 let idCounter = 1;
 
@@ -332,58 +323,53 @@
                     return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear() + 543}`;
                 };
 
-                // วันที่ปัจจุบันสำหรับเปรียบเทียบหา 'วันนี้' และ 'พยากรณ์พรุ่งนี้'
-                const todayStr = data.time.s.split(' ')[0]; // รูปแบบ YYYY-MM-DD
-                const today = new Date(todayStr);
+                const today = new Date();
                 today.setHours(0, 0, 0, 0);
+                const todayStr = today.toISOString().split('T')[0];
 
-                // ดึงข้อมูลรายวัน (WAQI API จะมีทั้งอดีตและอนาคตอยู่ใน array นี้)
-                const dailyForecast = data.forecast?.daily?.pm25 || [];
-
-                dailyForecast.forEach(item => {
-                    const itemDate = new Date(item.day);
-                    itemDate.setHours(0, 0, 0, 0);
-
-                    let type = 'history';
-                    let pm25Val = item.avg; // ใช้ค่าเฉลี่ยรายวันสำหรับอดีตและอนาคต
-
-                    if (itemDate.getTime() === today.getTime()) {
-                        type = 'current';
-                        // สำหรับวันนี้ ใช้ค่า Real-time ล่าสุดจากเซ็นเซอร์จะแม่นยำที่สุด
-                        pm25Val = data.iaqi?.pm25?.v || item.avg; 
-                    } else if (itemDate.getTime() > today.getTime()) {
-                        type = 'forecast';
-                    }
-
+                // 1. เพิ่มข้อมูลย้อนหลังจาก readings
+                readings.forEach(reading => {
+                    const readingDate = new Date(reading.reading_date);
+                    readingDate.setHours(0, 0, 0, 0);
+                    
+                    const isToday = reading.reading_date === todayStr;
+                    
                     formattedData.push({
                         id: idCounter++,
-                        date: formatDate(item.day),
-                        pm25: parseFloat(pm25Val),
-                        type: type,
-                        rawTimestamp: itemDate.getTime() // เอาไว้ใช้เรียงลำดับ
+                        date: formatDate(reading.reading_date),
+                        pm25: parseFloat(reading.pm25_value),
+                        type: isToday ? 'current' : 'history',
+                        rawTimestamp: readingDate.getTime()
                     });
                 });
 
-                // ตรวจสอบความปลอดภัย: ถ้าไม่มีข้อมูล current หลุดมาเลย ให้สร้างขึ้นมาใหม่จากค่าปัจจุบัน
-                if (!formattedData.find(d => d.type === 'current') && data.iaqi?.pm25) {
-                    formattedData.push({
-                        id: idCounter++,
-                        date: formatDate(todayStr),
-                        pm25: parseFloat(data.iaqi.pm25.v),
-                        type: 'current',
-                        rawTimestamp: today.getTime()
-                    });
-                }
+                // 2. เพิ่มการพยากรณ์จาก LSTM model
+                predictions.forEach(pred => {
+                    const predDate = new Date(pred.target_date);
+                    predDate.setHours(0, 0, 0, 0);
+                    
+                    // ถ้าวันที่พยากรณ์เป็นอนาคต (มากกว่าวันนี้)
+                    if (predDate.getTime() > today.getTime()) {
+                        // ใช้ค่าจริงถ้ามี ไม่งั้นใช้ค่าพยากรณ์
+                        const pm25Value = pred.actual_value || pred.predicted_value;
+                        
+                        formattedData.push({
+                            id: idCounter++,
+                            date: formatDate(pred.target_date),
+                            pm25: parseFloat(pm25Value),
+                            type: 'forecast',
+                            rawTimestamp: predDate.getTime(),
+                            isLSTM: true // ระบุว่ามาจาก LSTM model
+                        });
+                    }
+                });
 
-                // เรียงข้อมูลตามวันที่จากอดีต -> อนาคต
+                // เรียงข้อมูลตามวันที่
                 formattedData.sort((a, b) => a.rawTimestamp - b.rawTimestamp);
 
-                // ตัดเอาเฉพาะช่วง 8 วันรอบๆ ปัจจุบัน (ย้อนหลัง 4 วัน, ปัจจุบัน 1, ล่วงหน้า 3 วัน) เพื่อให้กราฟดูสวยงามพอดี
-                const currentIndex = formattedData.findIndex(d => d.type === 'current');
-                if (currentIndex !== -1) {
-                    const startIndex = Math.max(0, currentIndex - 4);
-                    const endIndex = Math.min(formattedData.length, currentIndex + 4);
-                    formattedData = formattedData.slice(startIndex, endIndex);
+                // ถ้าไม่มีข้อมูล current ให้ใช้ข้อมูลล่าสุด
+                if (!formattedData.find(d => d.type === 'current') && formattedData.length > 0) {
+                    formattedData[formattedData.length - 1].type = 'current';
                 }
 
                 return formattedData;
