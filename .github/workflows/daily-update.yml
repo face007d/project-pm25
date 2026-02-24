@@ -1,0 +1,43 @@
+name: Daily PM2.5 Data Update
+
+on:
+  schedule:
+    # รันทุกวันเวลา 00:00 UTC (07:00 เวลาไทย)
+    - cron: '0 0 * * *'
+  
+  # อนุญาตให้รัน manual ได้
+  workflow_dispatch:
+
+jobs:
+  update-data:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests python-dotenv supabase
+      
+      - name: Run daily update script
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          WAQI_API_TOKEN: ${{ secrets.WAQI_API_TOKEN }}
+          LOCATION: 'Nakhon Phanom'
+          API_URL: 'https://project-pm25-1.onrender.com'
+        run: |
+          python scripts/daily_update.py
+      
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "❌ Daily update failed!"
+          # TODO: ส่ง LINE Notify เมื่อล้มเหลว
