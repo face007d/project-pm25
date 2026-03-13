@@ -300,22 +300,28 @@ def save_reading():
 def line_webhook():
     """LINE Webhook - รับข้อความจาก LINE OA"""
     if not LINE_BOT_AVAILABLE:
-        return jsonify({'error': 'LINE Bot not configured'}), 503
+        return 'OK', 200
     
     # ตรวจสอบ signature
     signature = request.headers.get('X-Line-Signature', '')
     body = request.get_data(as_text=True)
     
+    # Log for debugging
+    print(f"📨 Webhook received: {body[:100]}...")
+    
     try:
         handler.handle(body, signature)
     except InvalidSignatureError:
         print("❌ Invalid signature")
-        abort(400)
+        return 'Invalid signature', 400
     except Exception as e:
         print(f"❌ Webhook error: {e}")
-        abort(500)
+        import traceback
+        traceback.print_exc()
+        # Return 200 anyway to prevent LINE from retrying
+        return 'OK', 200
     
-    return 'OK'
+    return 'OK', 200
 
 
 def save_fire_report_from_session(user_id, session, reply_token, address=None):
