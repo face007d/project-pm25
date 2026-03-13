@@ -317,7 +317,9 @@ def line_webhook():
     
     return 'OK'
 
-@handler.add(MessageEvent, message=TextMessage)
+# LINE Message Handlers (only register if LINE Bot is available)
+if LINE_BOT_AVAILABLE and handler:
+    @handler.add(MessageEvent, message=TextMessage)
 def handle_text_message(event):
     """จัดการข้อความ text"""
     user_id = event.source.user_id
@@ -407,7 +409,7 @@ def handle_text_message(event):
     except Exception as e:
         print(f"❌ Error handling text message: {e}")
 
-@handler.add(MessageEvent, message=ImageMessage)
+    @handler.add(MessageEvent, message=ImageMessage)
 def handle_image_message(event):
     """จัดการรูปภาพ"""
     user_id = event.source.user_id
@@ -461,7 +463,7 @@ def handle_image_message(event):
             TextSendMessage(text="❌ เกิดข้อผิดพลาดในการรับรูปภาพ")
         )
 
-@handler.add(MessageEvent, message=LocationMessage)
+    @handler.add(MessageEvent, message=LocationMessage)
 def handle_location_message(event):
     """จัดการพิกัด Location"""
     user_id = event.source.user_id
