@@ -7,7 +7,7 @@ import warnings
 import hmac
 import hashlib
 import base64
-from datetime import date, timedelta
+from datetime import date, timedelta, datetime
 warnings.filterwarnings('ignore')
 
 # ปิด TensorFlow logging
@@ -317,262 +317,263 @@ def line_webhook():
     
     return 'OK'
 
+
 # LINE Message Handlers (only register if LINE Bot is available)
 if LINE_BOT_AVAILABLE and handler:
     @handler.add(MessageEvent, message=TextMessage)
-def handle_text_message(event):
-    """จัดการข้อความ text"""
-    user_id = event.source.user_id
-    text = event.message.text.strip()
-    
-    try:
-        # อัปเดตข้อมูลผู้ใช้
+    def handle_text_message(event):
+        """จัดการข้อความ text"""
+        user_id = event.source.user_id
+        text = event.message.text.strip()
+        
         try:
-            profile = line_bot_api.get_profile(user_id)
-            db.upsert_line_user(
-                line_user_id=user_id,
-                display_name=profile.display_name,
-                picture_url=profile.picture_url,
-                status_message=profile.status_message
-            )
-        except:
-            pass
-        
-        # คำสั่งพิเศษ
-        if text.lower() in ['สวัสดี', 'hello', 'hi', 'เริ่ม', 'start']:
-            reply_text = (
-                "🔥 สวัสดีครับ! ยินดีต้อนรับสู่ระบบแจ้งเหตุไฟไหม้\n\n"
-                "📌 วิธีการแจ้งเหตุ:\n"
-                "1️⃣ ส่งรูปภาพจุดไฟไหม้/ควัน\n"
-                "2️⃣ ส่งพิกัดสถานที่ (กดแชร์ Location)\n\n"
-                "⚠️ ต้องส่งครบทั้ง 2 อย่างนะครับ\n\n"
-                "💨 ตรวจสอบค่าฝุ่น PM2.5: พิมพ์ 'ฝุ่น' หรือ 'pm25'"
-            )
-            line_bot_api.reply_message(
-                event.reply_token,
-                TextSendMessage(text=reply_text)
-            )
-        
-        elif text.lower() in ['ฝุ่น', 'pm25', 'pm2.5', 'aqi']:
-            # ดึงค่า PM2.5 ล่าสุด
-            readings = db.get_actual_readings(limit=1)
-            if readings:
-                latest = readings[0]
-                pm25 = latest['pm25_value']
-                level = latest['aqi_level']
-                date_str = latest['reading_date']
-                
-                reply_text = (
-                    f"💨 ค่าฝุ่น PM2.5 ล่าสุด\n\n"
-                    f"📅 วันที่: {date_str}\n"
-                    f"📊 ค่า PM2.5: {pm25:.1f} µg/m³\n"
-                    f"🎨 ระดับ: {level}\n\n"
-                    f"ดูข้อมูลเพิ่มเติม: https://project-pm25-1.onrender.com"
+            # อัปเดตข้อมูลผู้ใช้
+            try:
+                profile = line_bot_api.get_profile(user_id)
+                db.upsert_line_user(
+                    line_user_id=user_id,
+                    display_name=profile.display_name,
+                    picture_url=profile.picture_url,
+                    status_message=profile.status_message
                 )
-            else:
-                reply_text = "ไม่พบข้อมูลค่าฝุ่นในขณะนี้"
+            except:
+                pass
             
-            line_bot_api.reply_message(
-                event.reply_token,
-                TextSendMessage(text=reply_text)
-            )
+            # คำสั่งพิเศษ
+            if text.lower() in ['สวัสดี', 'hello', 'hi', 'เริ่ม', 'start']:
+                reply_text = (
+                    "🔥 สวัสดีครับ! ยินดีต้อนรับสู่ระบบแจ้งเหตุไฟไหม้\n\n"
+                    "📌 วิธีการแจ้งเหตุ:\n"
+                    "1️⃣ ส่งรูปภาพจุดไฟไหม้/ควัน\n"
+                    "2️⃣ ส่งพิกัดสถานที่ (กดแชร์ Location)\n\n"
+                    "⚠️ ต้องส่งครบทั้ง 2 อย่างนะครับ\n\n"
+                    "💨 ตรวจสอบค่าฝุ่น PM2.5: พิมพ์ 'ฝุ่น' หรือ 'pm25'"
+                )
+                line_bot_api.reply_message(
+                    event.reply_token,
+                    TextSendMessage(text=reply_text)
+                )
+            
+            elif text.lower() in ['ฝุ่น', 'pm25', 'pm2.5', 'aqi']:
+                # ดึงค่า PM2.5 ล่าสุด
+                readings = db.get_actual_readings(limit=1)
+                if readings:
+                    latest = readings[0]
+                    pm25 = latest['pm25_value']
+                    level = latest['aqi_level']
+                    date_str = latest['reading_date']
+                    
+                    reply_text = (
+                        f"💨 ค่าฝุ่น PM2.5 ล่าสุด\n\n"
+                        f"📅 วันที่: {date_str}\n"
+                        f"📊 ค่า PM2.5: {pm25:.1f} µg/m³\n"
+                        f"🎨 ระดับ: {level}\n\n"
+                        f"ดูข้อมูลเพิ่มเติม: https://project-pm25-1.onrender.com"
+                    )
+                else:
+                    reply_text = "ไม่พบข้อมูลค่าฝุ่นในขณะนี้"
+                
+                line_bot_api.reply_message(
+                    event.reply_token,
+                    TextSendMessage(text=reply_text)
+                )
+            
+            elif text.lower() in ['ช่วยเหลือ', 'help', 'คำสั่ง']:
+                reply_text = (
+                    "📋 คำสั่งที่ใช้ได้:\n\n"
+                    "🔥 แจ้งเหตุไฟไหม้\n"
+                    "   → ส่งรูป + พิกัด\n\n"
+                    "💨 ตรวจสอบค่าฝุ่น\n"
+                    "   → พิมพ์ 'ฝุ่น' หรือ 'pm25'\n\n"
+                    "📍 ดูแผนที่จุดไฟไหม้\n"
+                    "   → https://project-pm25-1.onrender.com"
+                )
+                line_bot_api.reply_message(
+                    event.reply_token,
+                    TextSendMessage(text=reply_text)
+                )
+            
+            else:
+                # ข้อความทั่วไป
+                reply_text = (
+                    "ขอบคุณสำหรับข้อความครับ 🙏\n\n"
+                    "หากต้องการแจ้งเหตุไฟไหม้:\n"
+                    "1️⃣ ส่งรูปภาพจุดไฟไหม้\n"
+                    "2️⃣ ส่งพิกัดสถานที่\n\n"
+                    "พิมพ์ 'ช่วยเหลือ' เพื่อดูคำสั่งทั้งหมด"
+                )
+                line_bot_api.reply_message(
+                    event.reply_token,
+                    TextSendMessage(text=reply_text)
+                )
         
-        elif text.lower() in ['ช่วยเหลือ', 'help', 'คำสั่ง']:
-            reply_text = (
-                "📋 คำสั่งที่ใช้ได้:\n\n"
-                "🔥 แจ้งเหตุไฟไหม้\n"
-                "   → ส่งรูป + พิกัด\n\n"
-                "💨 ตรวจสอบค่าฝุ่น\n"
-                "   → พิมพ์ 'ฝุ่น' หรือ 'pm25'\n\n"
-                "📍 ดูแผนที่จุดไฟไหม้\n"
-                "   → https://project-pm25-1.onrender.com"
-            )
-            line_bot_api.reply_message(
-                event.reply_token,
-                TextSendMessage(text=reply_text)
-            )
-        
-        else:
-            # ข้อความทั่วไป
-            reply_text = (
-                "ขอบคุณสำหรับข้อความครับ 🙏\n\n"
-                "หากต้องการแจ้งเหตุไฟไหม้:\n"
-                "1️⃣ ส่งรูปภาพจุดไฟไหม้\n"
-                "2️⃣ ส่งพิกัดสถานที่\n\n"
-                "พิมพ์ 'ช่วยเหลือ' เพื่อดูคำสั่งทั้งหมด"
-            )
-            line_bot_api.reply_message(
-                event.reply_token,
-                TextSendMessage(text=reply_text)
-            )
-    
-    except Exception as e:
-        print(f"❌ Error handling text message: {e}")
+        except Exception as e:
+            print(f"❌ Error handling text message: {e}")
 
     @handler.add(MessageEvent, message=ImageMessage)
-def handle_image_message(event):
-    """จัดการรูปภาพ"""
-    user_id = event.source.user_id
-    message_id = event.message.id
-    
-    try:
-        # ดาวน์โหลดรูปภาพ
-        message_content = line_bot_api.get_message_content(message_id)
+    def handle_image_message(event):
+        """จัดการรูปภาพ"""
+        user_id = event.source.user_id
+        message_id = event.message.id
         
-        # บันทึกรูปชั่วคราว (ในระบบจริงควรอัปโหลดไป cloud storage)
-        # ตอนนี้เราจะใช้ LINE CDN URL
-        image_url = f"https://api-data.line.me/v2/bot/message/{message_id}/content"
+        try:
+            # ดาวน์โหลดรูปภาพ
+            message_content = line_bot_api.get_message_content(message_id)
+            
+            # บันทึกรูปชั่วคราว (ในระบบจริงควรอัปโหลดไป cloud storage)
+            # ตอนนี้เราจะใช้ LINE CDN URL
+            image_url = f"https://api-data.line.me/v2/bot/message/{message_id}/content"
+            
+            # ดึง session ปัจจุบัน
+            session = db.get_or_create_session(user_id)
+            
+            if not session:
+                line_bot_api.reply_message(
+                    event.reply_token,
+                    TextSendMessage(text="❌ เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง")
+                )
+                return
+            
+            # อัปเดต session ด้วยรูปภาพ
+            db.update_session_image(
+                session_id=session['id'],
+                image_url=image_url,
+                image_message_id=message_id
+            )
+            
+            # ตรวจสอบว่ามีพิกัดแล้วหรือยัง
+            if session.get('has_location'):
+                # มีครบแล้ว! บันทึกรายงาน
+                save_fire_report_from_session(user_id, session, event.reply_token)
+            else:
+                # ยังไม่มีพิกัด
+                reply_text = (
+                    "✅ ได้รับรูปภาพแล้ว\n\n"
+                    "📍 กรุณาส่งพิกัดสถานที่ของจุดไฟไหม้\n"
+                    "(กดปุ่ม + → Location → แชร์ตำแหน่งปัจจุบัน)"
+                )
+                line_bot_api.reply_message(
+                    event.reply_token,
+                    TextSendMessage(text=reply_text)
+                )
         
-        # ดึง session ปัจจุบัน
-        session = db.get_or_create_session(user_id)
-        
-        if not session:
+        except Exception as e:
+            print(f"❌ Error handling image: {e}")
             line_bot_api.reply_message(
                 event.reply_token,
-                TextSendMessage(text="❌ เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง")
+                TextSendMessage(text="❌ เกิดข้อผิดพลาดในการรับรูปภาพ")
             )
-            return
-        
-        # อัปเดต session ด้วยรูปภาพ
-        db.update_session_image(
-            session_id=session['id'],
-            image_url=image_url,
-            image_message_id=message_id
-        )
-        
-        # ตรวจสอบว่ามีพิกัดแล้วหรือยัง
-        if session.get('has_location'):
-            # มีครบแล้ว! บันทึกรายงาน
-            save_fire_report_from_session(user_id, session, event.reply_token)
-        else:
-            # ยังไม่มีพิกัด
-            reply_text = (
-                "✅ ได้รับรูปภาพแล้ว\n\n"
-                "📍 กรุณาส่งพิกัดสถานที่ของจุดไฟไหม้\n"
-                "(กดปุ่ม + → Location → แชร์ตำแหน่งปัจจุบัน)"
-            )
-            line_bot_api.reply_message(
-                event.reply_token,
-                TextSendMessage(text=reply_text)
-            )
-    
-    except Exception as e:
-        print(f"❌ Error handling image: {e}")
-        line_bot_api.reply_message(
-            event.reply_token,
-            TextSendMessage(text="❌ เกิดข้อผิดพลาดในการรับรูปภาพ")
-        )
 
     @handler.add(MessageEvent, message=LocationMessage)
-def handle_location_message(event):
-    """จัดการพิกัด Location"""
-    user_id = event.source.user_id
-    latitude = event.message.latitude
-    longitude = event.message.longitude
-    address = event.message.address or ""
-    
-    try:
-        # ดึง session ปัจจุบัน
-        session = db.get_or_create_session(user_id)
+    def handle_location_message(event):
+        """จัดการพิกัด Location"""
+        user_id = event.source.user_id
+        latitude = event.message.latitude
+        longitude = event.message.longitude
+        address = event.message.address or ""
         
-        if not session:
+        try:
+            # ดึง session ปัจจุบัน
+            session = db.get_or_create_session(user_id)
+            
+            if not session:
+                line_bot_api.reply_message(
+                    event.reply_token,
+                    TextSendMessage(text="❌ เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง")
+                )
+                return
+            
+            # อัปเดต session ด้วยพิกัด
+            db.update_session_location(
+                session_id=session['id'],
+                latitude=latitude,
+                longitude=longitude
+            )
+            
+            # ตรวจสอบว่ามีรูปแล้วหรือยัง
+            if session.get('has_image'):
+                # มีครบแล้ว! บันทึกรายงาน
+                save_fire_report_from_session(user_id, session, event.reply_token, address)
+            else:
+                # ยังไม่มีรูป
+                reply_text = (
+                    "✅ ได้รับพิกัดแล้ว\n\n"
+                    "📷 กรุณาส่งรูปภาพจุดไฟไหม้/ควัน"
+                )
+                line_bot_api.reply_message(
+                    event.reply_token,
+                    TextSendMessage(text=reply_text)
+                )
+        
+        except Exception as e:
+            print(f"❌ Error handling location: {e}")
             line_bot_api.reply_message(
                 event.reply_token,
-                TextSendMessage(text="❌ เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง")
+                TextSendMessage(text="❌ เกิดข้อผิดพลาดในการรับพิกัด")
             )
-            return
-        
-        # อัปเดต session ด้วยพิกัด
-        db.update_session_location(
-            session_id=session['id'],
-            latitude=latitude,
-            longitude=longitude
-        )
-        
-        # ตรวจสอบว่ามีรูปแล้วหรือยัง
-        if session.get('has_image'):
-            # มีครบแล้ว! บันทึกรายงาน
-            save_fire_report_from_session(user_id, session, event.reply_token, address)
-        else:
-            # ยังไม่มีรูป
-            reply_text = (
-                "✅ ได้รับพิกัดแล้ว\n\n"
-                "📷 กรุณาส่งรูปภาพจุดไฟไหม้/ควัน"
-            )
-            line_bot_api.reply_message(
-                event.reply_token,
-                TextSendMessage(text=reply_text)
-            )
-    
-    except Exception as e:
-        print(f"❌ Error handling location: {e}")
-        line_bot_api.reply_message(
-            event.reply_token,
-            TextSendMessage(text="❌ เกิดข้อผิดพลาดในการรับพิกัด")
-        )
 
-def save_fire_report_from_session(user_id, session, reply_token, address=None):
-    """บันทึกรายงานไฟไหม้จาก session ที่สมบูรณ์"""
-    try:
-        # ดึงข้อมูลผู้ใช้
+    def save_fire_report_from_session(user_id, session, reply_token, address=None):
+        """บันทึกรายงานไฟไหม้จาก session ที่สมบูรณ์"""
         try:
-            profile = line_bot_api.get_profile(user_id)
-            display_name = profile.display_name
-        except:
-            display_name = None
-        
-        # ดึงค่า PM2.5 ล่าสุด
-        pm25_value = None
-        try:
-            readings = db.get_actual_readings(limit=1)
-            if readings:
-                pm25_value = readings[0]['pm25_value']
-        except:
-            pass
-        
-        # บันทึกรายงาน
-        report = db.save_fire_report(
-            line_user_id=user_id,
-            latitude=session['latitude'],
-            longitude=session['longitude'],
-            image_url=session['image_url'],
-            user_display_name=display_name,
-            location_address=address,
-            image_message_id=session.get('image_message_id'),
-            pm25_value=pm25_value
-        )
-        
-        if report:
-            # ทำเครื่องหมาย session ว่าเสร็จแล้ว
-            db.complete_session(session['id'])
+            # ดึงข้อมูลผู้ใช้
+            try:
+                profile = line_bot_api.get_profile(user_id)
+                display_name = profile.display_name
+            except:
+                display_name = None
             
-            # ส่งข้อความตอบกลับ
-            reply_text = (
-                "✅ ขอบคุณสำหรับข้อมูล!\n\n"
-                "ระบบได้รับแจ้งเหตุและบันทึกพิกัดลงแผนที่เรียบร้อยแล้ว\n\n"
-                f"📍 ตำแหน่ง: {session['latitude']:.6f}, {session['longitude']:.6f}\n"
-                f"🕐 เวลา: {datetime.now().strftime('%H:%M น.')}\n\n"
-                "ดูแผนที่: https://project-pm25-1.onrender.com"
+            # ดึงค่า PM2.5 ล่าสุด
+            pm25_value = None
+            try:
+                readings = db.get_actual_readings(limit=1)
+                if readings:
+                    pm25_value = readings[0]['pm25_value']
+            except:
+                pass
+            
+            # บันทึกรายงาน
+            report = db.save_fire_report(
+                line_user_id=user_id,
+                latitude=session['latitude'],
+                longitude=session['longitude'],
+                image_url=session['image_url'],
+                user_display_name=display_name,
+                location_address=address,
+                image_message_id=session.get('image_message_id'),
+                pm25_value=pm25_value
             )
             
-            line_bot_api.reply_message(
-                reply_token,
-                TextSendMessage(text=reply_text)
-            )
-            
-            print(f"✅ Fire report saved: {report.get('id')}")
-        else:
+            if report:
+                # ทำเครื่องหมาย session ว่าเสร็จแล้ว
+                db.complete_session(session['id'])
+                
+                # ส่งข้อความตอบกลับ
+                reply_text = (
+                    "✅ ขอบคุณสำหรับข้อมูล!\n\n"
+                    "ระบบได้รับแจ้งเหตุและบันทึกพิกัดลงแผนที่เรียบร้อยแล้ว\n\n"
+                    f"📍 ตำแหน่ง: {session['latitude']:.6f}, {session['longitude']:.6f}\n"
+                    f"🕐 เวลา: {datetime.now().strftime('%H:%M น.')}\n\n"
+                    "ดูแผนที่: https://project-pm25-1.onrender.com"
+                )
+                
+                line_bot_api.reply_message(
+                    reply_token,
+                    TextSendMessage(text=reply_text)
+                )
+                
+                print(f"✅ Fire report saved: {report.get('id')}")
+            else:
+                line_bot_api.reply_message(
+                    reply_token,
+                    TextSendMessage(text="❌ เกิดข้อผิดพลาดในการบันทึกข้อมูล")
+                )
+        
+        except Exception as e:
+            print(f"❌ Error saving fire report: {e}")
             line_bot_api.reply_message(
                 reply_token,
                 TextSendMessage(text="❌ เกิดข้อผิดพลาดในการบันทึกข้อมูล")
             )
-    
-    except Exception as e:
-        print(f"❌ Error saving fire report: {e}")
-        line_bot_api.reply_message(
-            reply_token,
-            TextSendMessage(text="❌ เกิดข้อผิดพลาดในการบันทึกข้อมูล")
-        )
 
 @app.route('/api/fire-reports', methods=['GET'])
 def get_fire_reports_api():
