@@ -435,22 +435,32 @@ if LINE_BOT_AVAILABLE and handler:
             
             # คำสั่งพิเศษ
             if text.lower() in ['สวัสดี', 'hello', 'hi', 'เริ่ม', 'start']:
+                # สร้าง Quick Reply Buttons
+                quick_reply = QuickReply(items=[
+                    QuickReplyButton(action=MessageAction(label="💨 ตรวจสอบค่าฝุ่น", text="ฝุ่น")),
+                    QuickReplyButton(action=MessageAction(label="📋 คำสั่งทั้งหมด", text="help")),
+                    QuickReplyButton(action=URIAction(label="📍 ดูแผนที่", uri="https://project-pm25-1.onrender.com"))
+                ])
+                
                 reply_text = (
                     "� สวัสดีครับ!\n"
                     "ยินดีต้อนรับสู่ พญานาคเฝ้าฟ้า\n"
                     "ระบบเฝ้าระวังคุณภาพอากาศ\n\n"
                     "━━━━━━━━━━━━━━━━\n\n"
-                    "📋 คำสั่งที่ใช้ได้:\n\n"
+                    "� คำสั่งที่ใช้ได้:\n\n"
                     "💨 ตรวจสอบค่าฝุ่น\n"
                     "   → พิมพ์ 'ฝุ่น' หรือ 'pm25'\n\n"
                     "🔥 แจ้งเหตุไฟไหม้\n"
                     "   → ส่งรูป + พิกัด\n\n"
                     "📍 ดูแผนที่จุดไฟไหม้\n"
-                    "   → https://project-pm25-1.onrender.com"
+                    "   → https://project-pm25-1.onrender.com\n\n"
+                    "━━━━━━━━━━━━━━━━\n\n"
+                    "👇 เลือกคำสั่งด้านล่าง"
                 )
+                
                 line_bot_api.reply_message(
                     event.reply_token,
-                    TextSendMessage(text=reply_text)
+                    TextSendMessage(text=reply_text, quick_reply=quick_reply)
                 )
             
             elif text.lower() in ['ฝุ่น', 'pm25', 'pm2.5', 'aqi']:
