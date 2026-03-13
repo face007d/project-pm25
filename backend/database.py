@@ -374,6 +374,350 @@ class SupabaseDB:
             return {}
     
     # ==========================================
+    # Fire Reports (Phase 2)
+    # ==========================================
+    
+    def save_fire_report(
+        self,
+        line_user_id: str,
+        latitude: float,
+        longitude: float,
+        image_url: str,
+        user_display_name: Optional[str] = None,
+        location_address: Optional[str] = None,
+        location_name: Optional[str] = None,
+        image_message_id: Optional[str] = None,
+        description: Optional[str] = None,
+        pm25_value: Optional[float] = None
+    ) -> Dict[str, Any]:
+        """
+        บันทึกรายงานจุดไฟไหม้
+        
+        Args:
+            line_user_id: LINE User ID
+            latitude: ละติจูด
+            longitude: ลองจิจูด
+            image_url: URL รูปภาพ
+            user_display_name: ชื่อผู้แจ้ง
+            location_address: ที่อยู่
+            location_name: ชื่อสถานที่
+            image_message_id: LINE Message ID ของรูป
+            description: รายละเอียดเพิ่มเติม
+            pm25_value: ค่า PM2.5 ณ เวลาที่แจ้ง
+        
+        Returns:
+            Dict ของรายงานที่บันทึก
+        """
+        try:
+            data = {
+                "line_user_id": line_user_id,
+                "latitude": latitude,
+                "longitude": longitude,
+                "image_url": image_url,
+            }
+            
+            if user_display_name:
+                data["user_display_name"] = user_display_name
+            if location_address:
+                data["location_address"] = location_address
+            if location_name:
+                data["location_name"] = location_name
+            if image_message_id:
+                data["image_message_id"] = image_message_id
+            if description:
+                data["description"] = description
+            if pm25_value is not None:
+                data["pm25_value"] = pm25_value
+            
+            result = self.client.table('fire_reports').insert(data).execute()
+            print(f"✅ Saved fire report from {line_user_id}")
+            return result.data[0] if result.data else {}
+        
+        except Exception as e:
+            print(f"❌ Error saving fire report: {e}")
+            return {}
+    
+    def get_fire_reports(
+        self,
+        limit: int = 50,
+        status: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
+        """
+        ดึงรายงานจุดไฟไหม้
+        
+        Args:
+            limit: จำนวนรายการ
+            status: กรองตามสถานะ (pending, verified, resolved, false_alarm)
+        
+        Returns:
+            List ของรายงาน
+        """
+        try:
+            query = self.client.table('fire_reports').select('*')
+            
+            if status:
+                query = query.eq('status', status)
+            
+            result = query.order('created_at', desc=True).limit(limit).execute()
+            return result.data
+        
+        except Exception as e:
+            print(f"❌ Error getting fire reports: {e}")
+            return []
+    
+    def get_fire_reports_today(self) -> List[Dict[str, Any]]:
+        """ดึงรายงานวันนี้"""
+        try:
+            result = self.client.table('v_today_reports').select('*').execute()
+            return result.data
+        except Exception as e:
+            print(f"❌ Error getting today's reports: {e}")
+            return []
+    
+    # ==========================================
+    # LINE User Sessions (Phase 2)
+    # ==========================================
+    
+    def get_or_create_session(self, line_user_id: str) -> Dict[str, Any]:
+        """
+        ดึง session ปัจจุบันหรือสร้างใหม่
+        
+        Args:
+            line_user_id: LINE User ID
+        
+        Returns:
+            Dict ของ session
+        """
+        try:
+            # หา session ที่ยังไม่หมดอายุและยังไม่เสร็จ
+            result = self.client.table('line_user_sessions')\
+                .select('*')\
+                .eq('line_user_id', line_user_id)\
+                .eq('is_complete', False)\
+                .gte('expires_at', datetime.now().isoformat())\
+                .order('created_at', desc=True)\
+                .limit(1)\
+                .execute()
+            
+            if result.data:
+                return result.data[0]
+            
+            # สร้าง session ใหม่
+            new_session = self.client.table('line_user_sessions')\
+                .insert({"line_user_id": line_user_id})\
+                .execute()
+            
+            return new_session.data[0] if new_session.data else {}
+        
+        except Exception as e:
+            print(f"❌ Error getting/creating session: {e}")
+            return {}
+    
+    def update_session_image(
+        self,
+        session_id: str,
+        image_url: str,
+        image_message_id: Optional[str] = None
+    ) -> bool:
+        """
+        อัปเดต session ด้วยรูปภาพ
+        
+        Args:
+            session_id: Session ID
+            image_url: URL รูปภาพ
+            image_message_id: LINE Message ID
+        
+        Returns:
+            True ถ้าสำเร็จ
+        """
+        try:
+            data = {
+                "has_image": True,
+                "image_url": image_url
+            }
+            if image_message_id:
+                data["image_message_id"] = image_message_id
+            
+            self.client.table('line_user_sessions')\
+                .update(data)\
+                .eq('id', session_id)\
+                .execute()
+            
+            return True
+        
+        except Exception as e:
+            print(f"❌ Error updating session image: {e}")
+            return False
+    
+    def update_session_location(
+        self,
+        session_id: str,
+        latitude: float,
+        longitude: float
+    ) -> bool:
+        """
+        อัปเดต session ด้วยพิกัด
+        
+        Args:
+            session_id: Session ID
+            latitude: ละติจูด
+            longitude: ลองจิจูด
+        
+        Returns:
+            True ถ้าสำเร็จ
+        """
+        try:
+            self.client.table('line_user_sessions')\
+                .update({
+                    "has_location": True,
+                    "latitude": latitude,
+                    "longitude": longitude
+                })\
+                .eq('id', session_id)\
+                .execute()
+            
+            return True
+        
+        except Exception as e:
+            print(f"❌ Error updating session location: {e}")
+            return False
+    
+    def complete_session(self, session_id: str) -> bool:
+        """
+        ทำเครื่องหมาย session ว่าเสร็จสมบูรณ์
+        
+        Args:
+            session_id: Session ID
+        
+        Returns:
+            True ถ้าสำเร็จ
+        """
+        try:
+            self.client.table('line_user_sessions')\
+                .update({
+                    "is_complete": True,
+                    "completed_at": datetime.now().isoformat()
+                })\
+                .eq('id', session_id)\
+                .execute()
+            
+            return True
+        
+        except Exception as e:
+            print(f"❌ Error completing session: {e}")
+            return False
+    
+    # ==========================================
+    # LINE Users (Phase 2)
+    # ==========================================
+    
+    def upsert_line_user(
+        self,
+        line_user_id: str,
+        display_name: Optional[str] = None,
+        picture_url: Optional[str] = None,
+        status_message: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        เพิ่มหรืออัปเดตข้อมูลผู้ใช้ LINE
+        
+        Args:
+            line_user_id: LINE User ID
+            display_name: ชื่อที่แสดง
+            picture_url: URL รูปโปรไฟล์
+            status_message: สถานะ
+        
+        Returns:
+            Dict ของผู้ใช้
+        """
+        try:
+            data = {
+                "line_user_id": line_user_id,
+                "last_active_at": datetime.now().isoformat()
+            }
+            
+            if display_name:
+                data["display_name"] = display_name
+            if picture_url:
+                data["picture_url"] = picture_url
+            if status_message:
+                data["status_message"] = status_message
+            
+            result = self.client.table('line_users')\
+                .upsert(data, on_conflict='line_user_id')\
+                .execute()
+            
+            return result.data[0] if result.data else {}
+        
+        except Exception as e:
+            print(f"❌ Error upserting LINE user: {e}")
+            return {}
+    
+    def get_notification_subscribers(self) -> List[Dict[str, Any]]:
+        """ดึงรายชื่อผู้ใช้ที่เปิดการแจ้งเตือน"""
+        try:
+            result = self.client.table('v_notification_subscribers').select('*').execute()
+            return result.data
+        except Exception as e:
+            print(f"❌ Error getting notification subscribers: {e}")
+            return []
+    
+    def save_notification_log(
+        self,
+        notification_type: str,
+        message_text: str,
+        line_user_id: Optional[str] = None,
+        is_broadcast: bool = False,
+        total_recipients: Optional[int] = None,
+        pm25_value: Optional[float] = None,
+        forecast_value: Optional[float] = None,
+        status: str = 'sent',
+        error_message: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        บันทึก log การแจ้งเตือน
+        
+        Args:
+            notification_type: ประเภท (daily_report, high_pm25, fire_alert)
+            message_text: ข้อความที่ส่ง
+            line_user_id: LINE User ID (ถ้าส่งเฉพาะคน)
+            is_broadcast: ส่งแบบ broadcast หรือไม่
+            total_recipients: จำนวนผู้รับ
+            pm25_value: ค่า PM2.5 ปัจจุบัน
+            forecast_value: ค่าพยากรณ์
+            status: สถานะ (sent, failed, pending)
+            error_message: ข้อความ error (ถ้ามี)
+        
+        Returns:
+            Dict ของ log
+        """
+        try:
+            data = {
+                "notification_type": notification_type,
+                "message_text": message_text,
+                "is_broadcast": is_broadcast,
+                "status": status
+            }
+            
+            if line_user_id:
+                data["line_user_id"] = line_user_id
+            if total_recipients is not None:
+                data["total_recipients"] = total_recipients
+            if pm25_value is not None:
+                data["pm25_value"] = pm25_value
+            if forecast_value is not None:
+                data["forecast_value"] = forecast_value
+            if error_message:
+                data["error_message"] = error_message
+            
+            result = self.client.table('notification_logs').insert(data).execute()
+            return result.data[0] if result.data else {}
+        
+        except Exception as e:
+            print(f"❌ Error saving notification log: {e}")
+            return {}
+    
+    # ==========================================
     # Utility Functions
     # ==========================================
     
