@@ -464,50 +464,63 @@ if LINE_BOT_AVAILABLE and handler:
                 )
             
             elif text.lower() in ['ฝุ่น', 'pm25', 'pm2.5', 'aqi']:
-                # ดึงค่า PM2.5 แบบ real-time จาก WAQI API
+                # ดึงค่า PM2.5 แบบ real-time จาก WAQI API (เหมือนเว็บ)
                 try:
                     import requests
                     waqi_token = os.getenv('WAQI_API_TOKEN', '6e19dc4d73747ab27c397b590fdbd504f1f496fc')
-                    waqi_url = f'https://api.waqi.info/feed/@9696/?token={waqi_token}'
+                    keyword = 'nakhon phanom'
                     
-                    response = requests.get(waqi_url, timeout=10)
-                    data = response.json()
+                    # 1. ค้นหาสถานี
+                    search_url = f'https://api.waqi.info/search/?token={waqi_token}&keyword={keyword}'
+                    search_res = requests.get(search_url, timeout=10)
+                    search_data = search_res.json()
                     
-                    if data.get('status') == 'ok':
-                        pm25 = data['data']['iaqi']['pm25']['v']
-                        aqi = data['data']['aqi']
-                        city = data['data']['city']['name']
-                        time = data['data']['time']['s']
+                    if search_data.get('status') == 'ok' and search_data.get('data'):
+                        station_uid = search_data['data'][0]['uid']
                         
-                        # คำนวณระดับ
-                        if pm25 <= 15.0:
-                            level = 'ดีมาก 😊'
-                            color = '🟦'
-                        elif pm25 <= 25.0:
-                            level = 'ดี 🙂'
-                            color = '🟩'
-                        elif pm25 <= 37.5:
-                            level = 'ปานกลาง 😐'
-                            color = '🟨'
-                        elif pm25 <= 75.0:
-                            level = 'เริ่มมีผลกระทบ 😷'
-                            color = '🟧'
+                        # 2. ดึงข้อมูลจากสถานี
+                        feed_url = f'https://api.waqi.info/feed/@{station_uid}/?token={waqi_token}'
+                        feed_res = requests.get(feed_url, timeout=10)
+                        data = feed_res.json()
+                        
+                        if data.get('status') == 'ok':
+                            pm25 = data['data']['iaqi']['pm25']['v']
+                            aqi = data['data']['aqi']
+                            city = data['data']['city']['name']
+                            time = data['data']['time']['s']
+                            
+                            # คำนวณระดับ
+                            if pm25 <= 15.0:
+                                level = 'ดีมาก 😊'
+                                color = '🟦'
+                            elif pm25 <= 25.0:
+                                level = 'ดี 🙂'
+                                color = '🟩'
+                            elif pm25 <= 37.5:
+                                level = 'ปานกลาง 😐'
+                                color = '🟨'
+                            elif pm25 <= 75.0:
+                                level = 'เริ่มมีผลกระทบ 😷'
+                                color = '🟧'
+                            else:
+                                level = 'มีผลกระทบต่อสุขภาพ ⚠️'
+                                color = '🟥'
+                            
+                            reply_text = (
+                                f"💨 ค่าฝุ่น PM2.5 ปัจจุบัน\n\n"
+                                f"📍 สถานี: {city}\n"
+                                f"📊 PM2.5: {pm25} µg/m³\n"
+                                f"🎨 AQI: {aqi}\n"
+                                f"{color} ระดับ: {level}\n"
+                                f"🕐 อัปเดต: {time}\n\n"
+                                f"ดูข้อมูลเพิ่มเติม:\nhttps://project-pm25-1.onrender.com"
+                            )
                         else:
-                            level = 'มีผลกระทบต่อสุขภาพ ⚠️'
-                            color = '🟥'
-                        
-                        reply_text = (
-                            f"💨 ค่าฝุ่น PM2.5 ปัจจุบัน\n\n"
-                            f"📍 สถานี: {city}\n"
-                            f"📊 PM2.5: {pm25} µg/m³\n"
-                            f"🎨 AQI: {aqi}\n"
-                            f"{color} ระดับ: {level}\n"
-                            f"🕐 อัปเดต: {time}\n\n"
-                            f"ดูข้อมูลเพิ่มเติม:\nhttps://project-pm25-1.onrender.com"
-                        )
+                            reply_text = "ไม่สามารถดึงข้อมูลค่าฝุ่นได้ในขณะนี้"
                     else:
-                        reply_text = "ไม่สามารถดึงข้อมูลค่าฝุ่นได้ในขณะนี้"
-                except:
+                        reply_text = "ไม่พบสถานีตรวจวัดในนครพนม"
+                except Exception as e:
+                    print(f"❌ Error fetching PM2.5: {e}")
                     reply_text = "เกิดข้อผิดพลาดในการดึงข้อมูล กรุณาลองใหม่อีกครั้ง"
                 
                 line_bot_api.reply_message(
