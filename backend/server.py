@@ -604,6 +604,9 @@ if LINE_BOT_AVAILABLE and handler:
                 image_message_id=message_id
             )
             
+            # ดึง session ใหม่เพื่อให้ได้ค่าที่อัปเดตแล้ว
+            session = db.get_or_create_session(user_id)
+            
             # ตรวจสอบว่ามีพิกัดแล้วหรือยัง
             if session.get('has_location'):
                 # มีครบแล้ว! บันทึกรายงาน
@@ -670,6 +673,9 @@ if LINE_BOT_AVAILABLE and handler:
                 latitude=latitude,
                 longitude=longitude
             )
+            
+            # ดึง session ใหม่เพื่อให้ได้ค่า latitude/longitude ที่อัปเดตแล้ว
+            session = db.get_or_create_session(user_id)
             
             # ตรวจสอบว่ามีรูปแล้วหรือยัง
             if session.get('has_image'):
