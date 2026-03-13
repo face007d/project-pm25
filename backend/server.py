@@ -21,7 +21,8 @@ from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError, LineBotApiError
 from linebot.models import (
     MessageEvent, TextMessage, ImageMessage, LocationMessage,
-    TextSendMessage, ImageSendMessage
+    TextSendMessage, ImageSendMessage,
+    QuickReply, QuickReplyButton, MessageAction, URIAction
 )
 
 # Import database module
@@ -337,9 +338,13 @@ def save_fire_report_from_session(user_id, session, reply_token, address=None):
         # ดึงค่า PM2.5 ล่าสุด
         pm25_value = None
         try:
-            readings = db.get_actual_readings(limit=1)
-            if readings:
-                pm25_value = readings[0]['pm25_value']
+            import requests
+            waqi_token = os.getenv('WAQI_API_TOKEN', '6e19dc4d73747ab27c397b590fdbd504f1f496fc')
+            waqi_url = f'https://api.waqi.info/feed/@9696/?token={waqi_token}'
+            response = requests.get(waqi_url, timeout=5)
+            data = response.json()
+            if data.get('status') == 'ok':
+                pm25_value = data['data']['iaqi']['pm25']['v']
         except:
             pass
         
@@ -361,11 +366,17 @@ def save_fire_report_from_session(user_id, session, reply_token, address=None):
             
             # ส่งข้อความตอบกลับ
             reply_text = (
-                "✅ ขอบคุณสำหรับข้อมูล!\n\n"
-                "ระบบได้รับแจ้งเหตุและบันทึกพิกัดลงแผนที่เรียบร้อยแล้ว\n\n"
-                f"📍 ตำแหน่ง: {session['latitude']:.6f}, {session['longitude']:.6f}\n"
+                "✅ บันทึกสำเร็จ!\n\n"
+                "━━━━━━━━━━━━━━━━\n\n"
+                "ขอบคุณสำหรับข้อมูล\n"
+                "ระบบได้บันทึกจุดไฟไหม้\n"
+                "ลงแผนที่เรียบร้อยแล้ว\n\n"
+                f"📍 พิกัด:\n"
+                f"{session['latitude']:.6f}, {session['longitude']:.6f}\n\n"
                 f"🕐 เวลา: {datetime.now().strftime('%H:%M น.')}\n\n"
-                "ดูแผนที่: https://project-pm25-1.onrender.com"
+                "━━━━━━━━━━━━━━━━\n\n"
+                "📍 ดูแผนที่:\n"
+                "https://project-pm25-1.onrender.com"
             )
             
             line_bot_api.reply_message(
@@ -375,16 +386,29 @@ def save_fire_report_from_session(user_id, session, reply_token, address=None):
             
             print(f"✅ Fire report saved: {report.get('id')}")
         else:
+            reply_text = (
+                "❌ เกิดข้อผิดพลาด\n\n"
+                "ไม่สามารถบันทึกข้อมูลได้\n"
+                "กรุณาลองใหม่อีกครั้ง"
+            )
             line_bot_api.reply_message(
                 reply_token,
-                TextSendMessage(text="❌ เกิดข้อผิดพลาดในการบันทึกข้อมูล")
+                TextSendMessage(text=reply_text)
             )
     
     except Exception as e:
         print(f"❌ Error saving fire report: {e}")
+        import traceback
+        traceback.print_exc()
+        
+        reply_text = (
+            "❌ เกิดข้อผิดพลาด\n\n"
+            "ไม่สามารถบันทึกข้อมูลได้\n"
+            "กรุณาลองใหม่อีกครั้ง"
+        )
         line_bot_api.reply_message(
             reply_token,
-            TextSendMessage(text="❌ เกิดข้อผิดพลาดในการบันทึกข้อมูล")
+            TextSendMessage(text=reply_text)
         )
 
 
@@ -412,12 +436,17 @@ if LINE_BOT_AVAILABLE and handler:
             # คำสั่งพิเศษ
             if text.lower() in ['สวัสดี', 'hello', 'hi', 'เริ่ม', 'start']:
                 reply_text = (
-                    "🔥 สวัสดีครับ! ยินดีต้อนรับสู่ระบบแจ้งเหตุไฟไหม้\n\n"
-                    "📌 วิธีการแจ้งเหตุ:\n"
-                    "1️⃣ ส่งรูปภาพจุดไฟไหม้/ควัน\n"
-                    "2️⃣ ส่งพิกัดสถานที่ (กดแชร์ Location)\n\n"
-                    "⚠️ ต้องส่งครบทั้ง 2 อย่างนะครับ\n\n"
-                    "💨 ตรวจสอบค่าฝุ่น PM2.5: พิมพ์ 'ฝุ่น' หรือ 'pm25'"
+                    "� สวัสดีครับ!\n"
+                    "ยินดีต้อนรับสู่ พญานาคเฝ้าฟ้า\n"
+                    "ระบบเฝ้าระวังคุณภาพอากาศ\n\n"
+                    "━━━━━━━━━━━━━━━━\n\n"
+                    "📋 คำสั่งที่ใช้ได้:\n\n"
+                    "💨 ตรวจสอบค่าฝุ่น\n"
+                    "   → พิมพ์ 'ฝุ่น' หรือ 'pm25'\n\n"
+                    "🔥 แจ้งเหตุไฟไหม้\n"
+                    "   → ส่งรูป + พิกัด\n\n"
+                    "📍 ดูแผนที่จุดไฟไหม้\n"
+                    "   → https://project-pm25-1.onrender.com"
                 )
                 line_bot_api.reply_message(
                     event.reply_token,
@@ -476,15 +505,19 @@ if LINE_BOT_AVAILABLE and handler:
                     TextSendMessage(text=reply_text)
                 )
             
-            elif text.lower() in ['ช่วยเหลือ', 'help', 'คำสั่ง']:
+            elif text.lower() in ['ช่วยเหลือ', 'help', 'คำสั่ง', 'เมนู', 'menu']:
                 reply_text = (
-                    "📋 คำสั่งที่ใช้ได้:\n\n"
-                    "🔥 แจ้งเหตุไฟไหม้\n"
-                    "   → ส่งรูป + พิกัด\n\n"
+                    "📋 คำสั่งทั้งหมด\n\n"
+                    "━━━━━━━━━━━━━━━━\n\n"
                     "💨 ตรวจสอบค่าฝุ่น\n"
-                    "   → พิมพ์ 'ฝุ่น' หรือ 'pm25'\n\n"
-                    "📍 ดูแผนที่จุดไฟไหม้\n"
-                    "   → https://project-pm25-1.onrender.com"
+                    "   พิมพ์: ฝุ่น, pm25, aqi\n\n"
+                    "� แจ้งเหตุไฟไหม้\n"
+                    "   1. ส่งรูปภาพ\n"
+                    "   2. ส่งพิกัด (Location)\n\n"
+                    "📍 ดูแผนที่\n"
+                    "   https://project-pm25-1.onrender.com\n\n"
+                    "━━━━━━━━━━━━━━━━\n\n"
+                    "💡 พิมพ์ 'สวัสดี' เพื่อเริ่มต้น"
                 )
                 line_bot_api.reply_message(
                     event.reply_token,
@@ -494,11 +527,15 @@ if LINE_BOT_AVAILABLE and handler:
             else:
                 # ข้อความทั่วไป
                 reply_text = (
-                    "ขอบคุณสำหรับข้อความครับ 🙏\n\n"
-                    "หากต้องการแจ้งเหตุไฟไหม้:\n"
-                    "1️⃣ ส่งรูปภาพจุดไฟไหม้\n"
-                    "2️⃣ ส่งพิกัดสถานที่\n\n"
-                    "พิมพ์ 'ช่วยเหลือ' เพื่อดูคำสั่งทั้งหมด"
+                    "💬 ขอบคุณสำหรับข้อความครับ\n\n"
+                    "━━━━━━━━━━━━━━━━\n\n"
+                    "📋 คำสั่งที่ใช้ได้:\n\n"
+                    "💨 ตรวจสอบค่าฝุ่น\n"
+                    "   → พิมพ์ 'ฝุ่น'\n\n"
+                    "🔥 แจ้งเหตุไฟไหม้\n"
+                    "   → ส่งรูป + พิกัด\n\n"
+                    "❓ ดูคำสั่งทั้งหมด\n"
+                    "   → พิมพ์ 'help'"
                 )
                 line_bot_api.reply_message(
                     event.reply_token,
@@ -526,9 +563,14 @@ if LINE_BOT_AVAILABLE and handler:
             session = db.get_or_create_session(user_id)
             
             if not session:
+                reply_text = (
+                    "❌ เกิดข้อผิดพลาด\n\n"
+                    "กรุณาลองใหม่อีกครั้ง\n"
+                    "หรือพิมพ์ 'help' เพื่อดูวิธีใช้งาน"
+                )
                 line_bot_api.reply_message(
                     event.reply_token,
-                    TextSendMessage(text="❌ เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง")
+                    TextSendMessage(text=reply_text)
                 )
                 return
             
@@ -547,8 +589,13 @@ if LINE_BOT_AVAILABLE and handler:
                 # ยังไม่มีพิกัด
                 reply_text = (
                     "✅ ได้รับรูปภาพแล้ว\n\n"
-                    "📍 กรุณาส่งพิกัดสถานที่ของจุดไฟไหม้\n"
-                    "(กดปุ่ม + → Location → แชร์ตำแหน่งปัจจุบัน)"
+                    "━━━━━━━━━━━━━━━━\n\n"
+                    "📍 ขั้นตอนต่อไป:\n"
+                    "ส่งพิกัดสถานที่ของจุดไฟไหม้\n\n"
+                    "วิธีส่งพิกัด:\n"
+                    "1. กดปุ่ม + ด้านล่าง\n"
+                    "2. เลือก Location\n"
+                    "3. แชร์ตำแหน่งปัจจุบัน"
                 )
                 line_bot_api.reply_message(
                     event.reply_token,
@@ -557,9 +604,17 @@ if LINE_BOT_AVAILABLE and handler:
         
         except Exception as e:
             print(f"❌ Error handling image: {e}")
+            import traceback
+            traceback.print_exc()
+            
+            reply_text = (
+                "❌ เกิดข้อผิดพลาด\n\n"
+                "ไม่สามารถรับรูปภาพได้\n"
+                "กรุณาลองใหม่อีกครั้ง"
+            )
             line_bot_api.reply_message(
                 event.reply_token,
-                TextSendMessage(text="❌ เกิดข้อผิดพลาดในการรับรูปภาพ")
+                TextSendMessage(text=reply_text)
             )
 
     @handler.add(MessageEvent, message=LocationMessage)
@@ -575,9 +630,14 @@ if LINE_BOT_AVAILABLE and handler:
             session = db.get_or_create_session(user_id)
             
             if not session:
+                reply_text = (
+                    "❌ เกิดข้อผิดพลาด\n\n"
+                    "กรุณาลองใหม่อีกครั้ง\n"
+                    "หรือพิมพ์ 'help' เพื่อดูวิธีใช้งาน"
+                )
                 line_bot_api.reply_message(
                     event.reply_token,
-                    TextSendMessage(text="❌ เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง")
+                    TextSendMessage(text=reply_text)
                 )
                 return
             
@@ -596,7 +656,9 @@ if LINE_BOT_AVAILABLE and handler:
                 # ยังไม่มีรูป
                 reply_text = (
                     "✅ ได้รับพิกัดแล้ว\n\n"
-                    "📷 กรุณาส่งรูปภาพจุดไฟไหม้/ควัน"
+                    "━━━━━━━━━━━━━━━━\n\n"
+                    "📷 ขั้นตอนต่อไป:\n"
+                    "ส่งรูปภาพจุดไฟไหม้/ควัน"
                 )
                 line_bot_api.reply_message(
                     event.reply_token,
@@ -605,9 +667,17 @@ if LINE_BOT_AVAILABLE and handler:
         
         except Exception as e:
             print(f"❌ Error handling location: {e}")
+            import traceback
+            traceback.print_exc()
+            
+            reply_text = (
+                "❌ เกิดข้อผิดพลาด\n\n"
+                "ไม่สามารถรับพิกัดได้\n"
+                "กรุณาลองใหม่อีกครั้ง"
+            )
             line_bot_api.reply_message(
                 event.reply_token,
-                TextSendMessage(text="❌ เกิดข้อผิดพลาดในการรับพิกัด")
+                TextSendMessage(text=reply_text)
             )
 
 
