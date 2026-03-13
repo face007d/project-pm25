@@ -318,6 +318,70 @@ def line_webhook():
     return 'OK'
 
 
+def save_fire_report_from_session(user_id, session, reply_token, address=None):
+    """บันทึกรายงานไฟไหม้จาก session ที่สมบูรณ์"""
+    try:
+        # ดึงข้อมูลผู้ใช้
+        try:
+            profile = line_bot_api.get_profile(user_id)
+            display_name = profile.display_name
+        except:
+            display_name = None
+        
+        # ดึงค่า PM2.5 ล่าสุด
+        pm25_value = None
+        try:
+            readings = db.get_actual_readings(limit=1)
+            if readings:
+                pm25_value = readings[0]['pm25_value']
+        except:
+            pass
+        
+        # บันทึกรายงาน
+        report = db.save_fire_report(
+            line_user_id=user_id,
+            latitude=session['latitude'],
+            longitude=session['longitude'],
+            image_url=session['image_url'],
+            user_display_name=display_name,
+            location_address=address,
+            image_message_id=session.get('image_message_id'),
+            pm25_value=pm25_value
+        )
+        
+        if report:
+            # ทำเครื่องหมาย session ว่าเสร็จแล้ว
+            db.complete_session(session['id'])
+            
+            # ส่งข้อความตอบกลับ
+            reply_text = (
+                "✅ ขอบคุณสำหรับข้อมูล!\n\n"
+                "ระบบได้รับแจ้งเหตุและบันทึกพิกัดลงแผนที่เรียบร้อยแล้ว\n\n"
+                f"📍 ตำแหน่ง: {session['latitude']:.6f}, {session['longitude']:.6f}\n"
+                f"🕐 เวลา: {datetime.now().strftime('%H:%M น.')}\n\n"
+                "ดูแผนที่: https://project-pm25-1.onrender.com"
+            )
+            
+            line_bot_api.reply_message(
+                reply_token,
+                TextSendMessage(text=reply_text)
+            )
+            
+            print(f"✅ Fire report saved: {report.get('id')}")
+        else:
+            line_bot_api.reply_message(
+                reply_token,
+                TextSendMessage(text="❌ เกิดข้อผิดพลาดในการบันทึกข้อมูล")
+            )
+    
+    except Exception as e:
+        print(f"❌ Error saving fire report: {e}")
+        line_bot_api.reply_message(
+            reply_token,
+            TextSendMessage(text="❌ เกิดข้อผิดพลาดในการบันทึกข้อมูล")
+        )
+
+
 # LINE Message Handlers (only register if LINE Bot is available)
 if LINE_BOT_AVAILABLE and handler:
     @handler.add(MessageEvent, message=TextMessage)
@@ -512,68 +576,6 @@ if LINE_BOT_AVAILABLE and handler:
                 TextSendMessage(text="❌ เกิดข้อผิดพลาดในการรับพิกัด")
             )
 
-    def save_fire_report_from_session(user_id, session, reply_token, address=None):
-        """บันทึกรายงานไฟไหม้จาก session ที่สมบูรณ์"""
-        try:
-            # ดึงข้อมูลผู้ใช้
-            try:
-                profile = line_bot_api.get_profile(user_id)
-                display_name = profile.display_name
-            except:
-                display_name = None
-            
-            # ดึงค่า PM2.5 ล่าสุด
-            pm25_value = None
-            try:
-                readings = db.get_actual_readings(limit=1)
-                if readings:
-                    pm25_value = readings[0]['pm25_value']
-            except:
-                pass
-            
-            # บันทึกรายงาน
-            report = db.save_fire_report(
-                line_user_id=user_id,
-                latitude=session['latitude'],
-                longitude=session['longitude'],
-                image_url=session['image_url'],
-                user_display_name=display_name,
-                location_address=address,
-                image_message_id=session.get('image_message_id'),
-                pm25_value=pm25_value
-            )
-            
-            if report:
-                # ทำเครื่องหมาย session ว่าเสร็จแล้ว
-                db.complete_session(session['id'])
-                
-                # ส่งข้อความตอบกลับ
-                reply_text = (
-                    "✅ ขอบคุณสำหรับข้อมูล!\n\n"
-                    "ระบบได้รับแจ้งเหตุและบันทึกพิกัดลงแผนที่เรียบร้อยแล้ว\n\n"
-                    f"📍 ตำแหน่ง: {session['latitude']:.6f}, {session['longitude']:.6f}\n"
-                    f"🕐 เวลา: {datetime.now().strftime('%H:%M น.')}\n\n"
-                    "ดูแผนที่: https://project-pm25-1.onrender.com"
-                )
-                
-                line_bot_api.reply_message(
-                    reply_token,
-                    TextSendMessage(text=reply_text)
-                )
-                
-                print(f"✅ Fire report saved: {report.get('id')}")
-            else:
-                line_bot_api.reply_message(
-                    reply_token,
-                    TextSendMessage(text="❌ เกิดข้อผิดพลาดในการบันทึกข้อมูล")
-                )
-        
-        except Exception as e:
-            print(f"❌ Error saving fire report: {e}")
-            line_bot_api.reply_message(
-                reply_token,
-                TextSendMessage(text="❌ เกิดข้อผิดพลาดในการบันทึกข้อมูล")
-            )
 
 @app.route('/api/fire-reports', methods=['GET'])
 def get_fire_reports_api():
