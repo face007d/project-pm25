@@ -48,11 +48,28 @@
             0% { background-position: -200% 0; }
             100% { background-position: 200% 0; }
         }
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        @keyframes countUp {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
         
         .gimmick-float { animation: float 6s ease-in-out infinite; }
+        .golden-glow-hover { 
+            transition: all 0.3s ease-out;
+        }
         .golden-glow-hover:hover { 
             box-shadow: 0 15px 35px -5px rgba(194, 155, 68, 0.2), 0 0 15px rgba(194, 155, 68, 0.1); 
-            transform: translateY(-4px);
+            transform: translateY(-4px) scale(1.01);
         }
         .text-gradient-gold {
             background: linear-gradient(90deg, #9C7C33, #D4AF37, #9C7C33);
@@ -61,6 +78,39 @@
             -webkit-background-clip: text;
             background-clip: text;
             animation: shimmer 5s linear infinite;
+        }
+        
+        /* Premium Glassmorphism */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.04);
+        }
+        
+        /* Staggered Entrance Animation */
+        .stagger-item {
+            opacity: 0;
+            animation: fadeInUp 0.8s ease-out forwards;
+        }
+        .stagger-item:nth-child(1) { animation-delay: 0.1s; }
+        .stagger-item:nth-child(2) { animation-delay: 0.2s; }
+        .stagger-item:nth-child(3) { animation-delay: 0.3s; }
+        .stagger-item:nth-child(4) { animation-delay: 0.4s; }
+        .stagger-item:nth-child(5) { animation-delay: 0.5s; }
+        .stagger-item:nth-child(6) { animation-delay: 0.6s; }
+        
+        /* Premium Button Micro-interactions */
+        .premium-button {
+            transition: all 0.3s ease-out;
+        }
+        .premium-button:hover {
+            transform: translateY(-2px) scale(1.02);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+        }
+        .premium-button:active {
+            transform: scale(0.95);
         }
 
         /* ลายน้ำพญานาคแบบประยุกต์ */
@@ -112,10 +162,10 @@
     <div id="app-content" class="max-w-6xl mx-auto space-y-8 relative z-10 p-4 md:p-8 hidden">
         
         <!-- --- ส่วนหัว (Hero Section): อลังการ ธีมสีทอง --- -->
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch stagger-item">
             
             <!-- กรอบรูปภาพพญาศรีสัตตนาคราช (Left Column) -->
-            <div class="lg:col-span-4 bg-white/80 backdrop-blur-md rounded-[2rem] p-3 shadow-lg border border-yellow-200/50 flex flex-col items-center justify-center relative overflow-hidden group transition-all duration-500 hover:shadow-2xl hover:shadow-yellow-600/20 h-80 lg:h-auto">
+            <div class="lg:col-span-4 glass-card rounded-[2rem] p-3 flex flex-col items-center justify-center relative overflow-hidden group transition-all duration-500 hover:shadow-2xl hover:shadow-yellow-600/20 h-80 lg:h-auto">
                 <div class="absolute inset-0 bg-gradient-to-t from-[#1A2530]/90 via-transparent to-transparent z-10 rounded-[1.5rem]"></div>
                 <!-- รูปจาก URL ใหม่ที่คุณให้มา -->
                 <img src="https://pukmudmuangthai.com/wp-content/uploads/2020/10/Ao_izard-3422.jpg" alt="พญาศรีสัตตนาคราช นครพนม" class="object-cover object-center w-full h-full rounded-[1.5rem] relative z-0 group-hover:scale-110 transition-transform duration-700" />
@@ -134,7 +184,7 @@
             </div>
 
             <!-- การ์ดแสดงผลหลัก (Right Column) -->
-            <div class="lg:col-span-8 bg-white/90 backdrop-blur-xl rounded-[2rem] p-8 md:p-10 shadow-xl border border-white relative overflow-hidden flex flex-col justify-between">
+            <div class="lg:col-span-8 glass-card rounded-[2rem] p-8 md:p-10 relative overflow-hidden flex flex-col justify-between transition-all duration-300 hover:shadow-2xl">
                 <!-- ลายน้ำ -->
                 <div class="naga-watermark"></div>
 
@@ -203,7 +253,7 @@
         </div>
 
         <!-- --- ระดับอันตราย (Color Bar Indicator) แบบอลังการขึ้น --- -->
-        <div class="bg-white p-8 rounded-[2rem] shadow-lg border border-gray-100 relative golden-glow-hover transition-all duration-300">
+        <div class="glass-card p-8 rounded-[2rem] relative golden-glow-hover stagger-item">
             <div class="flex flex-col sm:flex-row justify-between items-start sm:items-end mb-6">
                 <div>
                     <h3 class="font-bold text-[#1A2530] text-lg flex items-center">
@@ -233,7 +283,7 @@
         </div>
 
         <!-- --- Trend Graph --- -->
-        <div class="bg-white p-6 md:p-8 rounded-[2rem] shadow-lg border border-gray-100 golden-glow-hover transition-all duration-300">
+        <div class="glass-card p-6 md:p-8 rounded-[2rem] golden-glow-hover stagger-item">
             <div class="flex justify-between items-center mb-6">
                 <h3 class="font-bold text-[#1A2530] text-lg flex items-center">
                     <i data-lucide="line-chart" class="text-[#C29B44] mr-2"></i> แนวโน้มสถานการณ์ฝุ่น 7 วัน
@@ -243,12 +293,12 @@
         </div>
 
         <!-- --- Historical Data Table --- -->
-        <div class="bg-white rounded-[2rem] shadow-lg border border-gray-100 overflow-hidden golden-glow-hover transition-all duration-300">
+        <div class="glass-card rounded-[2rem] overflow-hidden golden-glow-hover stagger-item">
             <div class="p-6 md:p-8 border-b border-gray-50 flex flex-col sm:flex-row justify-between items-center gap-4 bg-gray-50/50">
                 <h3 class="font-bold text-[#1A2530] text-lg flex items-center">
                     <i data-lucide="database" class="text-[#C29B44] mr-2"></i> ข้อมูลรายละเอียดรายวัน
                 </h3>
-                <button onclick="handleDownloadCSV()" class="flex items-center bg-gradient-to-r from-[#1A2530] to-[#2C3E50] hover:from-[#C29B44] hover:to-[#D4AF37] text-white px-6 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 w-full sm:w-auto justify-center shadow-md transform hover:scale-105">
+                <button onclick="handleDownloadCSV()" class="premium-button flex items-center bg-gradient-to-r from-[#1A2530] to-[#2C3E50] hover:from-[#C29B44] hover:to-[#D4AF37] text-white px-6 py-2.5 rounded-xl text-sm font-bold w-full sm:w-auto justify-center shadow-md active:scale-95">
                     <i data-lucide="download" class="w-4 h-4 mr-2"></i>
                     ดาวน์โหลดรายงาน (CSV)
                 </button>
@@ -271,7 +321,7 @@
         </div>
 
         <!-- --- Fire Reports Map Section (Phase 2) --- -->
-        <div class="bg-white rounded-[2rem] shadow-lg border border-gray-100 overflow-hidden golden-glow-hover transition-all duration-300">
+        <div class="glass-card rounded-[2rem] overflow-hidden golden-glow-hover stagger-item">
             <div class="p-6 md:p-8 border-b border-gray-50 bg-gradient-to-r from-red-50/50 to-orange-50/50">
                 <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                     <div>
@@ -459,11 +509,28 @@
             }
         }
 
-        // --- 3. ฟังก์ชัน Render ข้อมูลลงบนหน้าจอ ---
+        // --- 3. ฟังก์ชัน Count-up Animation สำหรับตัวเลข ---
+        function animateValue(element, start, end, duration) {
+            if (!element) return;
+            const range = end - start;
+            const increment = range / (duration / 16); // 60fps
+            let current = start;
+            
+            const timer = setInterval(() => {
+                current += increment;
+                if ((increment > 0 && current >= end) || (increment < 0 && current <= end)) {
+                    current = end;
+                    clearInterval(timer);
+                }
+                element.textContent = current.toFixed(1);
+            }, 16);
+        }
+
+        // --- 4. ฟังก์ชัน Render ข้อมูลลงบนหน้าจอ (TARGETED DOM UPDATE) ---
         function renderDashboard(data) {
             appData = data;
             const currentData = data.find(d => d.type === 'current');
-            const forecastData = data.find(d => d.type === 'forecast'); // หาวันพรุ่งนี้
+            const forecastData = data.find(d => d.type === 'forecast');
 
             // อัปเดต Card ปัจจุบัน
             if(currentData) {
@@ -471,44 +538,51 @@
                 document.getElementById('current-date').innerHTML = `<i data-lucide="calendar" class="w-4 h-4 mr-2 text-[#C29B44]"></i> ${currentData.date}`;
                 
                 const valEl = document.getElementById('current-pm25-val');
-                valEl.textContent = currentData.pm25.toFixed(1);
+                const oldValue = parseFloat(valEl.textContent) || 0;
+                animateValue(valEl, oldValue, currentData.pm25, 1000);
                 valEl.style.color = level.color;
+                valEl.style.transition = 'color 0.5s ease-out';
 
                 const badgeEl = document.getElementById('current-pm25-badge');
                 badgeEl.style.backgroundColor = level.color;
+                badgeEl.style.transition = 'background-color 0.5s ease-out';
                 badgeEl.innerHTML = `
                     <i data-lucide="${level.icon}" class="w-5 h-5 mr-2"></i>
                     <span id="current-pm25-text">${level.text}</span>
                 `;
 
                 // เปลี่ยนสีกรอบซ้ายของการ์ด
-                document.getElementById('card-current').style.borderLeftColor = level.color;
+                const cardEl = document.getElementById('card-current');
+                cardEl.style.borderLeftColor = level.color;
+                cardEl.style.transition = 'border-color 0.5s ease-out';
 
                 // อัปเดต Marker (แถบสี 5 ระดับด้านล่าง)
                 const markerPosition = Math.min((currentData.pm25 / 100) * 100, 100);
-                document.getElementById('indicator-marker').style.left = `${markerPosition}%`;
-                document.getElementById('indicator-val').textContent = currentData.pm25;
+                const markerEl = document.getElementById('indicator-marker');
+                markerEl.style.left = `${markerPosition}%`;
+                document.getElementById('indicator-val').textContent = currentData.pm25.toFixed(1);
             }
 
-            // อัปเดต Card พยากรณ์พรุ่งนี้ (ทำให้โดดเด่นตามรูปภาพอ้างอิง)
+            // อัปเดต Card พยากรณ์พรุ่งนี้
             if(forecastData) {
                 const level = getPM25Level(forecastData.pm25);
                 
                 const fValEl = document.getElementById('forecast-val');
-                fValEl.textContent = forecastData.pm25.toFixed(1); // แสดง 39.7
-                
-                // ไม่ได้เปลี่ยนสี Text ให้เป็นสีตามเกณฑ์ เพราะอยากคงความหรูหราสีทองไว้ที่ตัวเลข
-                // แต่จะไปแสดงสีเกณฑ์ที่ป้าย Badge แทน
+                const oldForecast = parseFloat(fValEl.textContent) || 0;
+                animateValue(fValEl, oldForecast, forecastData.pm25, 1000);
                 
                 const fBadgeEl = document.getElementById('forecast-badge-status');
                 fBadgeEl.style.backgroundColor = level.color;
+                fBadgeEl.style.transition = 'background-color 0.5s ease-out';
                 fBadgeEl.innerHTML = `
                     <i data-lucide="${level.icon}" class="w-5 h-5 mr-2"></i>
                     <span id="forecast-text">${level.text}</span>
                 `;
 
                 // เปลี่ยนสีกรอบซ้ายของการ์ด
-                document.getElementById('card-forecast').style.borderLeftColor = level.color;
+                const cardForecast = document.getElementById('card-forecast');
+                cardForecast.style.borderLeftColor = level.color;
+                cardForecast.style.transition = 'border-color 0.5s ease-out';
             }
 
             renderChart(data);
@@ -520,7 +594,7 @@
             }
         }
 
-        // --- 4. ฟังก์ชันวาดกราฟ (อลังการแบบมีเงา) ---
+        // --- 5. ฟังก์ชันวาดกราฟ (Premium Smooth Chart with Drop Shadow) ---
         function renderChart(data) {
             const options = {
                 series: [{
@@ -535,15 +609,22 @@
                     animations: {
                         enabled: true,
                         easing: 'easeinout',
-                        speed: 1000,
+                        speed: 1200,
                         animateGradually: {
                             enabled: true,
-                            delay: 150
+                            delay: 180
                         },
                         dynamicAnimation: {
                             enabled: true,
-                            speed: 350
+                            speed: 400
                         }
+                    },
+                    dropShadow: {
+                        enabled: true,
+                        top: 3,
+                        left: 0,
+                        blur: 10,
+                        opacity: 0.15
                     }
                 },
                 colors: ['#D4AF37'], // สีทอง
@@ -551,16 +632,16 @@
                     type: 'gradient',
                     gradient: {
                         shadeIntensity: 1,
-                        opacityFrom: 0.5,
-                        opacityTo: 0.0,
-                        stops: [0, 90, 100]
+                        opacityFrom: 0.6,
+                        opacityTo: 0.05,
+                        stops: [0, 85, 100]
                     }
                 },
                 dataLabels: { 
                     enabled: true,
-                    offsetY: -5,
+                    offsetY: -8,
                     style: {
-                        fontSize: '12px',
+                        fontSize: '13px',
                         fontFamily: 'Prompt',
                         fontWeight: 'bold',
                         colors: ['#1A2530']
@@ -568,12 +649,17 @@
                     background: {
                         enabled: true,
                         foreColor: '#fff',
-                        borderRadius: 4,
-                        padding: 4,
+                        borderRadius: 6,
+                        padding: 6,
                         borderWidth: 0,
+                        opacity: 0.95
                     }
                 },
-                stroke: { curve: 'smooth', width: 4 },
+                stroke: { 
+                    curve: 'smooth', 
+                    width: 4,
+                    lineCap: 'round'
+                },
                 xaxis: {
                     categories: data.map(d => {
                         if(d.type === 'current') return 'วันนี้';
@@ -596,11 +682,15 @@
                     yaxis: { lines: { show: true } }
                 },
                 markers: {
-                    size: 5,
+                    size: 6,
                     colors: ['#fff'],
                     strokeColors: '#D4AF37',
                     strokeWidth: 3,
-                    hover: { size: 8 }
+                    hover: { 
+                        size: 9,
+                        sizeOffset: 2
+                    },
+                    discrete: []
                 },
                 annotations: {
                     yaxis: [{
@@ -616,7 +706,32 @@
                 },
                 tooltip: {
                     theme: 'light',
-                    y: { formatter: function (val) { return val + " µg/m³" } }
+                    style: {
+                        fontSize: '14px',
+                        fontFamily: 'Prompt'
+                    },
+                    marker: {
+                        show: true
+                    },
+                    y: { 
+                        formatter: function (val) { 
+                            return val.toFixed(1) + " µg/m³" 
+                        } 
+                    },
+                    custom: function({series, seriesIndex, dataPointIndex, w}) {
+                        const value = series[seriesIndex][dataPointIndex];
+                        const level = getPM25Level(value);
+                        return `
+                            <div style="padding: 12px; background: white; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+                                <div style="font-weight: bold; color: ${level.color}; margin-bottom: 4px;">
+                                    ${value.toFixed(1)} µg/m³
+                                </div>
+                                <div style="font-size: 12px; color: #666;">
+                                    ${level.text}
+                                </div>
+                            </div>
+                        `;
+                    }
                 }
             };
 
@@ -624,14 +739,15 @@
             chart.render();
         }
 
-        // --- 5. ฟังก์ชันสร้างตาราง ---
+        // --- 6. ฟังก์ชันสร้างตาราง (TARGETED UPDATE) ---
         function renderTable(data) {
             const tbody = document.getElementById('table-body');
-            tbody.innerHTML = '';
-
+            
+            // ถ้ามีข้อมูลเดิมอยู่แล้ว ให้ update แทนการสร้างใหม่ทั้งหมด
+            const existingRows = tbody.querySelectorAll('tr');
             const reversedData = [...data].reverse();
 
-            reversedData.forEach(row => {
+            reversedData.forEach((row, index) => {
                 const level = getPM25Level(row.pm25);
                 
                 let typeHtml = '';
@@ -646,9 +762,7 @@
                     typeHtml = '<span class="text-gray-400 text-xs font-medium whitespace-nowrap px-2">ย้อนหลัง</span>';
                 }
 
-                const tr = document.createElement('tr');
-                tr.className = rowClass;
-                tr.innerHTML = `
+                const rowHTML = `
                     <td class="p-5 text-sm font-semibold text-[#1A2530] whitespace-nowrap">${row.date}</td>
                     <td class="p-5 text-sm">${typeHtml}</td>
                     <td class="p-5 text-lg font-bold text-[#1A2530] text-right">${row.pm25.toFixed(1)}</td>
@@ -658,11 +772,73 @@
                         </span>
                     </td>
                 `;
-                tbody.appendChild(tr);
+
+                if (existingRows[index]) {
+                    // Update existing row
+                    existingRows[index].className = rowClass;
+                    existingRows[index].innerHTML = rowHTML;
+                } else {
+                    // Create new row
+                    const tr = document.createElement('tr');
+                    tr.className = rowClass;
+                    tr.innerHTML = rowHTML;
+                    tbody.appendChild(tr);
+                }
             });
+
+            // Remove extra rows if data is smaller
+            while (tbody.children.length > reversedData.length) {
+                tbody.removeChild(tbody.lastChild);
+            }
         }
 
-        // --- 6. ฟังก์ชันสร้างแผนที่และโหลดจุดไฟไหม้ ---
+        // --- 7. Live Data Simulation Engine (Premium Feature) ---
+        let simulationInterval = null;
+        
+        function simulateRealtimeUpdates() {
+            if (!appData || appData.length === 0) return;
+            
+            // หา current data
+            const currentIndex = appData.findIndex(d => d.type === 'current');
+            if (currentIndex === -1) return;
+            
+            // สุ่มเปลี่ยนค่า PM2.5 เล็กน้อย (±2)
+            const variation = (Math.random() - 0.5) * 4; // -2 to +2
+            const newValue = Math.max(0, appData[currentIndex].pm25 + variation);
+            appData[currentIndex].pm25 = parseFloat(newValue.toFixed(1));
+            
+            // Update เฉพาะส่วนที่เปลี่ยน (Targeted DOM Update)
+            const level = getPM25Level(newValue);
+            const valEl = document.getElementById('current-pm25-val');
+            const oldValue = parseFloat(valEl.textContent) || 0;
+            
+            // Smooth count-up animation
+            animateValue(valEl, oldValue, newValue, 800);
+            valEl.style.color = level.color;
+            
+            // Update badge with fade effect
+            const badgeEl = document.getElementById('current-pm25-badge');
+            badgeEl.style.opacity = '0.5';
+            setTimeout(() => {
+                badgeEl.style.backgroundColor = level.color;
+                badgeEl.innerHTML = `
+                    <i data-lucide="${level.icon}" class="w-5 h-5 mr-2"></i>
+                    <span>${level.text}</span>
+                `;
+                badgeEl.style.opacity = '1';
+                if (window.lucide) window.lucide.createIcons();
+            }, 400);
+            
+            // Update marker position
+            const markerPosition = Math.min((newValue / 100) * 100, 100);
+            document.getElementById('indicator-marker').style.left = `${markerPosition}%`;
+            document.getElementById('indicator-val').textContent = newValue.toFixed(1);
+            
+            // Update table row (targeted)
+            renderTable(appData);
+        }
+
+        // --- 8. ฟังก์ชันสร้างแผนที่และโหลดจุดไฟไหม้ ---
         let map = null;
         let markersLayer = null;
 
@@ -787,7 +963,7 @@
             }
         }
 
-        // --- 7. ฟังก์ชัน Download CSV ---
+        // --- 9. ฟังก์ชัน Download CSV ---
         function handleDownloadCSV() {
             if (appData.length === 0) return;
             
@@ -840,6 +1016,9 @@
                 appContent.style.animation = 'fadeIn 1s forwards';
                 
                 lucide.createIcons(); // รีเฟรช Icon
+                
+                // เริ่ม Live Data Simulation (ทุก 5 วินาที)
+                simulationInterval = setInterval(simulateRealtimeUpdates, 5000);
             }, 800);
         });
         
