@@ -444,6 +444,19 @@ def upload_image_to_supabase(image_content, user_id, message_id):
         
         bucket_name = 'fire_images'
         
+        # ตรวจสอบว่า bucket มีอยู่จริงหรือไม่
+        try:
+            buckets = supabase.storage.list_buckets()
+            bucket_names = [b['name'] for b in buckets]
+            print(f"📦 Available buckets: {bucket_names}")
+            
+            if bucket_name not in bucket_names:
+                print(f"❌ Bucket '{bucket_name}' not found!")
+                print(f"💡 Please create bucket '{bucket_name}' in Supabase Storage")
+                return None
+        except Exception as e:
+            print(f"⚠️ Could not list buckets: {e}")
+        
         # ลองอัพโหลด
         print(f"📤 Uploading to bucket: {bucket_name}/{filename}")
         response = supabase.storage.from_(bucket_name).upload(
