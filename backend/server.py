@@ -396,9 +396,9 @@ def upload_image_to_supabase(image_content, user_id, message_id):
     Returns: public URL ของรูปภาพ หรือ None ถ้าล้มเหลว
     """
     try:
-        # ตรวจสอบ credentials
+        # ตรวจสอบ credentials (ใช้ service_role key สำหรับ Storage)
         supabase_url = os.getenv('SUPABASE_URL')
-        supabase_key = os.getenv('SUPABASE_KEY')
+        supabase_key = os.getenv('SUPABASE_SERVICE_KEY') or os.getenv('SUPABASE_KEY')
         
         if not supabase_url or not supabase_key:
             print("⚠️ Supabase credentials not found")

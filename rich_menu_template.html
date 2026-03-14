@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LINE Rich Menu - พญานาคเฝ้าฟ้า</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f0f0f0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        .rich-menu {
+            width: 2500px;
+            height: 843px;
+            display: flex;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            transform: scale(0.3);
+            transform-origin: top left;
+        }
+        
+        .menu-item {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            border-right: 3px solid rgba(255,255,255,0.3);
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+        }
+        
+        .menu-item:last-child {
+            border-right: none;
+        }
+        
+        .menu-item:hover {
+            background: rgba(255,255,255,0.1);
+        }
+        
+        .icon {
+            width: 280px;
+            height: 280px;
+            background: white;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 40px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        .icon svg {
+            width: 180px;
+            height: 180px;
+        }
+        
+        .label {
+            color: white;
+            font-size: 72px;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .instructions {
+            margin-top: 20px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            max-width: 800px;
+        }
+        
+        .instructions h2 {
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+        
+        .instructions ol {
+            margin-left: 20px;
+        }
+        
+        .instructions li {
+            margin: 10px 0;
+            line-height: 1.6;
+        }
+        
+        button {
+            margin-top: 20px;
+            padding: 12px 24px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        button:hover {
+            background: #764ba2;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="richMenu" class="rich-menu">
+            <!-- ปุ่มที่ 1: ตรวจสอบค่าฝุ่น -->
+            <div class="menu-item">
+                <div class="icon">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z" fill="#667eea"/>
+                        <circle cx="12" cy="12" r="3" fill="#667eea"/>
+                        <path d="M12 7c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5zm0 8c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3z" fill="#667eea" opacity="0.5"/>
+                    </svg>
+                </div>
+                <div class="label">ตรวจสอบค่าฝุ่น</div>
+            </div>
+            
+            <!-- ปุ่มที่ 2: รายงานไฟไหม้ -->
+            <div class="menu-item">
+                <div class="icon">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 2c-1.1 0-2 .9-2 2 0 .74.4 1.38 1 1.73V7h2V5.73c.6-.35 1-.99 1-1.73 0-1.1-.9-2-2-2z" fill="#ff6b6b"/>
+                        <path d="M13 8h-2v2h2V8zm0 3h-2v2h2v-2zm0 3h-2v2h2v-2z" fill="#ff6b6b"/>
+                        <path d="M19 13h-2v2h2v-2zm0 3h-2v2h2v-2zM7 13H5v2h2v-2zm0 3H5v2h2v-2z" fill="#ff6b6b" opacity="0.5"/>
+                        <path d="M12 18c-3.31 0-6-2.69-6-6h2c0 2.21 1.79 4 4 4s4-1.79 4-4h2c0 3.31-2.69 6-6 6z" fill="#ff6b6b"/>
+                    </svg>
+                </div>
+                <div class="label">รายงานไฟไหม้</div>
+            </div>
+            
+            <!-- ปุ่มที่ 3: ดูแผนที่ -->
+            <div class="menu-item">
+                <div class="icon">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" fill="#4ecdc4"/>
+                        <circle cx="12" cy="9" r="2.5" fill="white"/>
+                        <path d="M12 2C8.13 2 5 5.13 5 9c0 1.74.5 3.37 1.41 4.84.27.43.58.85.92 1.27L12 22l4.67-6.89c.34-.42.65-.84.92-1.27C18.5 12.37 19 10.74 19 9c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" fill="#4ecdc4" opacity="0.7"/>
+                    </svg>
+                </div>
+                <div class="label">ดูแผนที่</div>
+            </div>
+        </div>
+        
+        <div class="instructions">
+            <h2>🎨 วิธีใช้งาน Rich Menu Template</h2>
+            <ol>
+                <li><strong>บันทึกเป็นรูปภาพ:</strong>
+                    <ul>
+                        <li>Windows: กด <code>Win + Shift + S</code> แล้วเลือกพื้นที่สี่เหลี่ยมด้านบน</li>
+                        <li>หรือคลิกปุ่ม "บันทึกเป็นรูปภาพ" ด้านล่าง</li>
+                    </ul>
+                </li>
+                <li><strong>ขนาดรูปภาพ:</strong> ต้องเป็น 2500 x 843 pixels (อัตราส่วนที่ LINE กำหนด)</li>
+                <li><strong>อัพโหลดไปที่ LINE:</strong>
+                    <ul>
+                        <li>เข้า <a href="https://developers.line.biz/console/" target="_blank">LINE Developers Console</a></li>
+                        <li>เลือก Messaging API Channel ของคุณ</li>
+                        <li>ไปที่ Rich Menu → Create</li>
+                        <li>อัพโหลดรูปภาพนี้</li>
+                    </ul>
+                </li>
+                <li><strong>หรือใช้ API:</strong> เรียก <code>POST /api/create-rich-menu</code> แล้วอัพโหลดรูปผ่าน LINE API</li>
+            </ol>
+            
+            <button onclick="downloadImage()">📥 บันทึกเป็นรูปภาพ</button>
+        </div>
+    </div>
+    
+    <script>
+        function downloadImage() {
+            // สำหรับการ download ต้องใช้ html2canvas library
+            alert('กรุณาใช้ Snipping Tool หรือ Screenshot:\n\n' +
+                  'Windows: Win + Shift + S\n' +
+                  'Mac: Cmd + Shift + 4\n\n' +
+                  'จากนั้นบันทึกเป็นไฟล์ PNG ขนาด 2500x843 px');
+        }
+    </script>
+</body>
+</html>
