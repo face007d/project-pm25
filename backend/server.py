@@ -396,13 +396,24 @@ def upload_image_to_supabase(image_content, user_id, message_id):
     Returns: public URL ของรูปภาพ หรือ None ถ้าล้มเหลว
     """
     try:
+        # ตรวจสอบ credentials
+        supabase_url = os.getenv('SUPABASE_URL')
+        supabase_key = os.getenv('SUPABASE_KEY')
+        
+        if not supabase_url or not supabase_key:
+            print("⚠️ Supabase credentials not found")
+            return None
+        
         # อ่านข้อมูลรูปภาพ
         image_data = b''
         for chunk in image_content.iter_content():
             image_data += chunk
         
+        print(f"📥 Downloaded image: {len(image_data)} bytes")
+        
         # เปิดรูปด้วย PIL
         image = Image.open(io.BytesIO(image_data))
+        print(f"🖼️ Original image size: {image.size}")
         
         # Resize ให้กว้างสุด 768px (รักษาอัตราส่วน)
         max_width = 768
@@ -410,6 +421,7 @@ def upload_image_to_supabase(image_content, user_id, message_id):
             ratio = max_width / image.width
             new_height = int(image.height * ratio)
             image = image.resize((max_width, new_height), Image.Resampling.LANCZOS)
+            print(f"📐 Resized to: {image.size}")
         
         # แปลงเป็น RGB ถ้าเป็น RGBA
         if image.mode == 'RGBA':
@@ -420,27 +432,24 @@ def upload_image_to_supabase(image_content, user_id, message_id):
         image.save(output, format='JPEG', quality=85, optimize=True)
         output.seek(0)
         
+        print(f"💾 Compressed to: {len(output.getvalue())} bytes")
+        
         # สร้างชื่อไฟล์ unique
         timestamp = datetime.now(THAILAND_TZ).strftime('%Y%m%d_%H%M%S')
         filename = f"{user_id}_{timestamp}_{message_id}.jpg"
         
         # อัพโหลดไปยัง Supabase Storage
-        supabase_url = os.getenv('SUPABASE_URL')
-        supabase_key = os.getenv('SUPABASE_KEY')
-        
-        if not supabase_url or not supabase_key:
-            print("⚠️ Supabase credentials not found")
-            return None
-        
         from supabase import create_client
         supabase = create_client(supabase_url, supabase_key)
         
-        # อัพโหลดไฟล์
         bucket_name = 'fire_images'
+        
+        # ลองอัพโหลด
+        print(f"📤 Uploading to bucket: {bucket_name}/{filename}")
         response = supabase.storage.from_(bucket_name).upload(
             filename,
             output.getvalue(),
-            file_options={"content-type": "image/jpeg"}
+            file_options={"content-type": "image/jpeg", "upsert": "true"}
         )
         
         # สร้าง public URL
@@ -450,7 +459,16 @@ def upload_image_to_supabase(image_content, user_id, message_id):
         return public_url
         
     except Exception as e:
-        print(f"❌ Error uploading image to Supabase: {e}")
+        error_msg = str(e)
+        print(f"❌ Error uploading image to Supabase: {error_msg}")
+        
+        # แสดง error แบบละเอียด
+        if 'Bucket not found' in error_msg:
+            print("💡 Hint: Please create 'fire_images' bucket in Supabase Storage")
+            print("   1. Go to Supabase Dashboard → Storage")
+            print("   2. Create new bucket named 'fire_images'")
+            print("   3. Set it as Public bucket")
+        
         import traceback
         traceback.print_exc()
         return None
