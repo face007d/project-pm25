@@ -147,6 +147,253 @@
             z-index: 1000 !important;
         }
     </style>
+
+    <!-- 🎨 CLEAN MINIMAL SAAS UI OVERRIDE -->
+    <style>
+        /* ========================================
+           OPERATION "CLEAN MINIMAL SAAS" 
+           CSS Override - No HTML Changes
+        ======================================== */
+        
+        /* 1. SOLID & CLEAN BACKGROUND */
+        body {
+            background-color: #F8F9FA !important;
+            background-image: none !important;
+        }
+        
+        /* 2. FLAT & CRISP CARDS - Remove Glassmorphism */
+        .glass-card {
+            background: #FFFFFF !important;
+            backdrop-filter: none !important;
+            -webkit-backdrop-filter: none !important;
+            border: 1px solid #E5E7EB !important;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06) !important;
+        }
+        
+        /* Subtle hover effect */
+        .golden-glow-hover:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08) !important;
+            transform: translateY(-2px) !important;
+        }
+        
+        /* 3. TYPOGRAPHY & COLOR RESET */
+        
+        /* Remove gold gradient text */
+        .text-gradient-gold {
+            background: none !important;
+            color: #111827 !important;
+            -webkit-background-clip: unset !important;
+            background-clip: unset !important;
+            animation: none !important;
+        }
+        
+        /* Main headings - dark gray */
+        h1, h2, h3, h4, h5, h6 {
+            color: #111827 !important;
+        }
+        
+        /* Stats numbers - dark */
+        .text-5xl, .text-4xl, .text-3xl {
+            color: #1E293B !important;
+        }
+        
+        /* Secondary text - medium gray */
+        .text-gray-500, .text-gray-600 {
+            color: #6B7280 !important;
+        }
+        
+        /* 4. CLEAN STATUS BADGES */
+        
+        /* Green - Good */
+        .bg-green-100 {
+            background-color: #D1FAE5 !important;
+        }
+        .text-green-700, .text-green-600 {
+            color: #047857 !important;
+        }
+        
+        /* Yellow - Moderate */
+        .bg-yellow-100 {
+            background-color: #FEF3C7 !important;
+        }
+        .text-yellow-700, .text-yellow-600 {
+            color: #B45309 !important;
+        }
+        
+        /* Orange - Unhealthy */
+        .bg-orange-100 {
+            background-color: #FFEDD5 !important;
+        }
+        .text-orange-700, .text-orange-600 {
+            color: #C2410C !important;
+        }
+        
+        /* Red - Hazardous */
+        .bg-red-100 {
+            background-color: #FEE2E2 !important;
+        }
+        .text-red-700, .text-red-600 {
+            color: #B91C1C !important;
+        }
+        
+        /* Purple - Very Unhealthy */
+        .bg-purple-100 {
+            background-color: #F3E8FF !important;
+        }
+        .text-purple-700, .text-purple-600 {
+            color: #7C3AED !important;
+        }
+        
+        /* 5. REMOVE FANCY EFFECTS */
+        
+        /* No floating animation */
+        .gimmick-float {
+            animation: none !important;
+        }
+        
+        /* No gold pulse */
+        @keyframes pulse-gold {
+            0%, 100% { box-shadow: none; }
+        }
+        
+        /* No shimmer */
+        @keyframes shimmer {
+            0%, 100% { background-position: 0 0; }
+        }
+        
+        /* 6. CLEAN BUTTONS */
+        .premium-button {
+            background-color: #3B82F6 !important;
+            color: white !important;
+            border: none !important;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important;
+        }
+        
+        .premium-button:hover {
+            background-color: #2563EB !important;
+            box-shadow: 0 4px 8px rgba(59, 130, 246, 0.2) !important;
+            transform: translateY(-1px) !important;
+        }
+        
+        /* 7. CLEAN ICONS - Gray instead of colorful */
+        [data-lucide] {
+            color: #6B7280 !important;
+        }
+        
+        /* Keep status-specific icon colors */
+        .text-green-500 [data-lucide],
+        .text-yellow-500 [data-lucide],
+        .text-orange-500 [data-lucide],
+        .text-red-500 [data-lucide],
+        .text-purple-500 [data-lucide] {
+            color: inherit !important;
+        }
+        
+        /* 8. CLEAN HEADER */
+        header {
+            background: #FFFFFF !important;
+            border-bottom: 1px solid #E5E7EB !important;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important;
+        }
+        
+        /* 9. REMOVE WATERMARK OPACITY */
+        .naga-watermark {
+            opacity: 0.02 !important;
+        }
+        
+        /* 10. CLEAN TABLE */
+        table {
+            background: #FFFFFF !important;
+        }
+        
+        thead {
+            background: #F9FAFB !important;
+            border-bottom: 1px solid #E5E7EB !important;
+        }
+        
+        tbody tr {
+            border-bottom: 1px solid #F3F4F6 !important;
+        }
+        
+        tbody tr:hover {
+            background: #F9FAFB !important;
+        }
+        
+        /* 11. CLEAN CHART CONTAINER */
+        #chart {
+            background: transparent !important;
+        }
+        
+        /* 12. CLEAN MAP SECTION */
+        #map {
+            border: 1px solid #E5E7EB !important;
+            border-radius: 8px !important;
+        }
+        
+        /* 13. SUBTLE ANIMATIONS - Keep fadeInUp but make it subtle */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .stagger-item {
+            animation-duration: 0.4s !important;
+        }
+        
+        /* 14. CLEAN LOADER */
+        #loader {
+            background: #F8F9FA !important;
+        }
+        
+        /* 15. PROFESSIONAL SPACING */
+        .glass-card {
+            border-radius: 12px !important;
+        }
+        
+        /* 16. CLEAN FIRE REPORT BADGES */
+        .bg-red-50 {
+            background-color: #FEF2F2 !important;
+        }
+        
+        .bg-orange-50 {
+            background-color: #FFF7ED !important;
+        }
+        
+        /* 17. REMOVE GRADIENT BACKGROUNDS */
+        .bg-gradient-to-r,
+        .bg-gradient-to-br,
+        .bg-gradient-to-bl {
+            background-image: none !important;
+            background-color: #F9FAFB !important;
+        }
+        
+        /* 18. CLEAN STATS CARDS */
+        .bg-blue-50,
+        .bg-green-50,
+        .bg-purple-50,
+        .bg-pink-50 {
+            background-color: #F9FAFB !important;
+        }
+        
+        /* 19. PROFESSIONAL BORDERS */
+        .border-gray-100,
+        .border-gray-50 {
+            border-color: #E5E7EB !important;
+        }
+        
+        /* 20. CLEAN FOCUS STATES */
+        button:focus,
+        a:focus {
+            outline: 2px solid #3B82F6 !important;
+            outline-offset: 2px !important;
+        }
+    </style>
 </head>
 <body class="text-gray-800 relative min-h-screen overflow-x-hidden">
 
