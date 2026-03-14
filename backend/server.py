@@ -99,7 +99,9 @@ def create_rich_menu():
         return None
 
 app = Flask(__name__, static_folder='../frontend', static_url_path='')
-CORS(app)
+# Enable CORS for all origins
+CORS(app, resources={r"/*": {"origins": "*"}})
+
 
 # หา path ของไฟล์ปัจจุบัน
 base_dir = os.path.dirname(os.path.abspath(__file__))
