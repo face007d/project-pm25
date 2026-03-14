@@ -442,7 +442,7 @@ def upload_image_to_supabase(image_content, user_id, message_id):
         from supabase import create_client
         supabase = create_client(supabase_url, supabase_key)
         
-        bucket_name = 'fire_images'
+        bucket_name = 'fire_image'  # ชื่อ bucket ใน Supabase (ไม่มี s)
         
         # ตรวจสอบว่า bucket มีอยู่จริงหรือไม่
         try:
