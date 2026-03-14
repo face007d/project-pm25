@@ -129,14 +129,22 @@
 
         /* Leaflet Popup Styling */
         .leaflet-popup-content-wrapper {
-            border-radius: 12px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+            border-radius: 16px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            padding: 0;
         }
         .leaflet-popup-content {
-            margin: 12px;
+            margin: 16px;
+            font-family: 'Prompt', sans-serif;
         }
         .leaflet-popup-tip {
-            box-shadow: 0 3px 14px rgba(0,0,0,0.1);
+            box-shadow: 0 3px 14px rgba(0,0,0,0.15);
+        }
+        .custom-fire-marker {
+            transition: all 0.3s ease;
+        }
+        .custom-fire-marker:hover {
+            z-index: 1000 !important;
         }
     </style>
 </head>
@@ -910,12 +918,52 @@
                         const lon = report.longitude;
                         
                         if (lat && lon) {
-                            // สร้าง custom icon สีแดง
+                            // ใช้รูปภาพจริงแทนจุดกลม
+                            let iconHtml = '';
+                            if (report.image_url) {
+                                // แสดงรูปภาพที่ลูกค้าส่งมาเป็น marker
+                                iconHtml = `
+                                    <div style="
+                                        width: 60px; 
+                                        height: 60px; 
+                                        border-radius: 12px; 
+                                        overflow: hidden;
+                                        border: 3px solid #ef4444;
+                                        box-shadow: 0 4px 12px rgba(239, 68, 68, 0.5);
+                                        cursor: pointer;
+                                        transition: transform 0.2s;
+                                    " onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">
+                                        <img src="${report.image_url}" 
+                                             style="width: 100%; height: 100%; object-fit: cover;"
+                                             alt="Fire Report"
+                                             onerror="this.parentElement.innerHTML='<div style=\\'background:#ef4444;width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:white;font-size:24px;\\'>🔥</div>'" />
+                                    </div>
+                                `;
+                            } else {
+                                // ถ้าไม่มีรูป ใช้ไอคอนไฟ
+                                iconHtml = `
+                                    <div style="
+                                        background-color: #ef4444; 
+                                        width: 48px; 
+                                        height: 48px; 
+                                        border-radius: 50%; 
+                                        border: 3px solid white; 
+                                        box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+                                        display: flex;
+                                        align-items: center;
+                                        justify-content: center;
+                                        font-size: 24px;
+                                        cursor: pointer;
+                                    ">🔥</div>
+                                `;
+                            }
+                            
                             const fireIcon = L.divIcon({
                                 className: 'custom-fire-marker',
-                                html: '<div style="background-color: #ef4444; width: 24px; height: 24px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.3);"></div>',
-                                iconSize: [24, 24],
-                                iconAnchor: [12, 12]
+                                html: iconHtml,
+                                iconSize: report.image_url ? [60, 60] : [48, 48],
+                                iconAnchor: report.image_url ? [30, 30] : [24, 24],
+                                popupAnchor: [0, report.image_url ? -30 : -24]
                             });
                             
                             // สร้าง marker
@@ -932,8 +980,8 @@
                             });
                             
                             let popupContent = `
-                                <div style="min-width: 200px; font-family: 'Prompt', sans-serif;">
-                                    <h3 style="font-weight: bold; color: #1A2530; margin-bottom: 8px; font-size: 14px;">
+                                <div style="min-width: 280px; max-width: 350px; font-family: 'Prompt', sans-serif;">
+                                    <h3 style="font-weight: bold; color: #ef4444; margin-bottom: 12px; font-size: 16px; display: flex; align-items: center; gap: 8px;">
                                         🔥 รายงานจุดไฟไหม้
                                     </h3>
                             `;
@@ -941,28 +989,44 @@
                             if (report.image_url) {
                                 popupContent += `
                                     <img src="${report.image_url}" 
-                                         style="width: 100%; height: 150px; object-fit: cover; border-radius: 8px; margin-bottom: 8px;"
-                                         alt="รูปภาพจุดไฟไหม้" />
+                                         style="width: 100%; height: 200px; object-fit: cover; border-radius: 12px; margin-bottom: 12px; cursor: pointer; border: 2px solid #ef4444;"
+                                         alt="รูปภาพจุดไฟไหม้"
+                                         onclick="window.open('${report.image_url}', '_blank')"
+                                         title="คลิกเพื่อดูรูปขนาดเต็ม" />
                                 `;
                             }
                             
                             popupContent += `
-                                    <div style="font-size: 12px; color: #666; line-height: 1.6;">
-                                        <p style="margin: 4px 0;"><strong>📍 พิกัด:</strong><br/>${lat.toFixed(6)}, ${lon.toFixed(6)}</p>
-                                        <p style="margin: 4px 0;"><strong>🕐 เวลา:</strong><br/>${dateStr}</p>
+                                    <div style="font-size: 13px; color: #374151; line-height: 1.8; background: #f9fafb; padding: 12px; border-radius: 8px;">
+                                        <p style="margin: 6px 0; display: flex; align-items: start;">
+                                            <strong style="min-width: 80px; color: #1f2937;">📍 พิกัด:</strong>
+                                            <span>${lat.toFixed(6)}, ${lon.toFixed(6)}</span>
+                                        </p>
+                                        <p style="margin: 6px 0; display: flex; align-items: start;">
+                                            <strong style="min-width: 80px; color: #1f2937;">🕐 เวลา:</strong>
+                                            <span>${dateStr}</span>
+                                        </p>
                             `;
                             
                             if (report.user_display_name) {
-                                popupContent += `<p style="margin: 4px 0;"><strong>👤 รายงานโดย:</strong> ${report.user_display_name}</p>`;
+                                popupContent += `
+                                    <p style="margin: 6px 0; display: flex; align-items: start;">
+                                        <strong style="min-width: 80px; color: #1f2937;">👤 รายงานโดย:</strong>
+                                        <span>${report.user_display_name}</span>
+                                    </p>
+                                `;
                             }
                             
                             if (report.pm25_value) {
                                 const level = getPM25Level(report.pm25_value);
                                 popupContent += `
-                                    <p style="margin: 4px 0;">
-                                        <strong>💨 PM2.5:</strong> ${report.pm25_value} µg/m³
-                                        <span style="background: ${level.color}; color: white; padding: 2px 8px; border-radius: 4px; font-size: 10px; margin-left: 4px;">
-                                            ${level.text}
+                                    <p style="margin: 6px 0; display: flex; align-items: start;">
+                                        <strong style="min-width: 80px; color: #1f2937;">💨 PM2.5:</strong>
+                                        <span>
+                                            ${report.pm25_value} µg/m³
+                                            <span style="background: ${level.color}; color: white; padding: 3px 10px; border-radius: 6px; font-size: 11px; margin-left: 6px; font-weight: bold;">
+                                                ${level.text}
+                                            </span>
                                         </span>
                                     </p>
                                 `;
@@ -974,8 +1038,17 @@
                             `;
                             
                             marker.bindPopup(popupContent, {
-                                maxWidth: 300,
-                                className: 'custom-popup'
+                                maxWidth: 350,
+                                minWidth: 280,
+                                className: 'custom-popup',
+                                closeButton: true,
+                                autoClose: false,
+                                closeOnClick: false
+                            });
+                            
+                            // เปิด popup อัตโนมัติเมื่อคลิก
+                            marker.on('click', function() {
+                                this.openPopup();
                             });
                             
                             markersLayer.addLayer(marker);
