@@ -862,25 +862,82 @@ tbody td.num { text-align:center; }
         </div>
         <div class="api-badge" id="api-status"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="11" height="11"><path d="M21.5 2l-5 10M12 2l5 10M2.5 2l5 10M17.5 12H9l-7 10h20l-5-10"/></svg>กำลังดึงข้อมูล...</div>
       </div>
-      <!-- PM bar indicator -->
-      <div style="background:rgba(212,175,55,0.06);border:1px solid var(--glass-bd);border-radius:10px;padding:16px;margin-bottom:14px;">
-        <div style="display:flex;align-items:flex-end;gap:12px;margin-bottom:12px;">
-          <div style="font-size:52px;line-height:1;font-weight:800;font-family:'IBM Plex Mono',monospace;letter-spacing:-2px;" id="current-pm25-val">—</div>
-          <div style="padding-bottom:6px;">
-            <div style="font-size:11px;color:var(--stone-4);">µg/m³ · PM2.5</div>
-            <div id="current-pm25-badge" style="display:inline-flex;align-items:center;gap:5px;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:700;color:#fff;background:#94A3B8;margin-top:4px;transition:all 0.5s;">
-              <span>กำลังโหลด...</span>
+      <!-- ══ TODAY + TOMORROW HERO ══ -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
+
+        <!-- วันนี้ -->
+        <div style="background:rgba(212,175,55,0.06);border:1px solid var(--glass-bd);border-radius:12px;padding:16px;position:relative;overflow:hidden;">
+          <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--gold-lt),var(--gold),var(--gold-lt));"></div>
+          <div style="font-size:10px;font-weight:700;color:var(--stone-4);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px;display:flex;align-items:center;gap:5px;">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="11" height="11"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            ค่าปัจจุบัน
+          </div>
+          <div style="display:flex;align-items:flex-end;gap:8px;margin-bottom:6px;">
+            <div style="font-size:58px;line-height:1;font-weight:800;font-family:'IBM Plex Mono',monospace;letter-spacing:-2px;transition:color 0.5s;" id="current-pm25-val">—</div>
+            <div style="padding-bottom:6px;">
+              <div style="font-size:11px;color:var(--stone-4);">µg/m³</div>
+              <div style="font-size:10px;color:var(--stone-4);">PM2.5</div>
             </div>
           </div>
+          <div id="current-pm25-badge" style="display:inline-flex;align-items:center;gap:5px;padding:5px 14px;border-radius:20px;font-size:12px;font-weight:700;color:#fff;background:#94A3B8;transition:all 0.5s;">
+            <span>กำลังโหลด...</span>
+          </div>
+          <div style="margin-top:8px;font-size:10px;color:var(--stone-4);" id="api-date-today">—</div>
         </div>
-        <div style="font-size:11px;color:var(--stone-4);margin-bottom:6px;display:flex;justify-content:space-between;">
+
+        <!-- พรุ่งนี้ (LSTM prediction) -->
+        <div style="background:rgba(99,102,241,0.06);border:2px solid rgba(99,102,241,0.25);border-radius:12px;padding:16px;position:relative;overflow:hidden;">
+          <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#6366f1,#a5b4fc,#6366f1);"></div>
+          <!-- "ทำนาย" ribbon -->
+          <div style="position:absolute;top:10px;right:-18px;background:#6366f1;color:#fff;font-size:8px;font-weight:800;padding:3px 24px;transform:rotate(45deg);letter-spacing:0.08em;">LSTM</div>
+          <div style="font-size:10px;font-weight:700;color:#6366f1;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px;display:flex;align-items:center;gap:5px;">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="11" height="11"><path d="M12 2a10 10 0 1 0 10 10"/><path d="M12 6v6l4 2"/><path d="m22 2-5 5"/><path d="m17 2 5 5"/></svg>
+            พยากรณ์พรุ่งนี้
+          </div>
+          <div style="display:flex;align-items:flex-end;gap:8px;margin-bottom:6px;">
+            <div style="font-size:58px;line-height:1;font-weight:800;font-family:'IBM Plex Mono',monospace;letter-spacing:-2px;transition:color 0.5s;" id="tomorrow-pm25-val">—</div>
+            <div style="padding-bottom:6px;">
+              <div style="font-size:11px;color:var(--stone-4);">µg/m³</div>
+              <div style="font-size:10px;color:var(--stone-4);">PM2.5</div>
+            </div>
+          </div>
+          <div id="tomorrow-pm25-badge" style="display:inline-flex;align-items:center;gap:5px;padding:5px 14px;border-radius:20px;font-size:12px;font-weight:700;color:#fff;background:#94A3B8;transition:all 0.5s;">
+            <span>กำลังโหลด...</span>
+          </div>
+          <div style="margin-top:8px;font-size:10px;color:var(--stone-4);" id="api-date-tomorrow">—</div>
+        </div>
+
+      </div>
+
+      <!-- Trend arrow between today → tomorrow -->
+      <div id="pm25-trend-bar" style="display:none;background:rgba(212,175,55,0.05);border:1px solid var(--glass-bd);border-radius:8px;padding:10px 14px;margin-bottom:14px;align-items:center;gap:10px;">
+        <div style="font-size:11px;font-weight:700;color:var(--stone-3);">แนวโน้ม:</div>
+        <div style="flex:1;display:flex;align-items:center;gap:8px;">
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;" id="trend-today-num">—</div>
+          <div id="trend-arrow" style="font-size:18px;">→</div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;" id="trend-tomorrow-num">—</div>
+          <div id="trend-label" style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:12px;background:#f0fdf4;color:#16a34a;">—</div>
+        </div>
+      </div>
+
+      <!-- PM bar indicator (ย้ายมาเป็นส่วนรอง) -->
+      <div style="background:rgba(212,175,55,0.04);border:1px solid var(--glass-bd);border-radius:10px;padding:12px 16px;margin-bottom:14px;">
+        <div style="font-size:10px;color:var(--stone-4);margin-bottom:5px;display:flex;justify-content:space-between;">
           <span>ดีมาก</span><span>ปานกลาง</span><span>เริ่มมีผล</span><span>ไม่ดี</span><span>อันตราย</span>
         </div>
         <div style="height:7px;border-radius:4px;background:linear-gradient(90deg,#28b4d8 0%,#2ecc71 20%,#f1c40f 45%,#e67e22 70%,#e74c3c 100%);position:relative;">
           <div id="indicator-marker" style="position:absolute;top:50%;left:0%;width:3px;height:13px;background:var(--stone);border-radius:2px;transform:translate(-50%,-50%);box-shadow:0 0 0 2px var(--white),0 0 0 3px var(--stone);transition:left 1s cubic-bezier(0.4,0,0.2,1);"></div>
         </div>
         <div style="text-align:center;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--stone-4);margin-top:4px;" id="indicator-val">0.0</div>
+        <div style="margin-top:2px;
+          margin-bottom:-2px;
+          display:flex;align-items:center;gap:6px;
+          font-size:10px;color:var(--stone-4);">
+          <div style="display:flex;align-items:center;gap:4px;"> </div>
+        </div>
       </div>
+
+
       <!-- Forecast table from API -->
       <div style="overflow-x:auto;">
         <table style="width:100%;border-collapse:collapse;" id="api-table">
@@ -2048,25 +2105,66 @@ function renderAPITable(data) {
 
 function renderAPIStatus(data) {
   const curr = data.find(d=>d.type==='current');
+  const nextForecast = data.find(d=>d.type==='forecast');
+
   if(curr){
     const level = getPM25Level(curr.pm25);
+
+    // ── api header
     document.getElementById('api-date').innerHTML=`📅 ${curr.date} · อัปเดตล่าสุด`;
     document.getElementById('api-status').innerHTML=`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' width='11' height='11'><path d='M22 11.08V12a10 10 0 1 1-5.93-9.14'/><polyline points='22 4 12 14.01 9 11.01'/></svg> โหลดสำเร็จ`;
     document.getElementById('api-status').style.color = '#16A34A';
     document.getElementById('api-status').style.background = '#F0FDF4';
     document.getElementById('api-status').style.border = '1px solid #BBF7D0';
 
+    // ── TODAY card
     const valEl = document.getElementById('current-pm25-val');
     animateValue(valEl, 0, curr.pm25, 1200);
     valEl.style.color = level.color;
-
     const badge = document.getElementById('current-pm25-badge');
     badge.style.background = level.color;
     badge.innerHTML = `<span>${level.text}</span>`;
+    const todayDateEl = document.getElementById('api-date-today');
+    if(todayDateEl) todayDateEl.innerHTML = `📅 ${curr.date} · ข้อมูลจริง`;
 
+    // ── indicator bar
     const pct = Math.min((curr.pm25/100)*100,100);
     document.getElementById('indicator-marker').style.left = pct+'%';
     document.getElementById('indicator-val').textContent = curr.pm25.toFixed(1);
+  }
+
+  // ── TOMORROW card
+  if(nextForecast){
+    const lvF = getPM25Level(nextForecast.pm25);
+    const tVal = document.getElementById('tomorrow-pm25-val');
+    if(tVal){ animateValue(tVal, 0, nextForecast.pm25, 1400); tVal.style.color = lvF.color; }
+    const tBadge = document.getElementById('tomorrow-pm25-badge');
+    if(tBadge){ tBadge.style.background = lvF.color; tBadge.innerHTML = `<span>${lvF.text}</span>`; }
+    const tDate = document.getElementById('api-date-tomorrow');
+    if(tDate) tDate.innerHTML = `🤖 LSTM Model พยากรณ์ · ${nextForecast.date}`;
+  }
+
+  // ── TREND bar
+  if(curr && nextForecast){
+    const trendBar = document.getElementById('pm25-trend-bar');
+    if(trendBar){
+      trendBar.style.display = 'flex';
+      document.getElementById('trend-today-num').textContent = curr.pm25.toFixed(1) + ' µg/m³';
+      document.getElementById('trend-tomorrow-num').textContent = nextForecast.pm25.toFixed(1) + ' µg/m³';
+      const diff = nextForecast.pm25 - curr.pm25;
+      const arrow = document.getElementById('trend-arrow');
+      const label = document.getElementById('trend-label');
+      if(diff > 2){
+        arrow.textContent = '↑'; arrow.style.color = '#dc2626';
+        label.textContent = `สูงขึ้น +${diff.toFixed(1)}`; label.style.background='#fff5f5'; label.style.color='#dc2626';
+      } else if(diff < -2){
+        arrow.textContent = '↓'; arrow.style.color = '#16a34a';
+        label.textContent = `ลดลง ${diff.toFixed(1)}`; label.style.background='#f0fdf4'; label.style.color='#16a34a';
+      } else {
+        arrow.textContent = '→'; arrow.style.color = '#94a3b8';
+        label.textContent = 'ทรงตัว'; label.style.background='#f8fafc'; label.style.color='#64748b';
+      }
+    }
   }
 }
 
@@ -2078,15 +2176,35 @@ function simulateRealtimeUpdates() {
   const newValue = Math.max(0, appData[ci].pm25+variation);
   appData[ci].pm25 = parseFloat(newValue.toFixed(1));
   const level = getPM25Level(newValue);
+
+  // update today card
   const valEl = document.getElementById('current-pm25-val');
   animateValue(valEl, parseFloat(valEl.textContent)||0, newValue, 800);
   valEl.style.color = level.color;
   const badge = document.getElementById('current-pm25-badge');
   badge.style.opacity='0.5';
   setTimeout(()=>{ badge.style.background=level.color; badge.innerHTML=`<span>${level.text}</span>`; badge.style.opacity='1'; },400);
+
+  // update indicator
   const pct = Math.min((newValue/100)*100,100);
   document.getElementById('indicator-marker').style.left=pct+'%';
   document.getElementById('indicator-val').textContent=newValue.toFixed(1);
+
+  // update trend bar
+  const nextForecast = appData.find(d=>d.type==='forecast');
+  if(nextForecast){
+    const tn = document.getElementById('trend-today-num');
+    if(tn) tn.textContent = newValue.toFixed(1)+' µg/m³';
+    const diff = nextForecast.pm25 - newValue;
+    const arrow = document.getElementById('trend-arrow');
+    const label = document.getElementById('trend-label');
+    if(arrow && label){
+      if(diff>2){ arrow.textContent='↑'; arrow.style.color='#dc2626'; label.textContent=`สูงขึ้น +${diff.toFixed(1)}`; label.style.background='#fff5f5'; label.style.color='#dc2626'; }
+      else if(diff<-2){ arrow.textContent='↓'; arrow.style.color='#16a34a'; label.textContent=`ลดลง ${diff.toFixed(1)}`; label.style.background='#f0fdf4'; label.style.color='#16a34a'; }
+      else { arrow.textContent='→'; arrow.style.color='#94a3b8'; label.textContent='ทรงตัว'; label.style.background='#f8fafc'; label.style.color='#64748b'; }
+    }
+  }
+
   renderAPITable(appData);
 }
 
