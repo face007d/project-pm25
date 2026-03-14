@@ -843,20 +843,48 @@
         let markersLayer = null;
 
         async function initializeMap() {
-            // สร้างแผนที่ โฟกัสที่นครพนม
-            map = L.map('map').setView([17.4065, 104.7686], 11);
+            try {
+                console.log('🗺️ Initializing map...');
+                
+                // ตรวจสอบว่า Leaflet โหลดแล้วหรือยัง
+                if (typeof L === 'undefined') {
+                    console.error('❌ Leaflet library not loaded!');
+                    return;
+                }
+                
+                // สร้างแผนที่ โฟกัสที่นครพนม
+                map = L.map('map').setView([17.4065, 104.7686], 11);
+                console.log('✅ Map instance created');
 
-            // เพิ่ม OpenStreetMap tiles
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '© OpenStreetMap contributors',
-                maxZoom: 18
-            }).addTo(map);
+                // เพิ่ม OpenStreetMap tiles
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '© OpenStreetMap contributors',
+                    maxZoom: 18
+                }).addTo(map);
+                console.log('✅ Map tiles added');
 
-            // สร้าง layer สำหรับ markers
-            markersLayer = L.layerGroup().addTo(map);
+                // สร้าง layer สำหรับ markers
+                markersLayer = L.layerGroup().addTo(map);
+                console.log('✅ Markers layer created');
 
-            // โหลดข้อมูลจุดไฟไหม้
-            await loadFireReports();
+                // โหลดข้อมูลจุดไฟไหม้
+                await loadFireReports();
+                console.log('✅ Map initialization complete');
+            } catch (error) {
+                console.error('❌ Error initializing map:', error);
+                // แสดงข้อความ error บนแผนที่
+                const mapEl = document.getElementById('map');
+                if (mapEl) {
+                    mapEl.innerHTML = `
+                        <div style="display: flex; align-items: center; justify-center; height: 100%; background: #f3f4f6; color: #666; font-family: 'Prompt', sans-serif; text-align: center; padding: 20px;">
+                            <div>
+                                <p style="font-size: 18px; font-weight: bold; margin-bottom: 8px;">⚠️ ไม่สามารถโหลดแผนที่ได้</p>
+                                <p style="font-size: 14px;">${error.message}</p>
+                            </div>
+                        </div>
+                    `;
+                }
+            }
         }
 
         async function loadFireReports() {
@@ -864,7 +892,10 @@
                 const response = await fetch('/api/fire-reports');
                 const data = await response.json();
                 
-                if (data.success && data.data) {
+                console.log('Fire reports response:', data); // Debug log
+                
+                // API returns { data: [...], count: N } not { success: true, data: [...] }
+                if (data.data && Array.isArray(data.data)) {
                     const reports = data.data;
                     
                     // อัพเดทจำนวนจุด
@@ -956,9 +987,14 @@
                         const bounds = markersLayer.getBounds();
                         map.fitBounds(bounds, { padding: [50, 50], maxZoom: 13 });
                     }
+                    
+                    console.log(`✅ Loaded ${reports.length} fire reports successfully`);
+                } else {
+                    console.warn('No fire reports data found or invalid format:', data);
+                    document.getElementById('fire-count').textContent = '0 จุด';
                 }
             } catch (error) {
-                console.error('Error loading fire reports:', error);
+                console.error('❌ Error loading fire reports:', error);
                 document.getElementById('fire-count').textContent = 'ไม่สามารถโหลดข้อมูล';
             }
         }
