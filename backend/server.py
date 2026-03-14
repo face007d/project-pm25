@@ -8,7 +8,11 @@ import hmac
 import hashlib
 import base64
 from datetime import date, timedelta, datetime
+from zoneinfo import ZoneInfo
 warnings.filterwarnings('ignore')
+
+# Thailand timezone
+THAILAND_TZ = ZoneInfo("Asia/Bangkok")
 
 # ปิด TensorFlow logging
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
@@ -49,6 +53,48 @@ else:
     handler = None
     LINE_BOT_AVAILABLE = False
     print("⚠️ LINE Bot not configured (missing credentials)")
+
+
+def create_rich_menu():
+    """สร้าง Rich Menu สำหรับ LINE Bot"""
+    if not LINE_BOT_AVAILABLE:
+        return None
+    
+    try:
+        from linebot.models import RichMenu, RichMenuSize, RichMenuArea, RichMenuBounds, URIAction, MessageAction
+        
+        # สร้าง Rich Menu
+        rich_menu_to_create = RichMenu(
+            size=RichMenuSize(width=2500, height=843),
+            selected=True,
+            name="PM2.5 Menu",
+            chat_bar_text="เมนูหลัก",
+            areas=[
+                RichMenuArea(
+                    bounds=RichMenuBounds(x=0, y=0, width=833, height=843),
+                    action=MessageAction(label='ตรวจสอบค่าฝุ่น', text='ตรวจสอบค่าฝุ่น')
+                ),
+                RichMenuArea(
+                    bounds=RichMenuBounds(x=833, y=0, width=834, height=843),
+                    action=MessageAction(label='รายงานไฟไหม้', text='รายงานไฟไหม้')
+                ),
+                RichMenuArea(
+                    bounds=RichMenuBounds(x=1667, y=0, width=833, height=843),
+                    action=URIAction(label='ดูแผนที่', uri='https://project-pm25-1.onrender.com')
+                )
+            ]
+        )
+        
+        rich_menu_id = line_bot_api.create_rich_menu(rich_menu=rich_menu_to_create)
+        print(f"✅ Rich Menu created: {rich_menu_id}")
+        
+        # TODO: อัพโหลดรูปภาพ Rich Menu ด้วย line_bot_api.set_rich_menu_image()
+        # ต้องมีไฟล์รูป 2500x843 px
+        
+        return rich_menu_id
+    except Exception as e:
+        print(f"⚠️ Could not create Rich Menu: {e}")
+        return None
 
 app = Flask(__name__, static_folder='../frontend', static_url_path='')
 CORS(app)
@@ -145,9 +191,26 @@ def api_status():
             '/api/save-reading': 'POST - Save actual reading',
             '/webhook': 'POST - LINE Webhook (Phase 2)',
             '/api/fire-reports': 'GET - Get fire reports (Phase 2)',
-            '/api/fire-reports/today': 'GET - Get today fire reports (Phase 2)'
+            '/api/fire-reports/today': 'GET - Get today fire reports (Phase 2)',
+            '/api/create-rich-menu': 'POST - Create LINE Rich Menu (Phase 2)'
         }
     })
+
+@app.route('/api/create-rich-menu', methods=['POST'])
+def api_create_rich_menu():
+    """API endpoint สำหรับสร้าง Rich Menu"""
+    if not LINE_BOT_AVAILABLE:
+        return jsonify({'error': 'LINE Bot not configured'}), 400
+    
+    rich_menu_id = create_rich_menu()
+    if rich_menu_id:
+        return jsonify({
+            'success': True,
+            'rich_menu_id': rich_menu_id,
+            'message': 'Rich Menu created successfully. Upload image at: https://developers.line.biz/console/'
+        })
+    else:
+        return jsonify({'error': 'Failed to create Rich Menu'}), 500
 
 @app.route('/predict', methods=['POST'])
 def predict():
@@ -373,7 +436,7 @@ def save_fire_report_from_session(user_id, session, reply_token, address=None):
                 "ลงแผนที่เรียบร้อยแล้ว\n\n"
                 f"📍 พิกัด:\n"
                 f"{session['latitude']:.6f}, {session['longitude']:.6f}\n\n"
-                f"🕐 เวลา: {datetime.now().strftime('%H:%M น.')}\n\n"
+                f"🕐 เวลา: {datetime.now(THAILAND_TZ).strftime('%d/%m/%Y %H:%M น.')}\n\n"
                 "━━━━━━━━━━━━━━━━\n\n"
                 "📍 ดูแผนที่:\n"
                 "https://project-pm25-1.onrender.com"
