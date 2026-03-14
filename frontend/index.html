@@ -347,7 +347,7 @@
                     </div>
                 </div>
             </div>
-            <div id="map" class="w-full h-[500px] relative"></div>
+            <div id="map" class="w-full h-[calc(100vh-400px)] min-h-[500px] relative"></div>
             <div class="p-4 bg-gray-50/50 border-t border-gray-100">
                 <div class="flex flex-wrap gap-4 text-xs text-gray-600">
                     <div class="flex items-center gap-2">
@@ -896,26 +896,37 @@
         }
 
         async function loadFireReports() {
+            console.log('📍 Loading fire reports...');
             try {
                 const response = await fetch('/api/fire-reports');
                 const data = await response.json();
                 
-                console.log('Fire reports response:', data); // Debug log
+                console.log('📊 Fire reports response:', data);
+                console.log('📊 Number of reports:', data.count);
                 
                 // API returns { data: [...], count: N } not { success: true, data: [...] }
                 if (data.data && Array.isArray(data.data)) {
                     const reports = data.data;
+                    console.log(`✅ Processing ${reports.length} fire reports`);
                     
                     // อัพเดทจำนวนจุด
                     document.getElementById('fire-count').textContent = `${reports.length} จุด`;
                     
                     // ล้าง markers เก่า
                     markersLayer.clearLayers();
+                    console.log('🗑️ Cleared old markers');
                     
                     // เพิ่ม marker แต่ละจุด
-                    reports.forEach(report => {
+                    reports.forEach((report, index) => {
                         const lat = report.latitude;
                         const lon = report.longitude;
+                        
+                        console.log(`📍 Report ${index + 1}:`, {
+                            lat,
+                            lon,
+                            image_url: report.image_url,
+                            created_at: report.created_at
+                        });
                         
                         if (lat && lon) {
                             // ใช้รูปภาพจริงแทนจุดกลม
@@ -1108,9 +1119,6 @@
             // แสดงข้อมูล
             renderDashboard(data);
 
-            // เริ่มต้นแผนที่ (Phase 2)
-            await initializeMap();
-
             // ปิดหน้าจอโหลด เปิดหน้าจอหลัก พร้อม Animation
             const loader = document.getElementById('loader');
             const appContent = document.getElementById('app-content');
@@ -1125,6 +1133,12 @@
                 appContent.style.animation = 'fadeIn 1s forwards';
                 
                 lucide.createIcons(); // รีเฟรช Icon
+                
+                // เริ่มต้นแผนที่หลังจาก DOM แสดงผลแล้ว (Phase 2)
+                setTimeout(async () => {
+                    console.log('🗺️ Starting map initialization...');
+                    await initializeMap();
+                }, 500);
                 
                 // เริ่ม Live Data Simulation (ทุก 5 วินาที)
                 simulationInterval = setInterval(simulateRealtimeUpdates, 5000);
