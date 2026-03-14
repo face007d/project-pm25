@@ -1,1563 +1,2180 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PM2.5 Smart Dashboard - Nakhon Phanom</title>
-    
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- Google Fonts: Prompt สำหรับภาษาไทย -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    
-    <!-- ApexCharts สำหรับวาดกราฟ -->
-    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
-    
-    <!-- Lucide Icons -->
-    <script src="https://unpkg.com/lucide@latest"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>พญานาคเฝ้าฟ้า — PM2.5 Air Quality & Fire Monitoring · นครพนม</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700;800&family=Cinzel:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/lucide@latest"></script>
+<style>
+/* ═══════════════════════════════════════
+   RESET & BASE
+═══════════════════════════════════════ */
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+html { scroll-behavior:smooth; font-size:14px; }
+body {
+  font-family:'Noto Sans Thai', sans-serif;
+  background: #F9F8F4;
+  color: #1C1A17;
+  line-height: 1.6;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
 
-    <style>
-        body { 
-            font-family: 'Prompt', sans-serif; 
-            background-color: #0A0E27;
-            background-image: 
-                radial-gradient(circle at 20% 50%, rgba(120, 119, 198, 0.15) 0%, transparent 50%),
-                radial-gradient(circle at 80% 80%, rgba(255, 107, 107, 0.15) 0%, transparent 50%),
-                radial-gradient(circle at 40% 20%, rgba(72, 219, 251, 0.15) 0%, transparent 50%);
-            min-height: 100vh;
-        }
-        
-        /* ซ่อนหน้าจอโหลดเมื่อพร้อม */
-        #loader { transition: opacity 0.8s ease-out; }
-        .hidden-fade { opacity: 0; pointer-events: none; }
-        
-        /* Cyber Grid Background */
-        body::before {
-            content: '';
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-image: 
-                linear-gradient(rgba(72, 219, 251, 0.03) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(72, 219, 251, 0.03) 1px, transparent 1px);
-            background-size: 50px 50px;
-            pointer-events: none;
-            z-index: 0;
-        }
-        
-        /* Animations */
-        @keyframes float {
-            0%, 100% { transform: translateY(0px); }
-            50% { transform: translateY(-10px); }
-        }
-        
-        @keyframes pulse-glow {
-            0%, 100% { box-shadow: 0 0 20px rgba(72, 219, 251, 0.3); }
-            50% { box-shadow: 0 0 40px rgba(72, 219, 251, 0.6); }
-        }
-        
-        @keyframes shimmer {
-            0% { background-position: -200% 0; }
-            100% { background-position: 200% 0; }
-        }
-        
-        @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(30px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-        
-        @keyframes slideInRight {
-            from {
-                opacity: 0;
-                transform: translateX(50px);
-            }
-            to {
-                opacity: 1;
-                transform: translateX(0);
-            }
-        }
-        
-        @keyframes countUp {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-        
-        @keyframes scan {
-            0% { transform: translateY(-100%); }
-            100% { transform: translateY(100%); }
-        }
-        
-        @keyframes borderGlow {
-            0%, 100% { border-color: rgba(72, 219, 251, 0.3); }
-            50% { border-color: rgba(72, 219, 251, 0.8); }
-        }
-        
-        /* Cyber Cards */
-        .cyber-card {
-            background: linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.95) 100%);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border: 1px solid rgba(72, 219, 251, 0.2);
-            box-shadow: 
-                0 8px 32px rgba(0, 0, 0, 0.4),
-                inset 0 1px 0 rgba(255, 255, 255, 0.05);
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .cyber-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 2px;
-            background: linear-gradient(90deg, transparent, rgba(72, 219, 251, 0.8), transparent);
-            animation: scan 3s infinite;
-        }
-        
-        .cyber-card:hover {
-            border-color: rgba(72, 219, 251, 0.5);
-            box-shadow: 
-                0 12px 48px rgba(0, 0, 0, 0.5),
-                0 0 30px rgba(72, 219, 251, 0.2),
-                inset 0 1px 0 rgba(255, 255, 255, 0.1);
-            transform: translateY(-4px);
-            transition: all 0.3s ease;
-        }
-        
-        /* Neon Text */
-        .neon-text {
-            color: #48DBFB;
-            text-shadow: 
-                0 0 10px rgba(72, 219, 251, 0.5),
-                0 0 20px rgba(72, 219, 251, 0.3),
-                0 0 30px rgba(72, 219, 251, 0.2);
-        }
-        
-        .neon-text-pink {
-            color: #FF6B6B;
-            text-shadow: 
-                0 0 10px rgba(255, 107, 107, 0.5),
-                0 0 20px rgba(255, 107, 107, 0.3);
-        }
-        
-        .neon-text-purple {
-            color: #A78BFA;
-            text-shadow: 
-                0 0 10px rgba(167, 139, 250, 0.5),
-                0 0 20px rgba(167, 139, 250, 0.3);
-        }
-        
-        /* Holographic Effect */
-        .holographic {
-            background: linear-gradient(
-                135deg,
-                rgba(72, 219, 251, 0.1) 0%,
-                rgba(167, 139, 250, 0.1) 25%,
-                rgba(255, 107, 107, 0.1) 50%,
-                rgba(72, 219, 251, 0.1) 75%,
-                rgba(167, 139, 250, 0.1) 100%
-            );
-            background-size: 400% 400%;
-            animation: holographic-shift 10s ease infinite;
-        }
-        
-        @keyframes holographic-shift {
-            0%, 100% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-        }
-        
-        /* Staggered Entrance */
-        .stagger-item {
-            opacity: 0;
-            animation: fadeInUp 0.8s ease-out forwards;
-        }
-        .stagger-item:nth-child(1) { animation-delay: 0.1s; }
-        .stagger-item:nth-child(2) { animation-delay: 0.2s; }
-        .stagger-item:nth-child(3) { animation-delay: 0.3s; }
-        .stagger-item:nth-child(4) { animation-delay: 0.4s; }
-        .stagger-item:nth-child(5) { animation-delay: 0.5s; }
-        .stagger-item:nth-child(6) { animation-delay: 0.6s; }
-        
-        /* Cyber Button */
-        .cyber-button {
-            background: linear-gradient(135deg, rgba(72, 219, 251, 0.2) 0%, rgba(72, 219, 251, 0.1) 100%);
-            border: 1px solid rgba(72, 219, 251, 0.5);
-            color: #48DBFB;
-            position: relative;
-            overflow: hidden;
-            transition: all 0.3s ease;
-        }
-        
-        .cyber-button::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(72, 219, 251, 0.3), transparent);
-            transition: left 0.5s;
-        }
-        
-        .cyber-button:hover::before {
-            left: 100%;
-        }
-        
-        .cyber-button:hover {
-            background: linear-gradient(135deg, rgba(72, 219, 251, 0.3) 0%, rgba(72, 219, 251, 0.2) 100%);
-            box-shadow: 0 0 20px rgba(72, 219, 251, 0.4);
-            transform: translateY(-2px);
-        }
-        
-        /* Status Indicators */
-        .status-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            animation: pulse-glow 2s infinite;
-        }
-        
-        /* Cyber Header */
-        header {
-            background: linear-gradient(135deg, rgba(15, 23, 42, 0.98) 0%, rgba(30, 41, 59, 0.98) 100%);
-            backdrop-filter: blur(20px);
-            border-bottom: 1px solid rgba(72, 219, 251, 0.2);
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
-        }
-        
-        /* Leaflet Popup Styling */
-        .leaflet-popup-content-wrapper {
-            background: linear-gradient(135deg, rgba(15, 23, 42, 0.98) 0%, rgba(30, 41, 59, 0.98) 100%);
-            border: 1px solid rgba(72, 219, 251, 0.3);
-            border-radius: 16px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.5), 0 0 20px rgba(72, 219, 251, 0.2);
-            color: #E2E8F0;
-        }
-        
-        .leaflet-popup-content {
-            margin: 16px;
-            font-family: 'Prompt', sans-serif;
-        }
-        
-        .leaflet-popup-tip {
-            background: rgba(15, 23, 42, 0.98);
-            box-shadow: 0 3px 14px rgba(0,0,0,0.3);
-        }
-        
-        .custom-fire-marker {
-            transition: all 0.3s ease;
-            filter: drop-shadow(0 0 10px rgba(255, 107, 107, 0.6));
-        }
-        
-        .custom-fire-marker:hover {
-            z-index: 1000 !important;
-            filter: drop-shadow(0 0 20px rgba(255, 107, 107, 0.9));
-        }
-        
-        /* Particle Effect */
-        .particle {
-            position: absolute;
-            border-radius: 50%;
-            pointer-events: none;
-        }
-        
-        /* Data Stream Effect */
-        .data-stream {
-            position: absolute;
-            top: 0;
-            right: 0;
-            width: 2px;
-            height: 100%;
-            background: linear-gradient(180deg, transparent, rgba(72, 219, 251, 0.5), transparent);
-            animation: stream-flow 2s linear infinite;
-        }
-        
-        @keyframes stream-flow {
-            0% { transform: translateY(-100%); }
-            100% { transform: translateY(100%); }
-        }
-        
-        /* Glitch Effect for Critical Values */
-        .glitch {
-            position: relative;
-        }
-        
-        .glitch::before,
-        .glitch::after {
-            content: attr(data-text);
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-        }
-        
-        .glitch::before {
-            left: 2px;
-            text-shadow: -2px 0 #FF6B6B;
-            clip: rect(24px, 550px, 90px, 0);
-            animation: glitch-anim 3s infinite linear alternate-reverse;
-        }
-        
-        .glitch::after {
-            left: -2px;
-            text-shadow: -2px 0 #48DBFB;
-            clip: rect(85px, 550px, 140px, 0);
-            animation: glitch-anim 2s infinite linear alternate-reverse;
-        }
-        
-        @keyframes glitch-anim {
-            0% { clip: rect(random(100) + px, 9999px, random(100) + px, 0); }
-            100% { clip: rect(random(100) + px, 9999px, random(100) + px, 0); }
-        }
-    </style>
+/* ═══════════════════════════════════════
+   DESIGN TOKENS — WHITE GOLD
+═══════════════════════════════════════ */
+:root {
+  /* Gold palette */
+  --gold:       #C9971C;
+  --gold-lt:    #D4AF37;
+  --gold-dk:    #9A7210;
+  --gold-pale:  #FDF8E6;
+  --gold-pale2: #FAF3D0;
+  --gold-border:rgba(212,175,55,0.25);
+  --gold-glow:  rgba(201,151,28,0.15);
 
-    <!-- 🚀 CYBER THEME OVERRIDE -->
-    <style>
-        /* Apply Cyber Card Style to all glass-card */
-        .glass-card {
-            background: linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.95) 100%) !important;
-            backdrop-filter: blur(20px) !important;
-            border: 1px solid rgba(72, 219, 251, 0.2) !important;
-            box-shadow: 
-                0 8px 32px rgba(0, 0, 0, 0.4),
-                inset 0 1px 0 rgba(255, 255, 255, 0.05) !important;
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .glass-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 2px;
-            background: linear-gradient(90deg, transparent, rgba(72, 219, 251, 0.8), transparent);
-            animation: scan 3s infinite;
-            z-index: 1;
-        }
-        
-        .golden-glow-hover:hover {
-            border-color: rgba(72, 219, 251, 0.5) !important;
-            box-shadow: 
-                0 12px 48px rgba(0, 0, 0, 0.5),
-                0 0 30px rgba(72, 219, 251, 0.2),
-                inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
-            transform: translateY(-4px) !important;
-        }
-        
-        /* Text Colors */
-        .text-\[#1A2530\],
-        h1, h2, h3, h4, h5, h6 {
-            color: #E2E8F0 !important;
-        }
-        
-        .text-gray-500,
-        .text-gray-600 {
-            color: #94A3B8 !important;
-        }
-        
-        /* Neon Accents */
-        .text-gradient-gold {
-            background: linear-gradient(90deg, #48DBFB, #A78BFA, #FF6B6B, #48DBFB) !important;
-            background-size: 200% auto !important;
-            -webkit-background-clip: text !important;
-            background-clip: text !important;
-            color: transparent !important;
-            animation: shimmer 3s linear infinite !important;
-        }
-        
-        /* Cyber Header */
-        header {
-            background: linear-gradient(135deg, rgba(15, 23, 42, 0.98) 0%, rgba(30, 41, 59, 0.98) 100%) !important;
-            border-bottom: 1px solid rgba(72, 219, 251, 0.2) !important;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5) !important;
-        }
-        
-        /* Buttons */
-        .premium-button,
-        button {
-            background: linear-gradient(135deg, rgba(72, 219, 251, 0.2) 0%, rgba(72, 219, 251, 0.1) 100%) !important;
-            border: 1px solid rgba(72, 219, 251, 0.5) !important;
-            color: #48DBFB !important;
-        }
-        
-        .premium-button:hover,
-        button:hover {
-            background: linear-gradient(135deg, rgba(72, 219, 251, 0.3) 0%, rgba(72, 219, 251, 0.2) 100%) !important;
-            box-shadow: 0 0 20px rgba(72, 219, 251, 0.4) !important;
-        }
-        
-        /* Table */
-        table {
-            background: transparent !important;
-        }
-        
-        thead {
-            background: rgba(15, 23, 42, 0.5) !important;
-            border-bottom: 1px solid rgba(72, 219, 251, 0.2) !important;
-        }
-        
-        thead th {
-            color: #48DBFB !important;
-        }
-        
-        tbody tr {
-            border-bottom: 1px solid rgba(72, 219, 251, 0.1) !important;
-            transition: all 0.3s ease;
-        }
-        
-        tbody tr:hover {
-            background: rgba(72, 219, 251, 0.05) !important;
-        }
-        
-        tbody td {
-            color: #E2E8F0 !important;
-        }
-        
-        /* Status Badges - Neon Style */
-        .bg-green-100 {
-            background: rgba(34, 197, 94, 0.2) !important;
-            border: 1px solid rgba(34, 197, 94, 0.5);
-        }
-        
-        .text-green-700,
-        .text-green-600 {
-            color: #4ADE80 !important;
-            text-shadow: 0 0 10px rgba(74, 222, 128, 0.5);
-        }
-        
-        .bg-yellow-100 {
-            background: rgba(234, 179, 8, 0.2) !important;
-            border: 1px solid rgba(234, 179, 8, 0.5);
-        }
-        
-        .text-yellow-700,
-        .text-yellow-600 {
-            color: #FACC15 !important;
-            text-shadow: 0 0 10px rgba(250, 204, 21, 0.5);
-        }
-        
-        .bg-orange-100 {
-            background: rgba(249, 115, 22, 0.2) !important;
-            border: 1px solid rgba(249, 115, 22, 0.5);
-        }
-        
-        .text-orange-700,
-        .text-orange-600 {
-            color: #FB923C !important;
-            text-shadow: 0 0 10px rgba(251, 146, 60, 0.5);
-        }
-        
-        .bg-red-100 {
-            background: rgba(239, 68, 68, 0.2) !important;
-            border: 1px solid rgba(239, 68, 68, 0.5);
-        }
-        
-        .text-red-700,
-        .text-red-600,
-        .text-red-500 {
-            color: #F87171 !important;
-            text-shadow: 0 0 10px rgba(248, 113, 113, 0.5);
-        }
-        
-        .bg-purple-100 {
-            background: rgba(168, 85, 247, 0.2) !important;
-            border: 1px solid rgba(168, 85, 247, 0.5);
-        }
-        
-        .text-purple-700,
-        .text-purple-600 {
-            color: #C084FC !important;
-            text-shadow: 0 0 10px rgba(192, 132, 252, 0.5);
-        }
-        
-        /* Loader */
-        #loader {
-            background: #0A0E27 !important;
-        }
-        
-        /* Map */
-        #map {
-            border: 1px solid rgba(72, 219, 251, 0.3) !important;
-            box-shadow: 0 0 20px rgba(72, 219, 251, 0.1) !important;
-        }
-        
-        /* Gradient Backgrounds */
-        .bg-gradient-to-r,
-        .bg-gradient-to-br,
-        .bg-gradient-to-bl,
-        .bg-gradient-to-t {
-            background-image: linear-gradient(135deg, rgba(72, 219, 251, 0.1) 0%, rgba(167, 139, 250, 0.1) 100%) !important;
-        }
-        
-        /* Stats Cards */
-        .bg-blue-50,
-        .bg-green-50,
-        .bg-purple-50,
-        .bg-pink-50,
-        .bg-red-50,
-        .bg-orange-50,
-        .bg-gray-50 {
-            background: rgba(15, 23, 42, 0.3) !important;
-        }
-        
-        /* Borders */
-        .border-gray-100,
-        .border-gray-50 {
-            border-color: rgba(72, 219, 251, 0.2) !important;
-        }
-        
-        /* Icons - Neon Glow */
-        [data-lucide] {
-            filter: drop-shadow(0 0 5px currentColor);
-        }
-        
-        /* Naga Image Container */
-        .glass-card img {
-            filter: brightness(0.9) contrast(1.1);
-        }
-        
-        /* Add Cyber Corner Accents */
-        .glass-card::after {
-            content: '';
-            position: absolute;
-            top: 0;
-            right: 0;
-            width: 100px;
-            height: 100px;
-            background: linear-gradient(135deg, transparent 50%, rgba(72, 219, 251, 0.1) 50%);
-            pointer-events: none;
-        }
-        
-        /* Pulse Animation for Live Data */
-        .animate-ping {
-            animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite !important;
-        }
-        
-        @keyframes ping {
-            75%, 100% {
-                transform: scale(2);
-                opacity: 0;
-            }
-        }
-    </style>
+  /* Neutrals */
+  --white:      #FFFFFF;
+  --cream:      #F9F8F4;
+  --cream2:     #F2EFE6;
+  --stone:      #1C1A17;
+  --stone-2:    #3D3A34;
+  --stone-3:    #706B60;
+  --stone-4:    #A89E8E;
+  --stone-5:    #D4CDBF;
+
+  /* Accents */
+  --blue:       #2563eb;
+  --blue-lt:    #EFF6FF;
+  --blue-bd:    #BFDBFE;
+  --red:        #DC2626;
+  --red-lt:     #FFF5F5;
+
+  /* Glass */
+  --glass-bg:   rgba(255,255,255,0.82);
+  --glass-bd:   rgba(212,175,55,0.18);
+
+  /* Shadows */
+  --shadow-xs:  0 1px 2px rgba(28,26,23,0.06);
+  --shadow-sm:  0 2px 8px rgba(28,26,23,0.07), 0 1px 3px rgba(28,26,23,0.04);
+  --shadow-md:  0 6px 20px rgba(28,26,23,0.09), 0 2px 6px rgba(28,26,23,0.05);
+  --shadow-lg:  0 16px 48px rgba(28,26,23,0.11), 0 4px 12px rgba(28,26,23,0.06);
+  --shadow-gold:0 4px 20px rgba(201,151,28,0.18), 0 1px 4px rgba(201,151,28,0.1);
+
+  /* Radius */
+  --r:    14px;
+  --r-sm: 8px;
+  --r-lg: 20px;
+}
+
+/* ═══════════════════════════════════════
+   BACKGROUND TEXTURE
+═══════════════════════════════════════ */
+body::before {
+  content:'';
+  position:fixed; inset:0; pointer-events:none; z-index:0;
+  background:
+    radial-gradient(ellipse 70% 50% at 5% 0%,   rgba(212,175,55,0.07) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 40% at 95% 90%,  rgba(201,151,28,0.05) 0%, transparent 55%),
+    radial-gradient(ellipse 30% 30% at 50% 50%,  rgba(249,248,244,0.0) 0%, transparent 70%);
+}
+body::after {
+  content:'';
+  position:fixed; inset:0; pointer-events:none; z-index:0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 300 300' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.018'/%3E%3C/svg%3E");
+  background-size:200px;
+  opacity:0.7;
+}
+
+/* ═══════════════════════════════════════
+   LOADER
+═══════════════════════════════════════ */
+#loader {
+  position:fixed; inset:0; z-index:9999;
+  background: #F9F8F4;
+  display:flex; flex-direction:column;
+  align-items:center; justify-content:center; gap:20px;
+  transition: opacity 0.8s ease, visibility 0.8s ease;
+}
+#loader.fade-out { opacity:0; visibility:hidden; }
+.loader-ring-wrap { position:relative; width:80px; height:80px; }
+.loader-ring-svg { transform:rotate(-90deg); animation:loader-spin 1.4s linear infinite; }
+@keyframes loader-spin { to { transform:rotate(270deg); } }
+.loader-text { font-family:'Cinzel',serif; font-size:22px; font-weight:700; letter-spacing:0.08em; color:var(--stone); }
+.loader-sub   { font-size:12px; color:var(--stone-3); letter-spacing:0.12em; }
+
+/* ═══════════════════════════════════════
+   GOLD LINE DECORATIONS
+═══════════════════════════════════════ */
+.gold-line-h {
+  height:1px;
+  background:linear-gradient(90deg, transparent, var(--gold-lt), var(--gold), var(--gold-lt), transparent);
+}
+.gold-line-top {
+  height:3px;
+  background:linear-gradient(90deg, transparent 0%, var(--gold-lt) 20%, var(--gold) 50%, var(--gold-lt) 80%, transparent 100%);
+}
+.gold-text {
+  background:linear-gradient(135deg, #9A7210 0%, #C9971C 30%, #D4AF37 55%, #E8C84A 70%, #B8860B 100%);
+  -webkit-background-clip:text; background-clip:text; color:transparent;
+}
+
+/* ═══════════════════════════════════════
+   TOPBAR
+═══════════════════════════════════════ */
+#topbar {
+  position:sticky; top:0; z-index:300;
+  background: rgba(255,255,255,0.94);
+  backdrop-filter: blur(20px);
+  border-bottom:1px solid var(--gold-border);
+  box-shadow: var(--shadow-sm), 0 1px 0 rgba(212,175,55,0.08);
+}
+.topbar-inner {
+  max-width:1440px; margin:0 auto;
+  display:flex; align-items:center; gap:0;
+  padding:0 24px; height:58px;
+}
+.brand { display:flex; align-items:center; gap:10px; text-decoration:none; }
+.brand-mark {
+  width:36px; height:36px; border-radius:10px; flex-shrink:0;
+  background:linear-gradient(135deg, #B8860B, #D4AF37, #C9971C);
+  display:flex; align-items:center; justify-content:center;
+  box-shadow: var(--shadow-gold);
+  position:relative; overflow:hidden;
+}
+.brand-mark::after {
+  content:''; position:absolute; inset:0;
+  background:linear-gradient(135deg,rgba(255,255,255,0.3) 0%,transparent 60%);
+}
+.brand-mark svg { width:18px; height:18px; color:#fff; position:relative; z-index:1; }
+.brand-name { font-family:'Cinzel',serif; font-size:16px; font-weight:700; color:var(--stone); letter-spacing:0.03em; }
+.brand-province {
+  font-size:10px; color:var(--white); font-weight:700;
+  background:linear-gradient(135deg,#B8860B,#D4AF37); border-radius:5px; padding:2px 8px; margin-left:6px;
+  letter-spacing:0.05em; box-shadow:0 1px 4px rgba(184,134,11,0.3);
+}
+.topbar-nav { display:flex; gap:2px; margin-left:32px; }
+.nav-btn {
+  padding:6px 14px; border-radius:8px; font-size:13px; font-weight:500;
+  color:var(--stone-3); cursor:pointer; border:none; background:none;
+  font-family:inherit; transition:all 0.15s;
+}
+.nav-btn:hover { background:var(--cream2); color:var(--stone); }
+.nav-btn.act {
+  background:var(--gold-pale); color:var(--gold-dk);
+  font-weight:700; border:1px solid rgba(201,151,28,0.2);
+}
+.topbar-right { display:flex; align-items:center; gap:10px; margin-left:auto; }
+.live-tag {
+  display:flex; align-items:center; gap:5px;
+  background:#F0FDF4; border:1px solid #BBF7D0; border-radius:20px;
+  padding:3px 10px; font-size:11px; font-weight:700; color:#15803D;
+}
+.blink-dot {
+  width:6px; height:6px; border-radius:50%; background:#22C55E;
+  animation:blink 1.4s ease-in-out infinite;
+}
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+.clock-tag {
+  font-family:'IBM Plex Mono',monospace; font-size:12px; font-weight:500;
+  color:var(--stone-3); background:var(--cream2); border:1px solid var(--stone-5);
+  border-radius:8px; padding:4px 12px;
+}
+
+/* ═══════════════════════════════════════
+   HERO BANNER
+═══════════════════════════════════════ */
+#hero {
+  position:relative; overflow:hidden;
+  background:linear-gradient(120deg, #1C1A17 0%, #2D2820 40%, #1A1510 100%);
+  padding:20px 24px 16px;
+}
+#hero::before {
+  content:''; position:absolute; inset:0; pointer-events:none;
+  background:
+    radial-gradient(ellipse 60% 80% at 15% 50%, rgba(212,175,55,0.12) 0%, transparent 55%),
+    radial-gradient(ellipse 40% 60% at 85% 30%, rgba(201,151,28,0.08) 0%, transparent 50%);
+}
+.hero-inner { max-width:1440px; margin:0 auto; position:relative; z-index:1; }
+.hero-top { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+.hero-title-block {}
+.hero-eyebrow {
+  font-size:10px; letter-spacing:0.15em; text-transform:uppercase;
+  color:rgba(212,175,55,0.6); margin-bottom:4px;
+  font-family:'IBM Plex Mono',monospace;
+}
+.hero-title {
+  font-family:'Cinzel',serif; font-size:22px; font-weight:700; letter-spacing:0.04em;
+  background:linear-gradient(135deg,#D4AF37 0%,#F0C842 45%,#C9971C 100%);
+  -webkit-background-clip:text; background-clip:text; color:transparent;
+}
+.hero-sub { font-size:12px; color:rgba(255,255,255,0.5); margin-top:2px; }
+.hero-search {
+  display:flex; align-items:center; gap:10px;
+  background:rgba(255,255,255,0.06); border:1px solid rgba(212,175,55,0.2);
+  border-radius:10px; padding:10px 16px; max-width:560px; flex:1; margin-left:32px;
+  cursor:pointer; transition:all 0.2s;
+}
+.hero-search:hover { background:rgba(212,175,55,0.08); border-color:rgba(212,175,55,0.35); }
+.hero-search svg { width:14px; height:14px; color:rgba(212,175,55,0.6); flex-shrink:0; }
+.hero-search span { font-size:13px; color:rgba(255,255,255,0.5); flex:1; }
+
+/* ═══════════════════════════════════════
+   WEATHER STRIP
+═══════════════════════════════════════ */
+#wstrip {
+  background:var(--white);
+  border-bottom:1px solid var(--gold-border);
+  box-shadow: var(--shadow-xs);
+}
+.wstrip-inner {
+  max-width:1440px; margin:0 auto;
+  display:flex; align-items:center;
+  padding:0 24px; overflow-x:auto;
+}
+.wchip {
+  display:flex; align-items:center; gap:7px;
+  padding:10px 18px; border-right:1px solid var(--stone-5);
+  font-size:12px; color:var(--stone-3); white-space:nowrap; flex-shrink:0;
+  transition:background 0.15s;
+}
+.wchip:hover { background:var(--gold-pale); }
+.wchip svg { width:14px; height:14px; flex-shrink:0; }
+.wchip .wv { font-weight:700; color:var(--stone); font-family:'IBM Plex Mono',monospace; margin-left:2px; }
+.wsep { flex:1; min-width:16px; }
+.wupdate {
+  display:flex; align-items:center; gap:5px;
+  font-size:11px; color:var(--stone-4); padding:10px 0 10px 18px; white-space:nowrap;
+}
+
+/* ═══════════════════════════════════════
+   PAGE LAYOUT
+═══════════════════════════════════════ */
+#page { max-width:1440px; margin:0 auto; padding:20px 24px 32px; position:relative; z-index:1; }
+
+/* ═══════════════════════════════════════
+   GLASS CARD BASE
+═══════════════════════════════════════ */
+.glass-card {
+  background:var(--glass-bg);
+  backdrop-filter:blur(16px) saturate(1.3);
+  -webkit-backdrop-filter:blur(16px) saturate(1.3);
+  border:1px solid var(--glass-bd);
+  border-radius:var(--r);
+  box-shadow:var(--shadow-md);
+  overflow:hidden;
+  position:relative;
+  transition:box-shadow 0.25s ease, transform 0.25s ease;
+}
+.glass-card::before {
+  content:''; position:absolute; inset:0;
+  background:linear-gradient(135deg, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0.0) 55%);
+  pointer-events:none; z-index:0;
+}
+.glass-card > * { position:relative; z-index:1; }
+.glass-card:hover { box-shadow:var(--shadow-lg), var(--shadow-gold); }
+
+/* Gold top accent line */
+.card-gold-top { height:2px; background:linear-gradient(90deg,transparent,var(--gold-lt),var(--gold),var(--gold-lt),transparent); }
+
+/* Card header */
+.card-header {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:13px 18px; border-bottom:1px solid rgba(212,175,55,0.12);
+  background:rgba(253,248,230,0.3);
+}
+.card-title {
+  display:flex; align-items:center; gap:8px;
+  font-size:13px; font-weight:700; color:var(--stone);
+}
+.card-title svg { width:14px; height:14px; }
+.card-title-gold { color:var(--gold-dk); }
+.card-sub { font-size:11px; color:var(--stone-4); }
+
+/* ═══════════════════════════════════════
+   TOP ROW — Map + Right Panel
+═══════════════════════════════════════ */
+.top-row {
+  display:grid;
+  grid-template-columns:1fr 380px;
+  gap:18px;
+  margin-bottom:18px;
+}
+
+/* ═══════════════════════════════════════
+   MAP
+═══════════════════════════════════════ */
+#map-card { display:flex; flex-direction:column; }
+#map { flex:1; min-height:440px; width:100%; }
+.leaflet-popup-content-wrapper {
+  border:1px solid var(--gold-border) !important;
+  border-radius:12px !important;
+  box-shadow:var(--shadow-lg) !important;
+  font-family:'Noto Sans Thai',sans-serif !important;
+}
+.map-legend-bar {
+  display:flex; align-items:center; gap:8px; flex-wrap:wrap;
+  padding:9px 16px; border-top:1px solid rgba(212,175,55,0.12);
+  background:rgba(253,248,230,0.4); font-size:11px;
+}
+.leg-item { display:flex; align-items:center; gap:4px; color:var(--stone-3); }
+.leg-dot { width:11px; height:11px; border-radius:3px; flex-shrink:0; }
+
+/* ═══════════════════════════════════════
+   RIGHT PANEL
+═══════════════════════════════════════ */
+#rpanel { display:flex; flex-direction:column; gap:14px; }
+
+/* ── AQI RING CARD (from command_center) ── */
+.aqi-ring-card {
+  background:var(--glass-bg);
+  backdrop-filter:blur(16px);
+  border:1px solid var(--glass-bd);
+  border-radius:var(--r);
+  box-shadow:var(--shadow-md);
+  overflow:hidden;
+}
+.aqi-ring-top {
+  padding:13px 18px;
+  border-bottom:1px solid rgba(212,175,55,0.12);
+  background:rgba(253,248,230,0.3);
+  display:flex; align-items:center; justify-content:space-between;
+}
+.aqi-ring-label { font-size:12px; font-weight:700; color:var(--stone); }
+.aqi-ring-loc {
+  display:flex; align-items:center; gap:5px;
+  font-size:11px; color:var(--stone-3); margin-top:2px;
+}
+.aqi-ring-loc svg { width:11px; height:11px; color:var(--gold); }
+
+/* Ring meter */
+.aqi-ring-body { padding:16px 18px; }
+.aqi-ring-row { display:flex; align-items:center; gap:18px; margin-bottom:14px; }
+.aqi-ring-wrap { position:relative; width:130px; height:130px; flex-shrink:0; }
+#aqi-ring-svg { transform:rotate(-90deg); }
+#aqi-ring-track { fill:none; stroke:var(--cream2); stroke-width:9; stroke-linecap:round; }
+#aqi-ring-fill {
+  fill:none; stroke-width:9; stroke-linecap:round;
+  stroke-dasharray:360; stroke-dashoffset:360;
+  transition:stroke-dashoffset 1.3s cubic-bezier(0.4,0,0.2,1), stroke 0.8s ease;
+}
+.aqi-ring-inner {
+  position:absolute; inset:0;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+}
+.aqi-ring-num {
+  font-size:32px; line-height:1; font-weight:800;
+  font-family:'IBM Plex Mono',monospace; letter-spacing:-1px;
+}
+.aqi-ring-unit { font-size:9px; color:var(--stone-4); margin-top:1px; }
+.aqi-ring-emoji { font-size:14px; margin-top:2px; }
+
+/* Right side of ring */
+.aqi-ring-info {}
+.aqi-badge {
+  display:inline-flex; align-items:center; gap:6px;
+  border-radius:20px; padding:5px 14px;
+  font-size:12px; font-weight:700; margin-bottom:8px;
+  border:1px solid transparent;
+  transition:all 0.5s ease;
+}
+.aqi-advice { font-size:11px; color:var(--stone-3); line-height:1.6; }
+
+/* PM Scale bar */
+.pm-bar-wrap { margin-top:12px; }
+.pm-bar-label { display:flex; justify-content:space-between; margin-bottom:4px; }
+.pm-bar-label span { font-size:9px; color:var(--stone-4); }
+.pm-bar-track {
+  height:7px; border-radius:4px;
+  background:linear-gradient(90deg,#b7e4a0 0%,#f9e07f 33%,#f5a623 55%,#e05a2b 75%,#c0392b 100%);
+  position:relative;
+}
+.pm-bar-needle {
+  position:absolute; top:50%; width:3px; height:13px;
+  background:var(--stone); border-radius:2px; transform:translate(-50%,-50%);
+  box-shadow:0 0 0 2px var(--white), 0 0 0 3px var(--stone);
+  transition:left 1s cubic-bezier(0.4,0,0.2,1);
+}
+
+/* Stats row */
+.stat-row { display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-top:12px; }
+.stat-box {
+  background:rgba(253,248,230,0.6); border:1px solid rgba(212,175,55,0.15);
+  border-radius:var(--r-sm); padding:8px 10px; text-align:center;
+  transition:background 0.2s;
+}
+.stat-box:hover { background:var(--gold-pale); }
+.stat-v { font-size:17px; font-weight:800; color:var(--stone); font-family:'IBM Plex Mono',monospace; }
+.stat-k { font-size:9px; color:var(--stone-4); text-transform:uppercase; letter-spacing:0.07em; margin-top:1px; }
+
+/* ── ENV CARDS STRIP (from command_center) ── */
+.env-strip {
+  display:grid; grid-template-columns:repeat(4,1fr); gap:10px;
+  margin-bottom:18px;
+}
+.env-card {
+  background:var(--glass-bg);
+  backdrop-filter:blur(12px);
+  border:1px solid var(--glass-bd);
+  border-radius:var(--r);
+  padding:14px 16px;
+  box-shadow:var(--shadow-sm);
+  transition:all 0.25s;
+  position:relative; overflow:hidden;
+}
+.env-card::before {
+  content:''; position:absolute; top:0; left:0; right:0; height:2px;
+  background:linear-gradient(90deg,transparent,var(--gold-lt),transparent);
+}
+.env-card:hover { box-shadow:var(--shadow-md), var(--shadow-gold); transform:translateY(-2px); }
+.env-icon-wrap {
+  width:38px; height:38px; border-radius:10px;
+  display:flex; align-items:center; justify-content:center; margin-bottom:10px;
+  background:linear-gradient(135deg,rgba(212,175,55,0.12),rgba(212,175,55,0.04));
+  border:1px solid rgba(212,175,55,0.18);
+}
+.env-icon-wrap svg { width:18px; height:18px; }
+.env-big { font-size:28px; font-weight:800; line-height:1; letter-spacing:-0.5px; color:var(--stone); }
+.env-unit { font-size:12px; color:var(--stone-3); font-weight:400; }
+.env-label { font-size:10px; color:var(--stone-4); text-transform:uppercase; letter-spacing:0.1em; margin-top:6px; }
+.env-sub { font-size:11px; color:var(--stone-3); margin-top:3px; }
+.sparkbar { display:flex; align-items:flex-end; gap:2px; height:22px; margin-top:10px; }
+.sparkbar-col { flex:1; border-radius:2px; min-height:3px; transition:height 0.4s ease; background:rgba(201,151,28,0.3); }
+
+/* Wind compass */
+.compass-mini { position:relative; width:50px; height:50px; }
+.compass-ring {
+  width:100%; height:100%; border-radius:50%;
+  border:1.5px solid rgba(212,175,55,0.3);
+  display:flex; align-items:center; justify-content:center;
+  background:rgba(253,248,230,0.5);
+}
+.compass-needle-wrap { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; transition:transform 0.8s ease; }
+.compass-needle { width:2.5px; height:18px; border-radius:2px; background:linear-gradient(to bottom,var(--red) 50%,var(--stone-4) 50%); }
+.compass-dirs { position:absolute; font-size:8px; font-weight:700; color:var(--stone-4); font-family:'IBM Plex Mono',monospace; }
+.compass-dirs .n { top:2px; left:50%; transform:translateX(-50%); color:var(--gold-dk); }
+.compass-dirs .s { bottom:2px; left:50%; transform:translateX(-50%); }
+.compass-dirs .e { right:3px; top:50%; transform:translateY(-50%); }
+.compass-dirs .w { left:3px; top:50%; transform:translateY(-50%); }
+
+/* ═══════════════════════════════════════
+   CHART CARD
+═══════════════════════════════════════ */
+.chart-card {
+  background:var(--glass-bg); backdrop-filter:blur(16px);
+  border:1px solid var(--glass-bd); border-radius:var(--r);
+  box-shadow:var(--shadow-md); overflow:hidden; margin-bottom:18px;
+}
+.chart-card-header {
+  padding:14px 20px 12px; border-bottom:1px solid rgba(212,175,55,0.12);
+  background:rgba(253,248,230,0.3);
+  display:flex; align-items:flex-start; justify-content:space-between;
+}
+.chart-card-title { font-size:14px; font-weight:800; color:var(--stone); margin-bottom:2px; }
+.chart-card-sub   { font-size:11px; color:var(--stone-3); }
+.chart-legend-row { display:flex; gap:14px; align-items:center; flex-wrap:wrap; }
+.cl-item { display:flex; align-items:center; gap:5px; font-size:11px; color:var(--stone-3); }
+.cl-bar  { width:10px; height:10px; border-radius:3px; }
+.cl-dash { width:20px; height:3px; border-radius:2px;
+  background:repeating-linear-gradient(90deg,#3b82f6 0,#3b82f6 4px,transparent 4px,transparent 8px); }
+.day-badge-row { display:flex; gap:8px; padding:10px 20px 0; flex-wrap:wrap; }
+.day-badge {
+  display:flex; align-items:center; gap:5px;
+  padding:4px 12px; border-radius:20px; font-size:11px; font-weight:600;
+  border:1px solid var(--stone-5); background:rgba(255,255,255,0.5); color:var(--stone-3);
+}
+.day-badge.today { background:var(--gold-pale); border-color:rgba(201,151,28,0.3); color:var(--gold-dk); }
+.day-badge.tomorrow { background:#FFF7ED; border-color:#FED7AA; color:#C2410C; }
+.day-badge svg { width:11px; height:11px; }
+.chart-body { padding:6px 14px 8px; }
+.chart-footer {
+  padding:8px 20px 12px; display:flex; align-items:center; gap:18px;
+  border-top:1px solid rgba(212,175,55,0.1); flex-wrap:wrap;
+  background:rgba(253,248,230,0.2);
+}
+.cf-stat { text-align:center; }
+.cf-val { font-size:14px; font-weight:800; font-family:'IBM Plex Mono',monospace; color:var(--stone); }
+.cf-key { font-size:10px; color:var(--stone-4); }
+.cf-div { width:1px; height:28px; background:rgba(212,175,55,0.2); }
+
+/* ═══════════════════════════════════════
+   BOTTOM ROW — Table + Fire + Stations
+═══════════════════════════════════════ */
+.bottom-row {
+  display:grid;
+  grid-template-columns:1fr 280px 280px;
+  gap:18px;
+}
+
+/* ─── TABLE ─── */
+.tbl-wrap { overflow-x:auto; }
+table { width:100%; border-collapse:collapse; }
+thead { background:rgba(253,248,230,0.5); }
+thead th {
+  padding:9px 13px; text-align:left;
+  font-size:10px; font-weight:700; color:var(--stone-3);
+  letter-spacing:0.07em; text-transform:uppercase;
+  border-bottom:2px solid rgba(212,175,55,0.18); white-space:nowrap;
+}
+thead th.num { text-align:center; }
+.fc-head { background:rgba(255,247,237,0.5) !important; color:#C2410C !important; }
+tbody tr { border-bottom:1px solid rgba(212,175,55,0.08); transition:background 0.15s; }
+tbody tr:last-child { border-bottom:none; }
+tbody tr:hover { background:rgba(253,248,230,0.5); }
+tbody tr.hl { background:rgba(253,248,230,0.4); }
+tbody tr.hl td.pname { color:var(--gold-dk); font-weight:800; }
+tbody td { padding:9px 13px; font-size:13px; vertical-align:middle; }
+tbody td.pname { font-weight:600; color:var(--stone); }
+tbody td.num { text-align:center; }
+.pm-chip {
+  display:inline-block; padding:3px 9px; border-radius:5px;
+  font-size:12px; font-weight:700; min-width:40px; text-align:center;
+  font-family:'IBM Plex Mono',monospace;
+}
+.trend-cell { display:flex; align-items:center; gap:4px; }
+.act-link {
+  display:inline-flex; align-items:center; gap:4px;
+  font-size:11px; font-weight:600; color:var(--gold-dk);
+  padding:3px 9px; border-radius:6px;
+  border:1px solid rgba(201,151,28,0.25);
+  background:var(--gold-pale); cursor:pointer; white-space:nowrap;
+  transition:all 0.15s;
+}
+.act-link:hover { background:var(--gold-pale2); border-color:rgba(201,151,28,0.4); }
+.act-link svg { width:11px; height:11px; }
+
+/* ─── FIRE PANEL ─── */
+.fire-card { display:flex; flex-direction:column; }
+.fire-header {
+  padding:12px 14px; border-bottom:1px solid #FEE2E2; background:#FFF5F5;
+  display:flex; align-items:center; justify-content:space-between;
+}
+.fire-title { display:flex; align-items:center; gap:6px; font-size:13px; font-weight:700; color:#991B1B; }
+.fire-badge { background:#FEE2E2; color:#B91C1C; border-radius:10px; padding:1px 8px; font-size:11px; font-weight:700; }
+.fire-list { padding:10px 12px; display:flex; flex-direction:column; gap:6px; overflow-y:auto; max-height:350px; flex:1; }
+.fire-list::-webkit-scrollbar { width:3px; }
+.fire-list::-webkit-scrollbar-thumb { background:var(--stone-5); border-radius:2px; }
+.fire-item {
+  display:flex; align-items:flex-start; gap:8px;
+  background:var(--white); border:1px solid #FEE2E2; border-radius:var(--r-sm); padding:8px 10px;
+  cursor:pointer; transition:all 0.15s; animation:fadeSlideUp 0.4s ease both;
+}
+.fire-item:hover { background:#FFF5F5; border-color:#FCA5A5; }
+@keyframes fadeSlideUp { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:none} }
+.fire-icon-wrap { width:26px; height:26px; border-radius:6px; background:#FEE2E2; display:flex; align-items:center; justify-content:center; font-size:13px; flex-shrink:0; }
+.fire-info { flex:1; min-width:0; }
+.fire-name { font-size:12px; font-weight:700; color:var(--stone); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.fire-meta { font-size:10px; color:var(--stone-4); margin-top:1px; }
+.fire-sev { border-radius:5px; padding:2px 7px; font-size:10px; font-weight:700; flex-shrink:0; }
+
+/* ─── STATION LIST (from command_center) ─── */
+.station-list { padding:10px 12px; display:flex; flex-direction:column; gap:5px; overflow-y:auto; flex:1; max-height:350px; }
+.station-list::-webkit-scrollbar { width:3px; }
+.station-list::-webkit-scrollbar-thumb { background:var(--stone-5); border-radius:2px; }
+.station-row {
+  display:flex; align-items:center; gap:8px;
+  padding:8px 10px; border-radius:var(--r-sm);
+  border:1px solid var(--glass-bd); background:rgba(255,255,255,0.5);
+  transition:all 0.2s; cursor:pointer;
+  animation:fadeSlideUp 0.4s ease both;
+}
+.station-row:hover { background:var(--gold-pale); border-color:rgba(212,175,55,0.3); }
+.station-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; transition:all 0.3s; }
+.station-dot-pulse { animation:stPulse 2.5s ease-out infinite; }
+@keyframes stPulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+.station-avg-row {
+  padding:8px 14px; border-top:1px solid var(--glass-bd);
+  background:rgba(253,248,230,0.3);
+  display:flex; align-items:center; justify-content:space-between;
+  font-size:11px; color:var(--stone-3);
+}
+
+/* ═══════════════════════════════════════
+   FORECAST CARD (from command_center)
+═══════════════════════════════════════ */
+.fc-row {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:8px 12px; border-radius:var(--r-sm);
+  background:rgba(255,255,255,0.45); border:1px solid var(--glass-bd);
+  transition:background 0.2s; margin-bottom:5px;
+}
+.fc-row:hover { background:var(--gold-pale); }
+.fc-time { font-family:'IBM Plex Mono',monospace; font-size:12px; font-weight:600; color:var(--stone); min-width:52px; }
+.fc-bar-wrap { flex:1; height:6px; background:var(--cream2); border-radius:3px; margin:0 10px; overflow:hidden; }
+.fc-bar-fill  { height:100%; border-radius:3px; transition:width 0.8s ease; }
+.fc-val-tag   { font-family:'IBM Plex Mono',monospace; font-size:12px; font-weight:700; min-width:38px; text-align:right; }
+
+/* ═══════════════════════════════════════
+   REAL-TIME SECTION — from index.html
+═══════════════════════════════════════ */
+.realtime-row {
+  display:grid; grid-template-columns:1fr 420px;
+  gap:18px; margin-bottom:18px;
+}
+.api-badge {
+  display:inline-flex; align-items:center; gap:5px;
+  background:rgba(253,248,230,0.8); border:1px solid rgba(201,151,28,0.2);
+  border-radius:20px; padding:3px 10px; font-size:10px; font-weight:700; color:var(--gold-dk);
+}
+.api-badge svg { width:11px; height:11px; }
+
+/* Count-up number */
+@keyframes countUp { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:none} }
+.count-up { animation:countUp 0.6s ease forwards; }
+
+/* ═══════════════════════════════════════
+   FOOTER
+═══════════════════════════════════════ */
+#footer {
+  background:var(--stone);
+  border-top:1px solid rgba(212,175,55,0.2);
+  padding:16px 24px;
+}
+.footer-inner {
+  max-width:1440px; margin:0 auto;
+  display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;
+}
+.src-row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-size:11px; color:rgba(255,255,255,0.45); }
+.src-badge {
+  background:rgba(212,175,55,0.12); border:1px solid rgba(212,175,55,0.2);
+  border-radius:5px; padding:2px 8px; font-size:10px; font-weight:700;
+  color:rgba(212,175,55,0.7);
+}
+.footer-copy { font-size:11px; color:rgba(255,255,255,0.3); font-family:'IBM Plex Mono',monospace; }
+
+/* ═══════════════════════════════════════
+   LEAFLET CUSTOM
+═══════════════════════════════════════ */
+.lp-name { font-weight:700; font-size:13px; margin-bottom:7px; color:var(--stone); }
+.lp-row { display:flex; justify-content:space-between; align-items:center; font-size:11px; margin-bottom:3px; color:var(--stone-3); }
+.lp-row b { color:var(--stone); font-weight:700; }
+@keyframes pulse-r { 0%{transform:scale(1);opacity:0.6} 100%{transform:scale(2);opacity:0} }
+
+/* ═══════════════════════════════════════
+   DOWNLOAD BUTTON
+═══════════════════════════════════════ */
+.btn-gold {
+  display:inline-flex; align-items:center; gap:6px;
+  padding:6px 14px; border-radius:8px; font-size:12px; font-weight:700;
+  color:var(--gold-dk); background:var(--gold-pale);
+  border:1px solid rgba(201,151,28,0.25); cursor:pointer;
+  font-family:inherit; transition:all 0.15s;
+}
+.btn-gold:hover { background:var(--gold-pale2); border-color:rgba(201,151,28,0.4); box-shadow:var(--shadow-gold); }
+.btn-gold svg { width:12px; height:12px; }
+
+/* Section divider */
+.section-label {
+  display:flex; align-items:center; gap:10px;
+  font-size:11px; font-weight:700; color:var(--stone-4);
+  letter-spacing:0.12em; text-transform:uppercase;
+  margin-bottom:12px;
+}
+.section-label::after { content:''; flex:1; height:1px; background:var(--glass-bd); }
+
+/* ═══════════════════════════════════════
+   ANIMATIONS
+═══════════════════════════════════════ */
+@keyframes fadeInUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:none} }
+.fade-in-up { opacity:0; animation:fadeInUp 0.6s ease forwards; }
+.fade-in-up:nth-child(1) { animation-delay:0.05s; }
+.fade-in-up:nth-child(2) { animation-delay:0.12s; }
+.fade-in-up:nth-child(3) { animation-delay:0.19s; }
+.fade-in-up:nth-child(4) { animation-delay:0.26s; }
+
+/* Tooltip override */
+.apexcharts-tooltip { font-family:'Noto Sans Thai',sans-serif !important; }
+
+/* ── Fire popup custom style ── */
+.fire-popup-custom .leaflet-popup-content-wrapper {
+  padding:0 !important;
+  border-radius:12px !important;
+  overflow:hidden !important;
+  border:1px solid rgba(239,68,68,0.25) !important;
+  box-shadow:0 12px 40px rgba(0,0,0,0.15), 0 4px 12px rgba(239,68,68,0.1) !important;
+}
+.fire-popup-custom .leaflet-popup-content {
+  margin:0 !important;
+  width:260px !important;
+}
+.fire-popup-custom .leaflet-popup-tip {
+  background:white !important;
+  box-shadow:0 3px 8px rgba(0,0,0,0.1) !important;
+}
+/* Station popup */
+.leaflet-popup-content-wrapper {
+  border:1px solid rgba(212,175,55,0.2) !important;
+  border-radius:12px !important;
+  box-shadow:0 8px 28px rgba(28,26,23,0.12) !important;
+  font-family:'Noto Sans Thai',sans-serif !important;
+}
+.leaflet-popup-content { font-family:'Noto Sans Thai',sans-serif !important; }
+
+/* Mobile responsive */
+@media(max-width:1200px) {
+  .bottom-row { grid-template-columns:1fr 260px; }
+  .bottom-row > .glass-card:last-child { grid-column:1/-1; }
+}
+@media(max-width:900px) {
+  .top-row { grid-template-columns:1fr; }
+  .env-strip { grid-template-columns:repeat(2,1fr); }
+  .bottom-row { grid-template-columns:1fr; }
+  .realtime-row { grid-template-columns:1fr; }
+}
+/* LINE section responsive */
+@media(max-width:780px) {
+  [style*="grid-template-columns:1fr 1fr"] { grid-template-columns:1fr !important; }
+}
+</style>
 </head>
-<body class="text-gray-800 relative min-h-screen overflow-x-hidden">
+<body>
 
-    <!-- แถบบาร์สีทองด้านบนสุด (Gold Top Bar) -->
-    <div class="w-full h-10 bg-[#C29B44] border-b border-yellow-600/30 shadow-sm relative z-50"></div>
+<!-- ══════ LOADER ══════ -->
+<div id="loader">
+  <div class="loader-ring-wrap">
+    <svg class="loader-ring-svg" viewBox="0 0 80 80" width="80" height="80">
+      <circle cx="40" cy="40" r="34" fill="none" stroke="#F2EFE6" stroke-width="5"/>
+      <circle cx="40" cy="40" r="34" fill="none" stroke="url(#lgrad)" stroke-width="5" stroke-linecap="round" stroke-dasharray="60 154"/>
+      <defs>
+        <linearGradient id="lgrad" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stop-color="#C9971C"/>
+          <stop offset="100%" stop-color="#D4AF37"/>
+        </linearGradient>
+      </defs>
+    </svg>
+  </div>
+  <div class="loader-text gold-text">พญานาคเฝ้าฟ้า</div>
+  <div class="loader-sub">PM2.5 FORECASTING & FIRE MONITORING · กำลังโหลดข้อมูล</div>
+</div>
 
-    <!-- Loading Screen แบบหรูหรา -->
-    <div id="loader" class="fixed inset-0 bg-white z-50 flex flex-col items-center justify-center">
-        <div class="relative w-24 h-24 mb-6">
-            <div class="absolute inset-0 border-4 border-yellow-100 rounded-full"></div>
-            <div class="absolute inset-0 border-4 border-[#C29B44] rounded-full border-t-transparent animate-spin"></div>
-            <i data-lucide="wind" class="absolute inset-0 m-auto text-[#C29B44] w-8 h-8 animate-pulse"></i>
+<!-- ══════ TOPBAR ══════ -->
+<div id="topbar">
+  <div class="topbar-inner">
+    <a class="brand" href="#">
+      <div class="brand-mark">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9.59 4.59A2 2 0 1 1 11 8H2m10.59 11.41A2 2 0 1 0 14 16H2m15.73-8.27A2.5 2.5 0 1 1 19.5 12H2"/></svg>
+      </div>
+      <span class="brand-name">พญานาคเฝ้าฟ้า</span>
+      <span class="brand-province">นครพนม</span>
+    </a>
+    <nav class="topbar-nav">
+      <button class="nav-btn act">ภาพรวม</button>
+      <button class="nav-btn">แผนที่</button>
+      <button class="nav-btn">พยากรณ์</button>
+      <button class="nav-btn">สถิติ</button>
+      <button class="nav-btn">รายงาน</button>
+    </nav>
+    <div class="topbar-right">
+      <div class="live-tag"><div class="blink-dot"></div>LIVE</div>
+      <div class="clock-tag" id="clock">00:00:00</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ HERO ══════ -->
+<div id="hero">
+  <div class="hero-inner">
+    <div class="hero-top">
+      <div class="hero-title-block">
+        <div class="hero-eyebrow">PM2.5 Forecasting & Fire Monitoring System</div>
+        <div class="hero-title">พญานาคเฝ้าฟ้า — จังหวัดนครพนม</div>
+        <div class="hero-sub">ข้อมูลเรียลไทม์จาก WAQI · LSTM Model พยากรณ์ 3 วัน · รายงานจุดไฟไหม้จากประชาชน</div>
+        <div style="display:flex;align-items:center;gap:10px;margin-top:14px;flex-wrap:wrap;">
+          <a href="https://line.me/R/ti/p/@726lnjeu" target="_blank" style="display:inline-flex;align-items:center;gap:8px;background:#06C755;border-radius:10px;padding:9px 18px;font-size:13px;font-weight:700;color:#fff;text-decoration:none;box-shadow:0 4px 14px rgba(6,199,85,0.35);transition:all 0.2s;border:1px solid rgba(255,255,255,0.2);" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 6px 20px rgba(6,199,85,0.45)'" onmouseout="this.style.transform='';this.style.boxShadow='0 4px 14px rgba(6,199,85,0.35)'">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="#fff"><path d="M19.365 9.863c.349 0 .63.285.63.631 0 .345-.281.63-.63.63H17.61v1.125h1.755c.349 0 .63.283.63.63 0 .344-.281.629-.63.629h-2.386c-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.627-.63h2.386c.349 0 .63.285.63.63 0 .349-.281.63-.63.63H17.61v1.125h1.755zm-3.855 3.016c0 .27-.174.51-.432.596-.064.021-.133.031-.199.031-.211 0-.391-.09-.51-.25l-2.443-3.317v2.94c0 .344-.279.629-.631.629-.346 0-.626-.285-.626-.629V8.108c0-.27.173-.51.43-.595.06-.023.136-.033.194-.033.195 0 .375.104.495.254l2.462 3.33V8.108c0-.345.282-.63.63-.63.345 0 .63.285.63.63v4.771zm-5.741 0c0 .344-.282.629-.631.629-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.627-.63.349 0 .631.285.631.63v4.771zm-2.466.629H4.917c-.345 0-.63-.285-.63-.629V8.108c0-.345.285-.63.63-.63.348 0 .63.285.63.63v4.141h1.756c.348 0 .629.283.629.63 0 .344-.282.629-.629.629M24 10.314C24 4.943 18.615.572 12 .572S0 4.943 0 10.314c0 4.811 4.27 8.842 10.035 9.608.391.082.923.258 1.058.59.12.301.079.766.038 1.08l-.164 1.02c-.045.301-.24 1.186 1.049.645 1.291-.539 6.916-4.078 9.436-6.975C23.176 14.393 24 12.458 24 10.314"/></svg>
+            เพิ่มเพื่อน LINE OA
+          </a>
+          <div style="font-size:11px;color:rgba(255,255,255,0.5);font-family:'IBM Plex Mono',monospace;">@726lnjeu · พญานาคเฝ้าฟ้า</div>
+          <a href="https://project-pm25.onrender.com" target="_blank" style="display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,0.08);border:1px solid rgba(212,175,55,0.25);border-radius:10px;padding:9px 16px;font-size:12px;font-weight:600;color:rgba(255,255,255,0.7);text-decoration:none;transition:all 0.2s;" onmouseover="this.style.background='rgba(212,175,55,0.12)'" onmouseout="this.style.background='rgba(255,255,255,0.08)'">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><circle cx="12" cy="12" r="10"/><line x1="2" x2="22" y1="12" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+            project-pm25.onrender.com
+          </a>
         </div>
-        <h2 class="text-2xl font-bold text-gradient-gold tracking-wide">NAKHON PHANOM</h2>
-        <p class="text-gray-500 mt-2 font-medium">กำลังเตรียมข้อมูลระบบพยากรณ์อัจฉริยะ...</p>
+      </div>
+      <div class="hero-search">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <span>ค้นหาด้วยชื่อ ตำบล อำเภอ หรือจังหวัด</span>
+      </div>
+    </div>
+    <div class="gold-line-h" style="opacity:0.4;margin-top:12px;"></div>
+  </div>
+</div>
+
+<!-- ══════ WEATHER STRIP ══════ -->
+<div id="wstrip">
+  <div class="wstrip-inner">
+    <div class="wchip">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#D97706" stroke-width="2"><path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z"/></svg>
+      อุณหภูมิ <span class="wv" id="wt-temp">34.2 °C</span>
+    </div>
+    <div class="wchip">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#3B82F6" stroke-width="2"><path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z"/></svg>
+      ความชื้น <span class="wv" id="wt-hum">62%</span>
+    </div>
+    <div class="wchip">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#64748B" stroke-width="2"><path d="M9.59 4.59A2 2 0 1 1 11 8H2m10.59 11.41A2 2 0 1 0 14 16H2m15.73-8.27A2.5 2.5 0 1 1 19.5 12H2"/></svg>
+      ลม <span class="wv" id="wt-wind">12.5 กม./ชม.</span>
+    </div>
+    <div class="wchip">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#64748B" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+      ทัศนวิสัย <span class="wv" id="wt-vis">4.2 กม.</span>
+    </div>
+    <div class="wchip">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#64748B" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      ความดัน <span class="wv" id="wt-press">1008 hPa</span>
+    </div>
+    <div class="wchip" style="color:#DC2626;">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#DC2626" stroke-width="2"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>
+      จุดความร้อน <span class="wv" style="color:#DC2626;">5 จุด</span>
+    </div>
+    <div class="wsep"></div>
+    <div class="wupdate">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      อัปเดต: <span id="wt-time">วันเสาร์ที่ 14 มี.ค. 2569 เวลา 18:00 น.</span>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ PAGE ══════ -->
+<div id="page">
+
+  <!-- ─────── REAL-TIME DATA ROW (from index.html) ─────── -->
+  <div class="section-label">
+    <span>ข้อมูลเรียลไทม์จาก API</span>
+    <div class="api-badge">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="11" height="11"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      WAQI · อัปเดตสดทุก 5 วินาที
+    </div>
+  </div>
+
+  <div class="realtime-row fade-in-up">
+    <!-- Realtime AQI from API -->
+    <div class="glass-card" style="padding:20px;">
+      <div class="card-gold-top"></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+        <div>
+          <div style="font-size:12px;font-weight:700;color:var(--stone);margin-bottom:4px;">📡 ค่า PM2.5 จาก WAQI API — นครพนม</div>
+          <div style="font-size:11px;color:var(--stone-4);" id="api-date">กำลังโหลด...</div>
+        </div>
+        <div class="api-badge" id="api-status"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="11" height="11"><path d="M21.5 2l-5 10M12 2l5 10M2.5 2l5 10M17.5 12H9l-7 10h20l-5-10"/></svg>กำลังดึงข้อมูล...</div>
+      </div>
+      <!-- PM bar indicator -->
+      <div style="background:rgba(212,175,55,0.06);border:1px solid var(--glass-bd);border-radius:10px;padding:16px;margin-bottom:14px;">
+        <div style="display:flex;align-items:flex-end;gap:12px;margin-bottom:12px;">
+          <div style="font-size:52px;line-height:1;font-weight:800;font-family:'IBM Plex Mono',monospace;letter-spacing:-2px;" id="current-pm25-val">—</div>
+          <div style="padding-bottom:6px;">
+            <div style="font-size:11px;color:var(--stone-4);">µg/m³ · PM2.5</div>
+            <div id="current-pm25-badge" style="display:inline-flex;align-items:center;gap:5px;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:700;color:#fff;background:#94A3B8;margin-top:4px;transition:all 0.5s;">
+              <span>กำลังโหลด...</span>
+            </div>
+          </div>
+        </div>
+        <div style="font-size:11px;color:var(--stone-4);margin-bottom:6px;display:flex;justify-content:space-between;">
+          <span>ดีมาก</span><span>ปานกลาง</span><span>เริ่มมีผล</span><span>ไม่ดี</span><span>อันตราย</span>
+        </div>
+        <div style="height:7px;border-radius:4px;background:linear-gradient(90deg,#28b4d8 0%,#2ecc71 20%,#f1c40f 45%,#e67e22 70%,#e74c3c 100%);position:relative;">
+          <div id="indicator-marker" style="position:absolute;top:50%;left:0%;width:3px;height:13px;background:var(--stone);border-radius:2px;transform:translate(-50%,-50%);box-shadow:0 0 0 2px var(--white),0 0 0 3px var(--stone);transition:left 1s cubic-bezier(0.4,0,0.2,1);"></div>
+        </div>
+        <div style="text-align:center;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--stone-4);margin-top:4px;" id="indicator-val">0.0</div>
+      </div>
+      <!-- Forecast table from API -->
+      <div style="overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;" id="api-table">
+          <thead>
+            <tr style="background:rgba(253,248,230,0.5);">
+              <th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:700;color:var(--stone-3);letter-spacing:0.07em;text-transform:uppercase;border-bottom:2px solid rgba(212,175,55,0.18);">วันที่</th>
+              <th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:700;color:var(--stone-3);letter-spacing:0.07em;text-transform:uppercase;border-bottom:2px solid rgba(212,175,55,0.18);">ประเภท</th>
+              <th style="padding:8px 12px;text-align:right;font-size:10px;font-weight:700;color:var(--stone-3);letter-spacing:0.07em;text-transform:uppercase;border-bottom:2px solid rgba(212,175,55,0.18);">PM2.5</th>
+              <th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:700;color:var(--stone-3);letter-spacing:0.07em;text-transform:uppercase;border-bottom:2px solid rgba(212,175,55,0.18);">สถานะ</th>
+            </tr>
+          </thead>
+          <tbody id="table-body"></tbody>
+        </table>
+      </div>
     </div>
 
-    <!-- Golden Dust Particles (ใส่ผ่าน JS) -->
-    <div id="particles-container" class="fixed inset-0 pointer-events-none z-0"></div>
+    <!-- Realtime chart from API -->
+    <div class="glass-card" style="padding:16px;display:flex;flex-direction:column;">
+      <div class="card-gold-top"></div>
+      <div style="font-size:13px;font-weight:700;color:var(--stone);margin-bottom:4px;">📊 กราฟข้อมูลจากสถานีจริง</div>
+      <div style="font-size:11px;color:var(--stone-4);margin-bottom:10px;">ข้อมูลย้อนหลัง 4 วัน + พยากรณ์ล่วงหน้า 3 วัน</div>
+      <div id="chart-container" style="flex:1;"></div>
+      <div style="padding-top:8px;border-top:1px solid rgba(212,175,55,0.1);font-size:11px;color:var(--stone-4);display:flex;align-items:center;gap:6px;">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="11" height="11"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
+        ข้อมูลจาก WAQI API (World Air Quality Index)
+      </div>
+    </div>
+  </div>
 
-    <div id="app-content" class="max-w-6xl mx-auto space-y-8 relative z-10 p-4 md:p-8 hidden">
-        
-        <!-- --- ส่วนหัว (Hero Section): อลังการ ธีมสีทอง --- -->
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch stagger-item">
-            
-            <!-- กรอบรูปภาพพญาศรีสัตตนาคราช (Left Column) -->
-            <div class="lg:col-span-4 glass-card rounded-[2rem] p-3 flex flex-col items-center justify-center relative overflow-hidden group transition-all duration-500 hover:shadow-2xl hover:shadow-yellow-600/20 h-80 lg:h-auto">
-                <div class="absolute inset-0 bg-gradient-to-t from-[#1A2530]/90 via-transparent to-transparent z-10 rounded-[1.5rem]"></div>
-                <!-- รูปจาก URL ใหม่ที่คุณให้มา -->
-                <img src="https://pukmudmuangthai.com/wp-content/uploads/2020/10/Ao_izard-3422.jpg" alt="พญาศรีสัตตนาคราช นครพนม" class="object-cover object-center w-full h-full rounded-[1.5rem] relative z-0 group-hover:scale-110 transition-transform duration-700" />
-                
-                <!-- Badge เมือง -->
-                <div class="absolute bottom-6 left-6 z-20 transform translate-y-2 group-hover:translate-y-0 transition-transform duration-300">
-                    <div class="flex items-center gap-2 mb-1">
-                        <span class="relative flex h-3 w-3">
-                          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-400 opacity-75"></span>
-                          <span class="relative inline-flex rounded-full h-3 w-3 bg-[#D4AF37]"></span>
-                        </span>
-                        <p class="text-white font-bold text-xl tracking-wide drop-shadow-md">นครพนม</p>
-                    </div>
-                    <p class="text-yellow-300 text-sm font-medium tracking-widest uppercase ml-5">Nakhon Phanom</p>
-                </div>
-            </div>
+  <!-- ─────── TOP ROW: Map + AQI Panel ─────── -->
+  <div class="section-label">
+    <span>แผนที่และสถานีวัดสด</span>
+  </div>
 
-            <!-- การ์ดแสดงผลหลัก (Right Column) -->
-            <div class="lg:col-span-8 glass-card rounded-[2rem] p-8 md:p-10 relative overflow-hidden flex flex-col justify-between transition-all duration-300 hover:shadow-2xl">
-                <!-- ลายน้ำ -->
-                <div class="naga-watermark"></div>
+  <div class="top-row fade-in-up">
 
-                <!-- Header Location & Date -->
-                <div class="flex flex-col md:flex-row justify-between items-start md:items-center relative z-10 mb-8">
-                    <div>
-                        <h3 class="text-[#C29B44] font-bold tracking-widest text-sm uppercase mb-2 flex items-center">
-                            <i data-lucide="satellite" class="w-4 h-4 mr-2 animate-pulse"></i> AI Air Quality Forecast
-                        </h3>
-                        <div class="flex items-center text-3xl md:text-4xl font-extrabold text-[#1A2530]">
-                            <i data-lucide="map-pin" class="text-[#C29B44] mr-3 w-8 h-8 md:w-10 md:h-10 gimmick-float"></i>
-                            ริมฝั่งแม่น้ำโขง
-                        </div>
-                    </div>
-                    <div class="mt-4 md:mt-0 bg-gray-100/80 px-4 py-2 rounded-full border border-gray-200 shadow-inner">
-                        <p id="current-date" class="text-[#1A2530] font-semibold tracking-wide text-sm flex items-center">
-                            <i data-lucide="calendar" class="w-4 h-4 mr-2 text-[#C29B44]"></i> -
-                        </p>
-                    </div>
-                </div>
-
-                <!-- 2 Cards: วันนี้ vs พรุ่งนี้ (ดึงความโดดเด่นของพยากรณ์ขึ้นมา) -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 relative z-10 flex-grow">
-                    
-                    <!-- Card 1: ปัจจุบัน -->
-                    <div id="card-current" class="rounded-2xl p-6 border-l-8 relative overflow-hidden golden-glow-hover transition-all duration-300 bg-gray-50 border-gray-300 shadow-sm flex flex-col justify-center">
-                        <div class="flex items-center text-gray-500 font-semibold mb-2">
-                            <i data-lucide="clock" class="w-5 h-5 mr-2"></i> ปัจจุบัน
-                        </div>
-                        <div class="flex items-end gap-3 mt-2">
-                            <span id="current-pm25-val" class="text-6xl md:text-7xl font-black leading-none text-gray-800">0</span>
-                            <span class="text-xl text-gray-500 font-bold mb-2">µg/m³</span>
-                        </div>
-                        <div class="mt-4 inline-flex">
-                            <div id="current-pm25-badge" class="flex items-center px-4 py-2 rounded-xl text-sm font-bold text-white shadow-md bg-gray-400">
-                                <i id="current-pm25-icon" data-lucide="activity" class="w-5 h-5 mr-2"></i>
-                                <span id="current-pm25-text">รอประมวลผล</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Card 2: พยากรณ์พรุ่งนี้ (ไฮไลต์อลังการ) -->
-                    <div id="card-forecast" class="rounded-2xl p-6 border-l-8 relative overflow-hidden golden-glow-hover transition-all duration-300 bg-gradient-to-br from-[#FFFDF5] to-yellow-50/50 border-[#C29B44] shadow-md flex flex-col justify-center">
-                        <!-- แสงวิบวับในพื้นหลังการ์ดพยากรณ์ -->
-                        <div class="absolute top-0 right-0 p-4 opacity-20">
-                            <i data-lucide="sparkles" class="w-16 h-16 text-[#C29B44] animate-spin" style="animation-duration: 10s;"></i>
-                        </div>
-
-                        <div class="flex items-center text-[#C29B44] font-bold mb-2">
-                            <i data-lucide="trending-up" class="w-5 h-5 mr-2"></i> คาดการณ์พรุ่งนี้
-                        </div>
-                        <div class="flex items-end gap-3 mt-2">
-                            <span id="forecast-val" class="text-6xl md:text-7xl font-black leading-none text-transparent bg-clip-text bg-gradient-to-r from-[#D4AF37] to-[#B8860B]">0</span>
-                            <span class="text-xl text-gray-500 font-bold mb-2">µg/m³</span>
-                        </div>
-                        <div class="mt-4 inline-flex relative z-10">
-                            <div id="forecast-badge-status" class="flex items-center px-4 py-2 rounded-xl text-sm font-bold text-white shadow-md bg-[#C29B44]">
-                                <i id="forecast-icon" data-lucide="eye" class="w-5 h-5 mr-2"></i>
-                                <span id="forecast-text">วิเคราะห์ข้อมูล...</span>
-                            </div>
-                        </div>
-                    </div>
-
-                </div>
-            </div>
+    <!-- MAP -->
+    <div class="glass-card" id="map-card">
+      <div class="card-gold-top"></div>
+      <div class="card-header">
+        <div class="card-title">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+          <span class="card-title-gold">แผนที่คุณภาพอากาศ — จังหวัดนครพนม</span>
         </div>
+        <span class="card-sub">คลิกที่ marker เพื่อดูรายละเอียด</span>
+      </div>
+      <div id="map"></div>
+      <div class="map-legend-bar">
+        <span style="font-size:10px;font-weight:700;color:var(--stone-3);margin-right:4px;">ระดับ PM2.5:</span>
+        <div class="leg-item"><div class="leg-dot" style="background:#b7e4a0;"></div><span>ดี</span></div>
+        <div class="leg-item"><div class="leg-dot" style="background:#f9e07f;"></div><span>ปานกลาง</span></div>
+        <div class="leg-item"><div class="leg-dot" style="background:#f5a623;"></div><span>เริ่มมีผล</span></div>
+        <div class="leg-item"><div class="leg-dot" style="background:#e05a2b;"></div><span>ไม่ดี</span></div>
+        <div class="leg-item"><div class="leg-dot" style="background:#c0392b;"></div><span>อันตราย</span></div>
+        <div class="leg-item" style="margin-left:8px;"><div class="leg-dot" style="background:#ef4444;border-radius:50%;"></div><span>🔥 จุดความร้อน</span></div>
+      </div>
+    </div>
 
-        <!-- --- ระดับอันตราย (Color Bar Indicator) แบบอลังการขึ้น --- -->
-        <div class="glass-card p-8 rounded-[2rem] relative golden-glow-hover stagger-item">
-            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-end mb-6">
+    <!-- RIGHT PANEL -->
+    <div id="rpanel">
+
+      <!-- AQI RING CARD -->
+      <div class="aqi-ring-card">
+        <div class="card-gold-top"></div>
+        <div class="aqi-ring-top">
+          <div>
+            <div class="aqi-ring-label">คุณภาพอากาศ ณ ขณะนี้</div>
+            <div class="aqi-ring-loc">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+              <span>อ.เมืองนครพนม · 17.4065, 104.7686</span>
+            </div>
+          </div>
+          <div class="api-badge">สถานีหลัก</div>
+        </div>
+        <div class="aqi-ring-body">
+          <div class="aqi-ring-row">
+            <div class="aqi-ring-wrap">
+              <svg id="aqi-ring-svg" viewBox="0 0 130 130" width="130" height="130">
+                <circle id="aqi-ring-track" cx="65" cy="65" r="57"/>
+                <circle id="aqi-ring-fill"  cx="65" cy="65" r="57" stroke="#C9971C"/>
+              </svg>
+              <div class="aqi-ring-inner">
+                <div class="aqi-ring-num gold-text" id="aqi-num">—</div>
+                <div class="aqi-ring-unit">µg/m³</div>
+                <div class="aqi-ring-emoji" id="aqi-emoji">🌡️</div>
+              </div>
+            </div>
+            <div class="aqi-ring-info">
+              <div class="aqi-badge" id="aqi-badge" style="background:#E2E8F0;color:#64748B;">กำลังโหลด...</div>
+              <div class="aqi-advice" id="aqi-adv" style="font-size:11px;color:var(--stone-3);line-height:1.6;max-width:200px;"></div>
+            </div>
+          </div>
+          <div class="pm-bar-wrap">
+            <div class="pm-bar-label"><span>ดีมาก</span><span>ปานกลาง</span><span>เริ่มมีผล</span><span>ไม่ดี</span><span>อันตราย</span></div>
+            <div class="pm-bar-track"><div class="pm-bar-needle" id="pm-needle" style="left:0%;"></div></div>
+          </div>
+          <div class="stat-row">
+            <div class="stat-box"><div class="stat-v" id="s-avg">52.1</div><div class="stat-k">เฉลี่ย 24ชม.</div></div>
+            <div class="stat-box"><div class="stat-v" id="s-max">80.0</div><div class="stat-k">สูงสุดวันนี้</div></div>
+            <div class="stat-box"><div class="stat-v gold-text" id="s-aqi">153</div><div class="stat-k">AQI Index</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- FORECAST MINI (from command_center) -->
+      <div class="glass-card">
+        <div class="card-gold-top"></div>
+        <div class="card-header">
+          <div class="card-title">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+            <span class="card-title-gold">พยากรณ์รายชั่วโมง</span>
+          </div>
+          <span class="card-sub">ช่วงค่ำถึงพรุ่งนี้</span>
+        </div>
+        <div style="padding:12px 14px;" id="forecast-list"></div>
+      </div>
+
+    </div>
+  </div><!-- .top-row -->
+
+  <!-- ─────── ENV STRIP ─────── -->
+  <div class="section-label"><span>ข้อมูลสภาพอากาศ</span></div>
+
+  <div class="env-strip fade-in-up">
+    <!-- Temperature -->
+    <div class="env-card">
+      <div class="env-icon-wrap">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#D97706" stroke-width="2"><path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z"/></svg>
+      </div>
+      <div class="env-big"><span id="env-temp">34.2</span><span class="env-unit"> °C</span></div>
+      <div class="env-label">อุณหภูมิ</div>
+      <div class="env-sub" id="env-temp-sub">รู้สึกได้ 38°C · ร้อนจัด</div>
+      <div class="sparkbar" id="temp-spark"></div>
+    </div>
+    <!-- Humidity -->
+    <div class="env-card">
+      <div class="env-icon-wrap">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#3B82F6" stroke-width="2"><path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z"/></svg>
+      </div>
+      <div class="env-big"><span id="env-hum">62</span><span class="env-unit"> %</span></div>
+      <div class="env-label">ความชื้นสัมพัทธ์</div>
+      <div class="env-sub" id="env-hum-sub">ชื้นปานกลาง</div>
+      <div style="margin-top:10px;height:6px;background:var(--cream2);border-radius:3px;overflow:hidden;">
+        <div id="hum-bar" style="height:100%;border-radius:3px;background:linear-gradient(90deg,#3B82F6,#93C5FD);width:62%;transition:width 0.8s ease;"></div>
+      </div>
+    </div>
+    <!-- Wind -->
+    <div class="env-card">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:4px;">
+        <div class="env-icon-wrap">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#64748B" stroke-width="2"><path d="M9.59 4.59A2 2 0 1 1 11 8H2m10.59 11.41A2 2 0 1 0 14 16H2m15.73-8.27A2.5 2.5 0 1 1 19.5 12H2"/></svg>
+        </div>
+        <div class="compass-mini">
+          <div class="compass-ring"></div>
+          <div class="compass-dirs"><span class="n">N</span><span class="s">S</span><span class="e">E</span><span class="w">W</span></div>
+          <div class="compass-needle-wrap" id="compass-needle-wrap">
+            <div class="compass-needle"></div>
+          </div>
+        </div>
+      </div>
+      <div class="env-big"><span id="env-wind">12.5</span><span class="env-unit"> กม./ชม.</span></div>
+      <div class="env-label">ความเร็วลม</div>
+      <div class="env-sub" id="env-wind-dir">ทิศ NNE · ลมโชย</div>
+    </div>
+    <!-- Visibility + Pressure -->
+    <div class="env-card">
+      <div class="env-icon-wrap">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#6366F1" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+      </div>
+      <div class="env-big"><span id="env-vis">4.2</span><span class="env-unit"> กม.</span></div>
+      <div class="env-label">ทัศนวิสัย</div>
+      <div class="env-sub" id="env-vis-sub">ลดลงจากฝุ่น PM2.5</div>
+      <div style="margin-top:8px;display:flex;align-items:center;gap:8px;">
+        <div style="font-size:10px;color:var(--stone-4);">ความดัน</div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;color:var(--stone);" id="env-press">1008</div>
+        <div style="font-size:10px;color:var(--stone-4);">hPa</div>
+      </div>
+      <div class="sparkbar" id="vis-spark"></div>
+    </div>
+  </div>
+
+  <!-- ─────── CHART ROW ─────── -->
+  <div class="section-label"><span>แนวโน้มรายชั่วโมง</span></div>
+
+  <div class="chart-card fade-in-up">
+    <div class="card-gold-top"></div>
+    <div class="chart-card-header">
+      <div>
+        <div class="chart-card-title">📈 แนวโน้ม PM2.5 — รายชั่วโมง วันนี้ + คาดการณ์พรุ่งนี้</div>
+        <div class="chart-card-sub">ข้อมูล 24 ชั่วโมงที่ผ่านมา และการพยากรณ์ล่วงหน้า · สถานีเมืองนครพนม</div>
+      </div>
+      <div class="chart-legend-row">
+        <div class="cl-item"><div class="cl-bar" style="background:#C9971C;"></div>ข้อมูลจริง</div>
+        <div class="cl-item"><div class="cl-dash"></div>คาดการณ์ค่ำ</div>
+        <div class="cl-item"><div class="cl-bar" style="background:#93C5FD;"></div>พยากรณ์พรุ่งนี้</div>
+      </div>
+    </div>
+    <div class="day-badge-row">
+      <div class="day-badge today">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><rect width="18" height="18" x="3" y="4" rx="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
+        วันนี้ · 14 มี.ค. 2569
+      </div>
+      <div class="day-badge" style="background:#E0F2FE;border-color:#7DD3FC;color:#0369A1;">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+        คาดการณ์ช่วงค่ำ 19:00–21:00
+      </div>
+      <div class="day-badge tomorrow">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+        พยากรณ์พรุ่งนี้ · 15 มี.ค. 2569
+      </div>
+    </div>
+    <div class="chart-body">
+      <div id="apex-main"></div>
+    </div>
+    <div class="chart-footer">
+      <div class="cf-stat"><div class="cf-val" id="cf-avg">52.1</div><div class="cf-key">เฉลี่ย 24ชม.</div></div>
+      <div class="cf-div"></div>
+      <div class="cf-stat"><div class="cf-val" id="cf-max" style="color:#E05A2B;">80.0</div><div class="cf-key">สูงสุดวันนี้</div></div>
+      <div class="cf-div"></div>
+      <div class="cf-stat"><div class="cf-val" id="cf-min" style="color:#22C55E;">12.0</div><div class="cf-key">ต่ำสุดวันนี้</div></div>
+      <div class="cf-div"></div>
+      <div class="cf-stat"><div class="cf-val" style="color:#3B82F6;">44.0</div><div class="cf-key">คาดพรุ่งนี้ (เฉลี่ย)</div></div>
+      <div class="cf-div"></div>
+      <div style="flex:1;"></div>
+      <div style="display:flex;align-items:center;gap:6px;padding:4px 12px;border-radius:6px;background:var(--gold-pale);border:1px solid rgba(201,151,28,0.2);font-size:11px;color:var(--gold-dk);font-weight:700;">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+        แนวโน้มดีขึ้น
+      </div>
+    </div>
+  </div>
+
+  <!-- ─────── BOTTOM ROW: Table + Fire + Stations ─────── -->
+  <div class="section-label"><span>ข้อมูลรายอำเภอ และจุดความร้อน</span></div>
+
+  <div class="bottom-row fade-in-up">
+
+    <!-- TABLE -->
+    <div class="glass-card">
+      <div class="card-gold-top"></div>
+      <div class="card-header">
+        <div class="card-title">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18"/></svg>
+          <span class="card-title-gold">ข้อมูล PM2.5 จังหวัดนครพนม — รายอำเภอ</span>
+        </div>
+        <button class="btn-gold" onclick="handleDownloadCSV()">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+          ดาวน์โหลด CSV
+        </button>
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>อำเภอ</th>
+              <th class="num">ล่าสุด<br><span style="font-size:9px;font-weight:400;">µg/m³</span></th>
+              <th class="num fc-head">19:00</th>
+              <th class="num fc-head">20:00</th>
+              <th class="num fc-head">21:00</th>
+              <th class="num">เฉลี่ย<br><span style="font-size:9px;">24ชม.</span></th>
+              <th>แนวโน้ม</th>
+              <th>รายละเอียด</th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- FIRE PANEL -->
+    <div class="glass-card fire-card">
+      <div class="card-gold-top"></div>
+      <div class="fire-header">
+        <div class="fire-title">🔥 จุดความร้อน</div>
+        <span class="fire-badge" id="fire-count-badge">5 จุด</span>
+      </div>
+      <div class="fire-list" id="fire-list"></div>
+      <div style="padding:8px 12px 10px;border-top:1px solid #FEE2E2;background:#FFF5F5;font-size:10px;color:#B91C1C;display:flex;align-items:center;gap:5px;">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="11" height="11"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
+        ข้อมูลจาก FIRMS NASA · อัปเดตทุก 3 ชม.
+      </div>
+    </div>
+
+    <!-- STATION LIST (from command_center) -->
+    <div class="glass-card" style="display:flex;flex-direction:column;">
+      <div class="card-gold-top"></div>
+      <div class="card-header">
+        <div class="card-title">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" x2="4" y1="22" y2="15"/></svg>
+          <span class="card-title-gold">สถานีวัดอากาศ</span>
+        </div>
+        <span class="card-sub">Live · 5 สถานี</span>
+      </div>
+      <div class="station-list" id="station-list"></div>
+      <div class="station-avg-row">
+        <span>ค่าเฉลี่ยทุกสถานี</span>
+        <span style="font-family:'IBM Plex Mono',monospace;font-weight:800;color:var(--stone);" id="sb-avg">—</span>
+        <span style="font-size:10px;color:var(--stone-4);">µg/m³</span>
+      </div>
+    </div>
+
+</div><!-- .bottom-row -->
+
+  <!-- ─────── LINE OA SECTION ─────── -->
+  <div class="section-label" style="margin-top:8px;"><span>รายงานจุดไฟไหม้ผ่าน LINE OA</span></div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:24px;" class="fade-in-up">
+
+    <!-- LINE OA Card -->
+    <div class="glass-card" style="overflow:hidden;">
+      <div style="height:3px;background:linear-gradient(90deg,#06C755,#00B348,#06C755);"></div>
+      <div style="display:flex;gap:0;">
+        <!-- Left: green accent -->
+        <div style="width:5px;background:linear-gradient(to bottom,#06C755,#00B348);flex-shrink:0;"></div>
+        <div style="padding:20px 22px;flex:1;">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px;gap:12px;">
+            <div>
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+                <div style="width:38px;height:38px;background:#06C755;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 3px 10px rgba(6,199,85,0.3);">
+                  <svg viewBox="0 0 24 24" width="20" height="20" fill="#fff"><path d="M19.365 9.863c.349 0 .63.285.63.631 0 .345-.281.63-.63.63H17.61v1.125h1.755c.349 0 .63.283.63.63 0 .344-.281.629-.63.629h-2.386c-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.627-.63h2.386c.349 0 .63.285.63.63 0 .349-.281.63-.63.63H17.61v1.125h1.755zm-3.855 3.016c0 .27-.174.51-.432.596-.064.021-.133.031-.199.031-.211 0-.391-.09-.51-.25l-2.443-3.317v2.94c0 .344-.279.629-.631.629-.346 0-.626-.285-.626-.629V8.108c0-.27.173-.51.43-.595.06-.023.136-.033.194-.033.195 0 .375.104.495.254l2.462 3.33V8.108c0-.345.282-.63.63-.63.345 0 .63.285.63.63v4.771zm-5.741 0c0 .344-.282.629-.631.629-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.627-.63.349 0 .631.285.631.63v4.771zm-2.466.629H4.917c-.345 0-.63-.285-.63-.629V8.108c0-.345.285-.63.63-.63.348 0 .63.285.63.63v4.141h1.756c.348 0 .629.283.629.63 0 .344-.282.629-.629.629M24 10.314C24 4.943 18.615.572 12 .572S0 4.943 0 10.314c0 4.811 4.27 8.842 10.035 9.608.391.082.923.258 1.058.59.12.301.079.766.038 1.08l-.164 1.02c-.045.301-.24 1.186 1.049.645 1.291-.539 6.916-4.078 9.436-6.975C23.176 14.393 24 12.458 24 10.314"/></svg>
+                </div>
                 <div>
-                    <h3 class="font-bold text-[#1A2530] text-lg flex items-center">
-                        <i data-lucide="bar-chart-2" class="text-[#C29B44] mr-2"></i> มาตรฐานดัชนีคุณภาพอากาศ (AQI)
-                    </h3>
-                    <p class="text-sm text-gray-500 mt-1">เกณฑ์การเฝ้าระวังผลกระทบต่อสุขภาพ PM2.5</p>
+                  <div style="font-size:15px;font-weight:800;color:var(--stone);">พญานาคเฝ้าฟ้า</div>
+                  <div style="font-size:11px;color:var(--stone-4);font-family:'IBM Plex Mono',monospace;">LINE Official Account · @726lnjeu</div>
                 </div>
+              </div>
+              <div style="font-size:12px;color:var(--stone-3);line-height:1.7;max-width:380px;">
+                แจ้งเตือนคุณภาพอากาศ PM2.5 และรับรายงานจุดไฟไหม้จากประชาชน<br>
+                เชื่อมต่อกับระบบฐานข้อมูล Supabase และแสดงบนแผนที่อัตโนมัติ
+              </div>
             </div>
-            
-            <div class="relative w-full h-6 rounded-full flex overflow-hidden shadow-inner bg-gray-100">
-                <div class="h-full flex-1 bg-[#28b4d8] relative group"><div class="absolute inset-0 bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity"></div></div>
-                <div class="h-full flex-1 bg-[#2ecc71] relative group"><div class="absolute inset-0 bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity"></div></div>
-                <div class="h-full flex-1 bg-[#f1c40f] relative group"><div class="absolute inset-0 bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity"></div></div>
-                <div class="h-full flex-1 bg-[#e67e22] relative group"><div class="absolute inset-0 bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity"></div></div>
-                <div class="h-full flex-1 bg-[#e74c3c] relative group"><div class="absolute inset-0 bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity"></div></div>
+            <!-- QR placeholder -->
+            <div style="width:80px;height:80px;background:var(--gold-pale);border:2px dashed rgba(201,151,28,0.3);border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0;font-size:9px;color:var(--stone-4);text-align:center;gap:3px;">
+              <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#C9971C" stroke-width="1.5"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="3" height="3"/><rect x="18" y="14" width="3" height="3"/><rect x="14" y="18" width="3" height="3"/><rect x="18" y="18" width="3" height="3"/></svg>
+              <span>QR Code<br>@726lnjeu</span>
             </div>
-            
-            <!-- Marker Position (เข็มชี้) -->
-            <div class="relative w-full h-10 mt-2">
-                <div id="indicator-marker" class="absolute top-0 -ml-4 transition-all duration-1000 ease-out flex flex-col items-center" style="left: 0%;">
-                    <div class="w-0 h-0 border-l-[8px] border-l-transparent border-r-[8px] border-r-transparent border-b-[10px] border-b-[#1A2530] animate-bounce"></div>
-                    <div id="indicator-val" class="bg-[#1A2530] text-white text-sm font-bold px-4 py-1.5 rounded-lg shadow-xl mt-1 whitespace-nowrap border border-gray-600">
-                        0
-                    </div>
-                </div>
-            </div>
+          </div>
+          <a href="https://line.me/R/ti/p/@726lnjeu" target="_blank" style="display:inline-flex;align-items:center;gap:8px;background:#06C755;border-radius:10px;padding:10px 22px;font-size:13px;font-weight:700;color:#fff;text-decoration:none;box-shadow:0 4px 14px rgba(6,199,85,0.3);transition:all 0.2s;" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 6px 20px rgba(6,199,85,0.4)'" onmouseout="this.style.transform='';this.style.boxShadow='0 4px 14px rgba(6,199,85,0.3)'">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="#fff"><path d="M19.365 9.863c.349 0 .63.285.63.631 0 .345-.281.63-.63.63H17.61v1.125h1.755c.349 0 .63.283.63.63 0 .344-.281.629-.63.629h-2.386c-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.627-.63h2.386c.349 0 .63.285.63.63 0 .349-.281.63-.63.63H17.61v1.125h1.755zm-3.855 3.016c0 .27-.174.51-.432.596-.064.021-.133.031-.199.031-.211 0-.391-.09-.51-.25l-2.443-3.317v2.94c0 .344-.279.629-.631.629-.346 0-.626-.285-.626-.629V8.108c0-.27.173-.51.43-.595.06-.023.136-.033.194-.033.195 0 .375.104.495.254l2.462 3.33V8.108c0-.345.282-.63.63-.63.345 0 .63.285.63.63v4.771zm-5.741 0c0 .344-.282.629-.631.629-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.627-.63.349 0 .631.285.631.63v4.771zm-2.466.629H4.917c-.345 0-.63-.285-.63-.629V8.108c0-.345.285-.63.63-.63.348 0 .63.285.63.63v4.141h1.756c.348 0 .629.283.629.63 0 .344-.282.629-.629.629M24 10.314C24 4.943 18.615.572 12 .572S0 4.943 0 10.314c0 4.811 4.27 8.842 10.035 9.608.391.082.923.258 1.058.59.12.301.079.766.038 1.08l-.164 1.02c-.045.301-.24 1.186 1.049.645 1.291-.539 6.916-4.078 9.436-6.975C23.176 14.393 24 12.458 24 10.314"/></svg>
+            เพิ่มเพื่อน @726lnjeu
+          </a>
         </div>
-
-        <!-- --- Trend Graph --- -->
-        <div class="glass-card p-6 md:p-8 rounded-[2rem] golden-glow-hover stagger-item">
-            <div class="flex justify-between items-center mb-6">
-                <h3 class="font-bold text-[#1A2530] text-lg flex items-center">
-                    <i data-lucide="line-chart" class="text-[#C29B44] mr-2"></i> แนวโน้มสถานการณ์ฝุ่น 7 วัน
-                </h3>
-            </div>
-            <div id="chart-container" class="h-[350px] w-full"></div>
-        </div>
-
-        <!-- --- Historical Data Table --- -->
-        <div class="glass-card rounded-[2rem] overflow-hidden golden-glow-hover stagger-item">
-            <div class="p-6 md:p-8 border-b border-gray-50 flex flex-col sm:flex-row justify-between items-center gap-4 bg-gray-50/50">
-                <h3 class="font-bold text-[#1A2530] text-lg flex items-center">
-                    <i data-lucide="database" class="text-[#C29B44] mr-2"></i> ข้อมูลรายละเอียดรายวัน
-                </h3>
-                <button onclick="handleDownloadCSV()" class="premium-button flex items-center bg-gradient-to-r from-[#1A2530] to-[#2C3E50] hover:from-[#C29B44] hover:to-[#D4AF37] text-white px-6 py-2.5 rounded-xl text-sm font-bold w-full sm:w-auto justify-center shadow-md active:scale-95">
-                    <i data-lucide="download" class="w-4 h-4 mr-2"></i>
-                    ดาวน์โหลดรายงาน (CSV)
-                </button>
-            </div>
-            <div class="overflow-x-auto p-2">
-                <table class="w-full text-left border-collapse">
-                    <thead>
-                        <tr class="text-gray-400 text-sm border-b border-gray-100">
-                            <th class="p-5 font-semibold whitespace-nowrap">วันที่</th>
-                            <th class="p-5 font-semibold whitespace-nowrap">ประเภท</th>
-                            <th class="p-5 font-semibold text-right whitespace-nowrap">PM2.5 (µg/m³)</th>
-                            <th class="p-5 font-semibold whitespace-nowrap">ระดับคุณภาพอากาศ</th>
-                        </tr>
-                    </thead>
-                    <tbody id="table-body" class="divide-y divide-gray-50">
-                        <!-- JS Insert -->
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <!-- --- Fire Reports Map Section (Phase 2) --- -->
-        <div class="glass-card rounded-[2rem] overflow-hidden golden-glow-hover stagger-item">
-            <div class="p-6 md:p-8 border-b border-gray-50 bg-gradient-to-r from-red-50/50 to-orange-50/50">
-                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                    <div>
-                        <h3 class="font-bold text-[#1A2530] text-lg flex items-center">
-                            <i data-lucide="flame" class="text-red-500 mr-2"></i> แผนที่จุดไฟไหม้ที่รายงาน
-                        </h3>
-                        <p class="text-sm text-gray-500 mt-1">ข้อมูลจากการรายงานผ่าน LINE Official Account</p>
-                    </div>
-                    <div class="flex items-center gap-2 bg-white px-4 py-2 rounded-xl shadow-sm border border-gray-100">
-                        <span class="relative flex h-3 w-3">
-                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                            <span class="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
-                        </span>
-                        <span id="fire-count" class="text-sm font-bold text-gray-700">0 จุด</span>
-                    </div>
-                </div>
-            </div>
-            <div id="map" class="w-full h-[calc(100vh-400px)] min-h-[500px] relative"></div>
-            <div class="p-4 bg-gray-50/50 border-t border-gray-100">
-                <div class="flex flex-wrap gap-4 text-xs text-gray-600">
-                    <div class="flex items-center gap-2">
-                        <div class="w-4 h-4 bg-red-500 rounded-full shadow-md"></div>
-                        <span>จุดไฟไหม้ที่รายงาน</span>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <i data-lucide="map-pin" class="w-4 h-4 text-blue-500"></i>
-                        <span>คลิกที่จุดเพื่อดูรายละเอียด</span>
-                    </div>
-                </div>
-            </div>
-        </div>
+      </div>
     </div>
 
-    <!-- Leaflet CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    
-    <!-- Scripts -->
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script>
-        // --- เอฟเฟกต์ Golden Dust Particles ---
-        function createParticles() {
-            const container = document.getElementById('particles-container');
-            const particleCount = 25;
-            
-            for(let i = 0; i < particleCount; i++) {
-                const p = document.createElement('div');
-                const size = Math.random() * 6 + 2;
-                p.className = 'absolute rounded-full bg-yellow-400/30 blur-[1px]';
-                p.style.width = `${size}px`;
-                p.style.height = `${size}px`;
-                p.style.left = `${Math.random() * 100}vw`;
-                p.style.top = `${Math.random() * 100}vh`;
-                
-                // สุ่มระยะเวลาการลอยและทิศทาง
-                const duration = Math.random() * 10 + 10;
-                p.style.animation = `float ${duration}s ease-in-out infinite alternate`;
-                p.style.animationDelay = `${Math.random() * 5}s`;
-                
-                container.appendChild(p);
-            }
-        }
+    <!-- Commands Card -->
+    <div class="glass-card">
+      <div class="card-gold-top"></div>
+      <div class="card-header">
+        <div class="card-title">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"/><line x1="12" x2="20" y1="19" y2="19"/></svg>
+          <span class="card-title-gold">คำสั่งและวิธีใช้งาน LINE OA</span>
+        </div>
+      </div>
+      <div style="padding:14px 18px;display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+        <!-- Column 1: Commands -->
+        <div>
+          <div style="font-size:10px;font-weight:700;color:var(--stone-4);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:8px;">คำสั่งตรวจสอบ</div>
+          <div style="display:flex;flex-direction:column;gap:5px;">
+            <div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--gold-pale);border-radius:7px;border:1px solid rgba(201,151,28,0.15);">
+              <code style="background:rgba(201,151,28,0.15);padding:2px 7px;border-radius:4px;font-size:11px;font-weight:700;color:var(--gold-dk);font-family:'IBM Plex Mono',monospace;">ฝุ่น</code>
+              <span style="font-size:11px;color:var(--stone-3);">ตรวจสอบค่า PM2.5 ปัจจุบัน</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--gold-pale);border-radius:7px;border:1px solid rgba(201,151,28,0.15);">
+              <code style="background:rgba(201,151,28,0.15);padding:2px 7px;border-radius:4px;font-size:11px;font-weight:700;color:var(--gold-dk);font-family:'IBM Plex Mono',monospace;">pm25</code>
+              <span style="font-size:11px;color:var(--stone-3);">ตรวจสอบค่า PM2.5 ปัจจุบัน</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--gold-pale);border-radius:7px;border:1px solid rgba(201,151,28,0.15);">
+              <code style="background:rgba(201,151,28,0.15);padding:2px 7px;border-radius:4px;font-size:11px;font-weight:700;color:var(--gold-dk);font-family:'IBM Plex Mono',monospace;">สวัสดี</code>
+              <span style="font-size:11px;color:var(--stone-3);">เมนูหลัก</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--gold-pale);border-radius:7px;border:1px solid rgba(201,151,28,0.15);">
+              <code style="background:rgba(201,151,28,0.15);padding:2px 7px;border-radius:4px;font-size:11px;font-weight:700;color:var(--gold-dk);font-family:'IBM Plex Mono',monospace;">help</code>
+              <span style="font-size:11px;color:var(--stone-3);">ดูคำสั่งทั้งหมด</span>
+            </div>
+          </div>
+        </div>
+        <!-- Column 2: Fire Report Steps -->
+        <div>
+          <div style="font-size:10px;font-weight:700;color:var(--stone-4);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:8px;">รายงานจุดไฟไหม้</div>
+          <div style="display:flex;flex-direction:column;gap:5px;">
+            <div style="display:flex;align-items:flex-start;gap:8px;padding:6px 10px;background:#FFF5F5;border-radius:7px;border:1px solid #FEE2E2;">
+              <div style="width:20px;height:20px;background:#EF4444;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#fff;flex-shrink:0;margin-top:1px;">1</div>
+              <div style="font-size:11px;color:var(--stone-3);line-height:1.5;">📸 ส่ง<b style="color:var(--stone);"> รูปภาพ</b>จุดไฟไหม้หรือควัน</div>
+            </div>
+            <div style="display:flex;align-items:flex-start;gap:8px;padding:6px 10px;background:#FFF5F5;border-radius:7px;border:1px solid #FEE2E2;">
+              <div style="width:20px;height:20px;background:#EF4444;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#fff;flex-shrink:0;margin-top:1px;">2</div>
+              <div style="font-size:11px;color:var(--stone-3);line-height:1.5;">📍 ส่ง<b style="color:var(--stone);"> Location</b> พิกัด GPS</div>
+            </div>
+            <div style="display:flex;align-items:flex-start;gap:8px;padding:6px 10px;background:#FFF5F5;border-radius:7px;border:1px solid #FEE2E2;">
+              <div style="width:20px;height:20px;background:#16A34A;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#fff;flex-shrink:0;margin-top:1px;">✓</div>
+              <div style="font-size:11px;color:var(--stone-3);line-height:1.5;">ระบบบันทึกและ<b style="color:#16A34A;"> แสดงบนแผนที่</b>อัตโนมัติ</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- ML Model badge -->
+      <div style="margin:0 18px 16px;padding:10px 14px;background:rgba(99,102,241,0.06);border:1px solid rgba(99,102,241,0.15);border-radius:9px;display:flex;align-items:center;gap:10px;">
+        <div style="width:32px;height:32px;background:rgba(99,102,241,0.12);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#6366F1" stroke-width="2" width="16" height="16"><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96-.46 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.98-3A2.5 2.5 0 0 1 9.5 2Z"/><path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96-.46 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-1.98-3A2.5 2.5 0 0 0 14.5 2Z"/></svg>
+        </div>
+        <div>
+          <div style="font-size:12px;font-weight:700;color:#6366F1;">🤖 LSTM Model พยากรณ์ PM2.5</div>
+          <div style="font-size:11px;color:var(--stone-4);margin-top:1px;">ใช้ข้อมูล 3 วันย้อนหลังพยากรณ์ล่วงหน้า · TensorFlow/Keras · อัปเดตทุกวัน 18:00 น.</div>
+        </div>
+      </div>
+    </div>
 
-        // --- 1. การตั้งค่าระดับ PM2.5 ตามมาตรฐานไทย ---
-        const getPM25Level = (value) => {
-            if (value <= 15.0) return { level: 1, color: '#28b4d8', bgCard: 'bg-cyan-50', text: 'ดีมาก', icon: 'smile' }; 
-            if (value <= 25.0) return { level: 2, color: '#2ecc71', bgCard: 'bg-green-50', text: 'อากาศดี', icon: 'leaf' }; 
-            if (value <= 37.5) return { level: 3, color: '#f1c40f', bgCard: 'bg-yellow-50', text: 'ปานกลาง', icon: 'meh' }; 
-            if (value <= 75.0) return { level: 4, color: '#e67e22', bgCard: 'bg-orange-50', text: 'เริ่มมีผลกระทบ', icon: 'alert-triangle' }; 
-            return { level: 5, color: '#e74c3c', bgCard: 'bg-red-50', text: 'มีผลกระทบต่อสุขภาพ', icon: 'shield-alert' }; 
-        };
+  </div>
 
-        let appData = [];
+</div><!-- #page -->
 
-        // --- 2. ฟังก์ชันดึงข้อมูลจาก API จริง ---
-        async function fetchPM25Data() {
-            const TOKEN = "6e19dc4d73747ab27c397b590fdbd504f1f496fc";
-            const KEYWORD = "nakhon phanom";
-            
-            try {
-                // 1. ค้นหาสถานี (Search API) เพื่อเอา UID
-                const searchUrl = `https://api.waqi.info/search/?token=${TOKEN}&keyword=${encodeURIComponent(KEYWORD)}`;
-                const searchRes = await fetch(searchUrl);
-                const searchData = await searchRes.json();
+<!-- ══════ FOOTER ══════ -->
+<footer id="footer">
+  <div class="footer-inner">
+    <div style="display:flex;flex-direction:column;gap:10px;flex:1;">
+      <div class="src-row">
+        <span>แหล่งข้อมูล:</span>
+        <span class="src-badge">WAQI API</span>
+        <span class="src-badge">LINE Messaging API</span>
+        <span class="src-badge">Supabase</span>
+        <span class="src-badge">FIRMS NASA</span>
+        <span class="src-badge">OpenStreetMap</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+        <a href="https://project-pm25.onrender.com" target="_blank" style="font-size:11px;color:rgba(212,175,55,0.6);text-decoration:none;font-family:'IBM Plex Mono',monospace;transition:color 0.15s;" onmouseover="this.style.color='rgba(212,175,55,0.9)'" onmouseout="this.style.color='rgba(212,175,55,0.6)'">🌐 project-pm25.onrender.com</a>
+        <span style="color:rgba(255,255,255,0.15);">·</span>
+        <a href="https://line.me/R/ti/p/@726lnjeu" target="_blank" style="font-size:11px;color:#06C755;text-decoration:none;font-family:'IBM Plex Mono',monospace;transition:opacity 0.15s;opacity:0.7;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.7'">LINE @726lnjeu</a>
+        <span style="color:rgba(255,255,255,0.15);">·</span>
+        <a href="https://github.com/face007d/project-pm25" target="_blank" style="font-size:11px;color:rgba(255,255,255,0.35);text-decoration:none;font-family:'IBM Plex Mono',monospace;transition:color 0.15s;" onmouseover="this.style.color='rgba(255,255,255,0.7)'" onmouseout="this.style.color='rgba(255,255,255,0.35)'">GitHub: face007d/project-pm25</a>
+      </div>
+    </div>
+    <div style="text-align:right;flex-shrink:0;">
+      <div style="font-family:'Cinzel',serif;font-size:13px;font-weight:700;background:linear-gradient(135deg,#C9971C,#D4AF37);-webkit-background-clip:text;background-clip:text;color:transparent;margin-bottom:3px;">พญานาคเฝ้าฟ้า</div>
+      <div class="footer-copy">PM2.5 Air Quality & Fire Monitoring System</div>
+      <div class="footer-copy" style="margin-top:2px;">© 2569 · Nakhon Phanom · v2.0</div>
+    </div>
+  </div>
+</footer>
 
-                if (searchData.status !== "ok" || searchData.data.length === 0) {
-                    throw new Error("ไม่พบข้อมูลสถานีจากคำค้นหา");
-                }
+<!-- ══════════════════════════════════════════════
+     SCRIPTS
+══════════════════════════════════════════════ -->
+<script>
+/* ──────────────────────────────────
+   STATIC DATA (pm25_v3 structure)
+────────────────────────────────── */
+const CURRENT_PM25 = 58.4;
 
-                // เอา UID ของสถานีแรกที่ค้นเจอ
-                const stationUid = searchData.data[0].uid;
+const STATIONS = [
+  { name:'โรงพยาบาลนครพนม',   pm25:58.4, lat:17.4065, lon:104.7686 },
+  { name:'ตลาดอินโดจีน',       pm25:44.1, lat:17.3960, lon:104.7750 },
+  { name:'สะพานมิตรภาพ 3',    pm25:71.2, lat:17.4200, lon:104.7800 },
+  { name:'เทศบาลเมืองนครพนม', pm25:39.5, lat:17.3850, lon:104.7600 },
+  { name:'มหาวิทยาลัยนครพนม', pm25:52.8, lat:17.4100, lon:104.7500 },
+];
+const FIRES = [
+  {
+    name:'บ้านนาทม อ.นาทม', lat:17.560, lon:104.680, time:'09:42', pm25:88.2, sev:'สูง',
+    reporter:'สมชาย ใจดี',
+    image_url:'https://images.unsplash.com/photo-1625047509248-ec889cbff17f?w=600&q=80'
+  },
+  {
+    name:'อ.ท่าอุเทน ริมโขง', lat:17.600, lon:104.720, time:'08:15', pm25:62.0, sev:'กลาง',
+    reporter:'มาลี สุขใจ',
+    image_url:'https://images.unsplash.com/photo-1563197678-b09088a3060b?w=600&q=80'
+  },
+  {
+    name:'บ้านโพนสา อ.โพนสวรรค์', lat:17.680, lon:104.700, time:'07:55', pm25:45.5, sev:'ต่ำ',
+    reporter:'ประยุทธ์ นาดี',
+    image_url:'https://images.unsplash.com/photo-1518173946687-a4c8892bbd9f?w=600&q=80'
+  },
+  {
+    name:'อ.ศรีสงคราม ป่าสน', lat:17.350, lon:104.620, time:'07:30', pm25:101.3, sev:'สูง',
+    reporter:'วิไล รักษ์ป่า',
+    image_url:'https://images.unsplash.com/photo-1574182245530-967d9b3831af?w=600&q=80'
+  },
+  {
+    name:'บ้านดอนโมง อ.บ้านแพง', lat:18.000, lon:104.700, time:'06:58', pm25:55.0, sev:'กลาง',
+    reporter:'สุพจน์ เกษตรดี',
+    image_url:'https://images.unsplash.com/photo-1547394765-185e1e68f34e?w=600&q=80'
+  },
+];
+const HIST = [12,18,25,33,42,58,71,69,62,55,48,52,61,74,80,78,70,65,58,61,55,48,42,38];
+const FC_TONIGHT = [{h:'19:00',v:35},{h:'20:00',v:40},{h:'21:00',v:45}];
+const FC_TOMORROW = [
+  {h:'22:00',v:38},{h:'23:00',v:34},{h:'00:00',v:30},{h:'01:00',v:28},{h:'02:00',v:26},
+  {h:'03:00',v:28},{h:'04:00',v:35},{h:'05:00',v:44},{h:'06:00',v:52},{h:'07:00',v:48},
+];
+const TABLE_ROWS = [
+  { district:'อ.เมืองนครพนม',  now:58.4, f:[55.0,52.0,48.0], avg:52.1, trend:'down',  highlight:true  },
+  { district:'อ.ท่าอุเทน',     now:71.2, f:[68.0,65.0,61.0], avg:66.8, trend:'down',  highlight:false },
+  { district:'อ.ธาตุพนม',      now:44.1, f:[46.0,48.0,50.0], avg:43.5, trend:'up',    highlight:false },
+  { district:'อ.นาแก',         now:39.5, f:[40.0,41.5,43.0], avg:38.9, trend:'up',    highlight:false },
+  { district:'อ.โพนสวรรค์',    now:52.8, f:[50.0,47.5,45.0], avg:50.2, trend:'down',  highlight:false },
+  { district:'อ.ศรีสงคราม',    now:101.3,f:[95.0,89.0,82.0], avg:88.4, trend:'down',  highlight:false },
+  { district:'อ.นาทม',         now:88.2, f:[83.0,78.0,72.0], avg:81.5, trend:'down',  highlight:false },
+  { district:'อ.บ้านแพง',      now:55.0, f:[53.0,51.0,48.5], avg:53.8, trend:'down',  highlight:false },
+  { district:'อ.วังยาง',       now:32.1, f:[33.5,35.0,37.0], avg:31.0, trend:'up',    highlight:false },
+  { district:'อ.เรณูนคร',      now:47.6, f:[45.0,43.0,41.0], avg:46.0, trend:'down',  highlight:false },
+  { district:'อ.นาหว้า',       now:29.3, f:[30.0,31.5,33.0], avg:28.8, trend:'stable',highlight:false },
+  { district:'อ.โพนสวรรค์ใต้', now:61.0, f:[58.0,55.0,51.0], avg:57.3, trend:'down',  highlight:false },
+];
 
-                // 2. ดึงข้อมูลแบบละเอียด (Feed API) โดยใช้ UID ที่ได้มา
-                const feedUrl = `https://api.waqi.info/feed/@${stationUid}/?token=${TOKEN}`;
-                const feedRes = await fetch(feedUrl);
-                const feedData = await feedRes.json();
+/* ──────────────────────────────────
+   PM2.5 LEVEL FUNCTION
+────────────────────────────────── */
+function lv(v) {
+  if(v<=15)  return { bg:'#B3E5A0', fg:'#1A5C0E', dot:'#4ADE80', label:'ดีมาก',            adv:'อากาศบริสุทธิ์ เหมาะสำหรับกิจกรรมกลางแจ้งทุกชนิด',                         emoji:'😊', ringColor:'#22C55E' };
+  if(v<=25)  return { bg:'#B7E4A0', fg:'#1A5C0E', dot:'#65D04B', label:'ดี',                adv:'คุณภาพอากาศดีเยี่ยม เหมาะสำหรับกิจกรรมกลางแจ้งทุกชนิด',                   emoji:'😊', ringColor:'#4ADE80' };
+  if(v<=37)  return { bg:'#F9E07F', fg:'#7A5E00', dot:'#EAB308', label:'ปานกลาง',           adv:'ผู้ที่มีโรคระบบทางเดินหายใจอาจได้รับผลกระทบบ้าง ควรระวัง',               emoji:'😐', ringColor:'#EAB308' };
+  if(v<=50)  return { bg:'#F5A623', fg:'#7A3E00', dot:'#F59E0B', label:'เริ่มมีผล',         adv:'ควรลดเวลาอยู่กลางแจ้ง โดยเฉพาะเด็กและผู้ป่วย',                           emoji:'😷', ringColor:'#F59E0B' };
+  if(v<=90)  return { bg:'#E05A2B', fg:'#FFFFFF', dot:'#EF4444', label:'ไม่ดีต่อสุขภาพ',   adv:'ทุกคนควรลดกิจกรรมกลางแจ้ง สวมหน้ากาก N95 เมื่อออกนอกบ้าน',             emoji:'🤧', ringColor:'#EF4444' };
+  if(v<=150) return { bg:'#C0392B', fg:'#FFFFFF', dot:'#B91C1C', label:'อันตราย',           adv:'อันตราย! หลีกเลี่ยงการออกนอกอาคาร ปิดประตูหน้าต่าง',                     emoji:'🚫', ringColor:'#DC2626' };
+  return             { bg:'#7F1D1D', fg:'#FFFFFF', dot:'#7F1D1D', label:'วิกฤต',            adv:'วิกฤต! ห้ามออกนอกอาคาร ปิดอุปกรณ์ฟอกอากาศ',                             emoji:'☣️', ringColor:'#7F1D1D' };
+}
 
-                if (feedData.status !== "ok") {
-                    throw new Error("ดึงข้อมูลสถานีล้มเหลว");
-                }
+function getPM25Level(v) {
+  if(v<=15)  return { level:1, color:'#28B4D8', text:'ดีมาก',               icon:'smile'        };
+  if(v<=25)  return { level:2, color:'#2ECC71', text:'อากาศดี',             icon:'leaf'         };
+  if(v<=37.5)return { level:3, color:'#F1C40F', text:'ปานกลาง',            icon:'meh'          };
+  if(v<=75)  return { level:4, color:'#E67E22', text:'เริ่มมีผลกระทบ',     icon:'alert-triangle'};
+  return             { level:5, color:'#E74C3C', text:'มีผลกระทบต่อสุขภาพ', icon:'shield-alert' };
+}
 
-                const data = feedData.data;
-                let formattedData = [];
-                let idCounter = 1;
+function trendHtml(t) {
+  const up = `<span style="display:flex;align-items:center;gap:3px;color:#DC2626;font-size:12px;font-weight:700;"><svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.5' width='13' height='13'><polyline points='22 7 13.5 15.5 8.5 10.5 2 17'/><polyline points='16 7 22 7 22 13'/></svg>สูงขึ้น</span>`;
+  const dn = `<span style="display:flex;align-items:center;gap:3px;color:#16A34A;font-size:12px;font-weight:700;"><svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.5' width='13' height='13'><polyline points='22 17 13.5 8.5 8.5 13.5 2 7'/><polyline points='16 17 22 17 22 11'/></svg>ลดลง</span>`;
+  const st = `<span style="display:flex;align-items:center;gap:3px;color:#94A3B8;font-size:12px;font-weight:700;"><svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.5' width='13' height='13'><line x1='5' y1='12' x2='19' y2='12'/></svg>ทรงตัว</span>`;
+  return t==='up'?up:t==='down'?dn:st;
+}
 
-                // ฟังก์ชันจัดฟอร์แมตวันที่เป็นแบบไทย (DD/MM/YYYY)
-                const formatDate = (dateStr) => {
-                    const d = new Date(dateStr);
-                    return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear() + 543}`;
-                };
+/* ──────────────────────────────────
+   CLOCK
+────────────────────────────────── */
+function startClock() {
+  const el = document.getElementById('clock');
+  const tick = () => { el.textContent = new Date().toLocaleTimeString('th-TH',{hour12:false}); };
+  tick(); setInterval(tick, 1000);
+}
 
-                // วันที่ปัจจุบันสำหรับเปรียบเทียบหา 'วันนี้' และ 'พยากรณ์พรุ่งนี้'
-                const todayStr = data.time.s.split(' ')[0]; // รูปแบบ YYYY-MM-DD
-                const today = new Date(todayStr);
-                today.setHours(0, 0, 0, 0);
+/* ──────────────────────────────────
+   AQI RING (command_center style)
+────────────────────────────────── */
+let currentPM = CURRENT_PM25;
 
-                // ดึงข้อมูลรายวัน (WAQI API จะมีทั้งอดีตและอนาคตอยู่ใน array นี้)
-                const dailyForecast = data.forecast?.daily?.pm25 || [];
+function updateAQI(val) {
+  const L = lv(val);
+  // Animate number
+  const el = document.getElementById('aqi-num');
+  let cur = parseFloat(el.textContent)||0; const step = (val-cur)/60;
+  const t = setInterval(()=>{ cur=Math.min(cur+step,val); el.textContent=cur.toFixed(1); if(cur>=val)clearInterval(t); },14);
+  // Ring
+  const circ = 360; const dashOff = circ - Math.min((val/150)*circ,circ);
+  const ring = document.getElementById('aqi-ring-fill');
+  ring.style.strokeDashoffset = dashOff;
+  ring.style.stroke = L.ringColor;
+  // Badge
+  const badge = document.getElementById('aqi-badge');
+  badge.style.background = L.bg; badge.style.color = L.fg;
+  badge.style.border = `1px solid ${L.fg}22`;
+  badge.innerHTML = `<span id="aqi-lbl">${L.label}</span>`;
+  document.getElementById('aqi-adv').textContent = L.adv;
+  document.getElementById('aqi-emoji').textContent = L.emoji;
+  // PM needle
+  const pct = Math.min((val/150)*100,100);
+  setTimeout(()=>{ document.getElementById('pm-needle').style.left = pct+'%'; },300);
+}
 
-                dailyForecast.forEach(item => {
-                    const itemDate = new Date(item.day);
-                    itemDate.setHours(0, 0, 0, 0);
+/* ──────────────────────────────────
+   ENV CARDS (command_center style)
+────────────────────────────────── */
+let currentTemp  = 34.2;
+let currentHumid = 62;
+let currentWind  = 12.5;
+let currentVis   = 4.2;
+let currentPress = 1008;
+let windDeg      = 22;
+const WIND_DIRS  = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
 
-                    let type = 'history';
-                    let pm25Val = item.avg; // ใช้ค่าเฉลี่ยรายวันสำหรับอดีตและอนาคต
+function updateEnv() {
+  document.getElementById('env-temp').textContent   = currentTemp.toFixed(1);
+  document.getElementById('env-hum').textContent    = Math.round(currentHumid);
+  document.getElementById('env-wind').textContent   = currentWind.toFixed(1);
+  document.getElementById('env-vis').textContent    = currentVis.toFixed(1);
+  document.getElementById('env-press').textContent  = Math.round(currentPress);
+  document.getElementById('wt-temp').textContent    = currentTemp.toFixed(1)+' °C';
+  document.getElementById('wt-hum').textContent     = Math.round(currentHumid)+'%';
+  document.getElementById('wt-wind').textContent    = currentWind.toFixed(1)+' กม./ชม.';
+  document.getElementById('wt-vis').textContent     = currentVis.toFixed(1)+' กม.';
+  document.getElementById('wt-press').textContent   = Math.round(currentPress)+' hPa';
+  // Humidity bar
+  document.getElementById('hum-bar').style.width = Math.min(currentHumid,100)+'%';
+  // Wind compass
+  document.getElementById('compass-needle-wrap').style.transform = `rotate(${windDeg}deg)`;
+  const dirIdx = Math.round(windDeg/22.5)%16;
+  document.getElementById('env-wind-dir').textContent = `ทิศ ${WIND_DIRS[dirIdx]} · ลมโชย`;
+  // Sub texts
+  const feelsLike = (currentTemp+4).toFixed(0);
+  document.getElementById('env-temp-sub').textContent = `รู้สึกได้ ${feelsLike}°C · ${currentTemp>38?'ร้อนจัด':'ร้อน'}`;
+  const humDesc = currentHumid>70?'ชื้นมาก':currentHumid>50?'ชื้นปานกลาง':'แห้ง';
+  document.getElementById('env-hum-sub').textContent = humDesc;
+  document.getElementById('env-vis-sub').textContent = currentVis<3?'ทัศนวิสัยแย่ (ฝุ่นหนา)':currentVis<6?'ลดลงจากฝุ่น PM2.5':'ทัศนวิสัยดี';
+}
 
-                    if (itemDate.getTime() === today.getTime()) {
-                        type = 'current';
-                        // สำหรับวันนี้ ใช้ค่า Real-time ล่าสุดจากเซ็นเซอร์จะแม่นยำที่สุด
-                        pm25Val = data.iaqi?.pm25?.v || item.avg; 
-                    } else if (itemDate.getTime() > today.getTime()) {
-                        type = 'forecast';
-                    }
+/* ──────────────────────────────────
+   SPARKBAR (command_center style)
+────────────────────────────────── */
+function renderSparkbar(id, data, color) {
+  const el = document.getElementById(id); if(!el) return;
+  const max = Math.max(...data); el.innerHTML='';
+  data.forEach(v=>{
+    const col = document.createElement('div');
+    col.className = 'sparkbar-col';
+    col.style.height = Math.max((v/max)*22,3)+'px';
+    col.style.background = color+'55';
+    el.appendChild(col);
+  });
+}
 
-                    formattedData.push({
-                        id: idCounter++,
-                        date: formatDate(item.day),
-                        pm25: parseFloat(pm25Val),
-                        type: type,
-                        rawTimestamp: itemDate.getTime() // เอาไว้ใช้เรียงลำดับ
-                    });
-                });
+/* ──────────────────────────────────
+   FORECAST LIST (command_center style)
+────────────────────────────────── */
+const ALL_FC = [
+  ...FC_TONIGHT.map(d=>({...d,type:'tonight'})),
+  ...FC_TOMORROW.slice(0,5).map(d=>({...d,type:'tomorrow'}))
+];
+function renderForecastList() {
+  const el = document.getElementById('forecast-list'); el.innerHTML='';
+  ALL_FC.forEach(item=>{
+    const L = lv(item.v);
+    const pct = Math.min((item.v/120)*100,100);
+    const row = document.createElement('div');
+    row.className='fc-row';
+    row.innerHTML=`
+      <div class="fc-time">${item.h}</div>
+      <div class="fc-bar-wrap"><div class="fc-bar-fill" style="width:${pct}%;background:${L.bg};"></div></div>
+      <div class="fc-val-tag" style="color:${L.fg==='#FFFFFF'?L.ringColor:L.fg};">${item.v}</div>
+      <div style="font-size:10px;color:var(--stone-4);min-width:60px;text-align:right;">${L.label}</div>
+    `;
+    el.appendChild(row);
+  });
+}
 
-                // ตรวจสอบความปลอดภัย: ถ้าไม่มีข้อมูล current หลุดมาเลย ให้สร้างขึ้นมาใหม่จากค่าปัจจุบัน
-                if (!formattedData.find(d => d.type === 'current') && data.iaqi?.pm25) {
-                    formattedData.push({
-                        id: idCounter++,
-                        date: formatDate(todayStr),
-                        pm25: parseFloat(data.iaqi.pm25.v),
-                        type: 'current',
-                        rawTimestamp: today.getTime()
-                    });
-                }
+/* ──────────────────────────────────
+   STATION LIST (command_center style)
+────────────────────────────────── */
+let stationsData = STATIONS.map(s=>({...s}));
 
-                // เรียงข้อมูลตามวันที่จากอดีต -> อนาคต
-                formattedData.sort((a, b) => a.rawTimestamp - b.rawTimestamp);
+function renderStations() {
+  const el = document.getElementById('station-list'); el.innerHTML='';
+  stationsData.forEach((s,i)=>{
+    const L = lv(s.pm25);
+    const row = document.createElement('div');
+    row.className='station-row';
+    row.style.animationDelay=(i*0.08)+'s';
+    row.innerHTML=`
+      <div class="station-dot" style="background:${L.ringColor};box-shadow:0 0 5px ${L.ringColor}66;"></div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:12px;font-weight:600;color:var(--stone);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${s.name}</div>
+        <div style="font-size:10px;color:var(--stone-4);margin-top:1px;">${L.label}</div>
+      </div>
+      <div style="text-align:right;flex-shrink:0;">
+        <div style="font-size:15px;font-weight:800;color:var(--stone);font-family:'IBM Plex Mono',monospace;">${s.pm25.toFixed(1)}</div>
+        <div style="font-size:9px;color:var(--stone-4);">µg/m³</div>
+      </div>
+      <div style="margin-left:6px;padding:2px 7px;border-radius:5px;background:${L.bg};color:${L.fg==='#FFFFFF'?'#9A3412':L.fg};font-size:10px;font-weight:700;border:1px solid ${L.bg};flex-shrink:0;">${L.label.split('ต่อ')[0]}</div>
+    `;
+    el.appendChild(row);
+  });
+  const avg = stationsData.reduce((a,b)=>a+b.pm25,0)/stationsData.length;
+  document.getElementById('sb-avg').textContent = avg.toFixed(1);
+}
 
-                // ตัดเอาเฉพาะช่วง 8 วันรอบๆ ปัจจุบัน (ย้อนหลัง 4 วัน, ปัจจุบัน 1, ล่วงหน้า 3 วัน) เพื่อให้กราฟดูสวยงามพอดี
-                const currentIndex = formattedData.findIndex(d => d.type === 'current');
-                if (currentIndex !== -1) {
-                    const startIndex = Math.max(0, currentIndex - 4);
-                    const endIndex = Math.min(formattedData.length, currentIndex + 4);
-                    formattedData = formattedData.slice(startIndex, endIndex);
-                }
+function updateStations() {
+  stationsData.forEach(s=>{ s.pm25 = Math.max(5,Math.min(150,s.pm25+(Math.random()-0.5)*3)); });
+  const rows = document.querySelectorAll('#station-list .station-row');
+  rows.forEach((row,i)=>{
+    if(!stationsData[i]) return;
+    const L = lv(stationsData[i].pm25);
+    const dot = row.querySelector('.station-dot');
+    if(dot){ dot.style.background=L.ringColor; dot.style.boxShadow=`0 0 5px ${L.ringColor}66`; }
+    const vals = row.querySelectorAll('div[style*="font-size:15px"]');
+    if(vals[0]) vals[0].textContent=stationsData[i].pm25.toFixed(1);
+  });
+  const avg = stationsData.reduce((a,b)=>a+b.pm25,0)/stationsData.length;
+  document.getElementById('sb-avg').textContent = avg.toFixed(1);
+}
 
-                return formattedData;
-                
-            } catch (error) {
-                console.error("การดึง API ล้มเหลว:", error.message);
-                console.log("-> กำลังแสดงข้อมูลจำลอง (Mock Data) แทนเพื่อป้องกันหน้าจอขาว");
-                
-                // ข้อมูลจำลอง (แสดงกรณี API มีปัญหา)
-                return new Promise((resolve) => {
-                    setTimeout(() => {
-                        resolve([
-                            { id: 1, date: '18/02/2569', pm25: 14.5, type: 'history' },
-                            { id: 2, date: '19/02/2569', pm25: 22.0, type: 'history' },
-                            { id: 3, date: '20/02/2569', pm25: 45.2, type: 'history' },
-                            { id: 4, date: '21/02/2569', pm25: 58.0, type: 'history' },
-                            { id: 5, date: '22/02/2569', pm25: 22.4, type: 'current' },
-                            { id: 6, date: '23/02/2569', pm25: 39.7, type: 'forecast' }, 
-                            { id: 7, date: '24/02/2569', pm25: 25.0, type: 'forecast' }, 
-                        ]);
-                    }, 800);
-                });
-            }
-        }
+/* ──────────────────────────────────
+   MAIN HOURLY CHART (pm25_v3 style)
+────────────────────────────────── */
+function renderHourlyChart() {
+  const histLabels = Array.from({length:24},(_,i)=>`${String(i).padStart(2,'0')}:00`);
+  const tnLabels   = FC_TONIGHT.map(d=>d.h);
+  const tmLabels   = FC_TOMORROW.map(d=>d.h);
+  const allLabels  = [...histLabels,...tnLabels,...tmLabels];
+  const histData   = [...HIST,...Array(tnLabels.length+tmLabels.length).fill(null)];
+  const tnData     = [...Array(24).fill(null),...FC_TONIGHT.map(d=>d.v),...Array(tmLabels.length).fill(null)];
+  const tmData     = [...Array(24+tnLabels.length).fill(null),...FC_TOMORROW.map(d=>d.v)];
 
-        // --- 3. ฟังก์ชัน Count-up Animation สำหรับตัวเลข ---
-        function animateValue(element, start, end, duration) {
-            if (!element) return;
-            const range = end - start;
-            const increment = range / (duration / 16); // 60fps
-            let current = start;
-            
-            const timer = setInterval(() => {
-                current += increment;
-                if ((increment > 0 && current >= end) || (increment < 0 && current <= end)) {
-                    current = end;
-                    clearInterval(timer);
-                }
-                element.textContent = current.toFixed(1);
-            }, 16);
-        }
+  new ApexCharts(document.getElementById('apex-main'),{
+    series:[
+      { name:'ข้อมูลจริง (วันนี้)', type:'bar',  data:histData },
+      { name:'คาดการณ์ช่วงค่ำ',     type:'line', data:tnData   },
+      { name:'พยากรณ์พรุ่งนี้',      type:'bar',  data:tmData   },
+    ],
+    chart:{ height:200, background:'transparent', toolbar:{show:false}, animations:{enabled:true,easing:'easeinout',speed:900}, fontFamily:'Noto Sans Thai,sans-serif' },
+    plotOptions:{ bar:{borderRadius:3,columnWidth:'70%'} },
+    stroke:{ width:[0,2.5,0], curve:'smooth', dashArray:[0,5,0] },
+    colors:['#C9971C','#2563EB','#93C5FD'],
+    fill:{ opacity:[0.85,1,0.65] },
+    dataLabels:{ enabled:false },
+    xaxis:{
+      categories:allLabels,
+      labels:{ show:true, rotate:-45, style:{fontSize:'9px',colors:Array(allLabels.length).fill('#A89E8E')},
+        formatter:(v)=>{ const idx=allLabels.indexOf(v); return idx%3===0?v:''; }
+      },
+      axisBorder:{show:false}, axisTicks:{show:false},
+    },
+    yaxis:{ min:0, max:120,
+      labels:{ style:{fontSize:'10px',colors:['#A89E8E']}, formatter:v=>v===0?'0':v },
+      title:{ text:'µg/m³', style:{fontSize:'10px',color:'#A89E8E'} }
+    },
+    grid:{ borderColor:'rgba(212,175,55,0.1)', strokeDashArray:3, padding:{top:-5,right:5,bottom:0,left:0} },
+    annotations:{
+      xaxis:[
+        { x:'19:00', x2:'21:00', fillColor:'#EFF6FF', opacity:0.6,
+          label:{text:'ช่วงค่ำ',style:{fontSize:'10px',color:'#2563EB',background:'#EFF6FF'},position:'top',offsetY:8} },
+        { x:'22:00', x2:'07:00', fillColor:'#FFF7ED', opacity:0.5,
+          label:{text:'พรุ่งนี้',style:{fontSize:'10px',color:'#C2410C',background:'#FFF7ED'},position:'top',offsetY:8} },
+      ],
+      yaxis:[
+        { y:25, borderColor:'#B7E4A0', strokeDashArray:3, label:{text:'ดี',  style:{fontSize:'9px',color:'#1A5C0E',background:'#F0FDF4'}} },
+        { y:50, borderColor:'#F5A623', strokeDashArray:3, label:{text:'เริ่มมีผล',style:{fontSize:'9px',color:'#7A3E00',background:'#FEF3E0'}} },
+        { y:90, borderColor:'#E05A2B', strokeDashArray:3, label:{text:'ไม่ดี',style:{fontSize:'9px',color:'#9A3412',background:'#FEE8E0'}} },
+      ]
+    },
+    tooltip:{
+      theme:'light', style:{fontFamily:'Noto Sans Thai,sans-serif',fontSize:'12px'},
+      y:{formatter:v=>v!=null?v+' µg/m³':'—'}, shared:true, intersect:false,
+    },
+    legend:{ show:true, position:'top', horizontalAlign:'left', fontSize:'11px', fontFamily:'Noto Sans Thai,sans-serif', markers:{width:10,height:10,radius:3}, labels:{colors:['#1C1A17','#1C1A17','#1C1A17']} },
+  }).render();
+}
 
-        // --- 4. ฟังก์ชัน Render ข้อมูลลงบนหน้าจอ (TARGETED DOM UPDATE) ---
-        function renderDashboard(data) {
-            appData = data;
-            const currentData = data.find(d => d.type === 'current');
-            const forecastData = data.find(d => d.type === 'forecast');
+/* ──────────────────────────────────
+   TABLE (pm25_v3 structure)
+────────────────────────────────── */
+function renderTable() {
+  const tbody = document.getElementById('tbody');
+  TABLE_ROWS.forEach(row=>{
+    const L=lv(row.now), L0=lv(row.f[0]), L1=lv(row.f[1]), L2=lv(row.f[2]), La=lv(row.avg);
+    const tr = document.createElement('tr');
+    if(row.highlight) tr.className='hl';
+    tr.innerHTML=`
+      <td class="pname">${row.district}${row.highlight?'<span style="font-size:10px;background:var(--gold-pale);color:var(--gold-dk);border-radius:4px;padding:1px 6px;margin-left:6px;font-weight:700;">หลัก</span>':''}</td>
+      <td class="num"><span class="pm-chip" style="background:${L.bg};color:${L.fg};">${row.now}</span></td>
+      <td class="num"><span class="pm-chip" style="background:${L0.bg};color:${L0.fg};">${row.f[0]}</span></td>
+      <td class="num"><span class="pm-chip" style="background:${L1.bg};color:${L1.fg};">${row.f[1]}</span></td>
+      <td class="num"><span class="pm-chip" style="background:${L2.bg};color:${L2.fg};">${row.f[2]}</span></td>
+      <td class="num"><span class="pm-chip" style="background:${La.bg};color:${La.fg};">${row.avg}</span></td>
+      <td><div class="trend-cell">${trendHtml(row.trend)}</div></td>
+      <td><span class="act-link"><svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' width='11' height='11'><line x1='8' x2='21' y1='6' y2='6'/><line x1='8' x2='21' y1='12' y2='12'/><line x1='8' x2='21' y1='18' y2='18'/><line x1='3' x2='3.01' y1='6' y2='6'/><line x1='3' x2='3.01' y1='12' y2='12'/><line x1='3' x2='3.01' y1='18' y2='18'/></svg>รายละเอียด</span></td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
 
-            // อัปเดต Card ปัจจุบัน
-            if(currentData) {
-                const level = getPM25Level(currentData.pm25);
-                document.getElementById('current-date').innerHTML = `<i data-lucide="calendar" class="w-4 h-4 mr-2 text-[#C29B44]"></i> ${currentData.date}`;
-                
-                const valEl = document.getElementById('current-pm25-val');
-                const oldValue = parseFloat(valEl.textContent) || 0;
-                animateValue(valEl, oldValue, currentData.pm25, 1000);
-                valEl.style.color = level.color;
-                valEl.style.transition = 'color 0.5s ease-out';
+/* ──────────────────────────────────
+   FIRE LIST (pm25_v3 structure)
+────────────────────────────────── */
+function renderFireList() {
+  const list = document.getElementById('fire-list');
+  const sc = {สูง:{c:'#DC2626',bg:'#FEE2E2'},กลาง:{c:'#D97706',bg:'#FEF9C3'},ต่ำ:{c:'#16A34A',bg:'#DCFCE7'}};
+  FIRES.forEach((f,i)=>{
+    const s = sc[f.sev];
+    const el = document.createElement('div');
+    el.className='fire-item'; el.style.animationDelay=(i*0.07)+'s';
+    el.innerHTML=`
+      <div class="fire-icon-wrap">🔥</div>
+      <div class="fire-info">
+        <div class="fire-name">${f.name}</div>
+        <div class="fire-meta">${f.time} น. · PM2.5: ${f.pm25} µg/m³</div>
+      </div>
+      <div class="fire-sev" style="background:${s.bg};color:${s.c};">${f.sev}</div>
+    `;
+    list.appendChild(el);
+  });
+}
 
-                const badgeEl = document.getElementById('current-pm25-badge');
-                badgeEl.style.backgroundColor = level.color;
-                badgeEl.style.transition = 'background-color 0.5s ease-out';
-                badgeEl.innerHTML = `
-                    <i data-lucide="${level.icon}" class="w-5 h-5 mr-2"></i>
-                    <span id="current-pm25-text">${level.text}</span>
-                `;
+/* ──────────────────────────────────
+   MAP (pm25_v3 + fire reports from index.html)
+────────────────────────────────── */
+let leafletMap = null;
+let fireMarkersLayer = null;
 
-                // เปลี่ยนสีกรอบซ้ายของการ์ด
-                const cardEl = document.getElementById('card-current');
-                cardEl.style.borderLeftColor = level.color;
-                cardEl.style.transition = 'border-color 0.5s ease-out';
+function initMap() {
+  leafletMap = L.map('map',{zoomControl:true,attributionControl:false}).setView([17.48,104.73],10);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{
+    subdomains:'abcd', maxZoom:19
+  }).addTo(leafletMap);
 
-                // อัปเดต Marker (แถบสี 5 ระดับด้านล่าง)
-                const markerPosition = Math.min((currentData.pm25 / 100) * 100, 100);
-                const markerEl = document.getElementById('indicator-marker');
-                markerEl.style.left = `${markerPosition}%`;
-                document.getElementById('indicator-val').textContent = currentData.pm25.toFixed(1);
-            }
+  // Station markers
+  STATIONS.forEach(s=>{
+    const L2 = lv(s.pm25);
+    const html=`<div style="position:relative;width:34px;height:34px;">
+      <div style="position:absolute;inset:0;border-radius:50%;background:${L2.ringColor}33;animation:pulse-r 2s ease-out infinite;"></div>
+      <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+        width:24px;height:24px;border-radius:50%;
+        background:${L2.bg};border:2.5px solid white;
+        box-shadow:0 2px 10px rgba(0,0,0,0.18);
+        display:flex;align-items:center;justify-content:center;
+        font-size:9px;font-weight:800;color:${L2.fg};font-family:'IBM Plex Mono',monospace;
+      ">${Math.round(s.pm25)}</div>
+    </div>`;
+    const icon = L.divIcon({className:'',html,iconSize:[34,34],iconAnchor:[17,17],popupAnchor:[0,-17]});
+    L.marker([s.lat,s.lon],{icon}).addTo(leafletMap).bindPopup(`
+      <div class="lp-name">📡 ${s.name}</div>
+      <div class="lp-row"><span>PM2.5 ปัจจุบัน</span><b style="color:${L2.ringColor}">${s.pm25} µg/m³</b></div>
+      <div class="lp-row"><span>ระดับ</span><b>${L2.label}</b></div>
+      <div class="lp-row"><span>สถานะ</span><b style="color:#16A34A">● ออนไลน์</b></div>
+    `);
+  });
 
-            // อัปเดต Card พยากรณ์พรุ่งนี้
-            if(forecastData) {
-                const level = getPM25Level(forecastData.pm25);
-                
-                const fValEl = document.getElementById('forecast-val');
-                const oldForecast = parseFloat(fValEl.textContent) || 0;
-                animateValue(fValEl, oldForecast, forecastData.pm25, 1000);
-                
-                const fBadgeEl = document.getElementById('forecast-badge-status');
-                fBadgeEl.style.backgroundColor = level.color;
-                fBadgeEl.style.transition = 'background-color 0.5s ease-out';
-                fBadgeEl.innerHTML = `
-                    <i data-lucide="${level.icon}" class="w-5 h-5 mr-2"></i>
-                    <span id="forecast-text">${level.text}</span>
-                `;
+  // Fire markers — photo-style + rich popup with image
+  fireMarkersLayer = L.layerGroup().addTo(leafletMap);
+  FIRES.forEach(f=>{
+    const sc={สูง:'#DC2626',กลาง:'#D97706',ต่ำ:'#16A34A'};
+    const c=sc[f.sev];
+    const sevBg={สูง:'#FEE2E2',กลาง:'#FEF9C3',ต่ำ:'#DCFCE7'};
 
-                // เปลี่ยนสีกรอบซ้ายของการ์ด
-                const cardForecast = document.getElementById('card-forecast');
-                cardForecast.style.borderLeftColor = level.color;
-                cardForecast.style.transition = 'border-color 0.5s ease-out';
-            }
+    // Icon: รูปภาพจริงใน marker
+    const iconHtml = f.image_url
+      ? `<div style="
+            width:52px;height:52px;border-radius:10px;overflow:hidden;
+            border:3px solid ${c};
+            box-shadow:0 4px 14px ${c}55, 0 2px 6px rgba(0,0,0,0.2);
+            cursor:pointer;position:relative;
+          ">
+          <img src="${f.image_url}"
+            style="width:100%;height:100%;object-fit:cover;"
+            onerror="this.parentElement.innerHTML='<div style=\'background:${c};width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:22px;\'>🔥</div>'"
+          />
+          <div style="
+            position:absolute;bottom:0;left:0;right:0;
+            background:linear-gradient(to top,${c}cc,transparent);
+            padding:3px 4px 2px;
+            font-size:8px;font-weight:800;color:#fff;text-align:center;
+            font-family:'IBM Plex Mono',monospace;letter-spacing:0.05em;
+          ">${f.pm25} µg/m³</div>
+          <div style="
+            position:absolute;inset:0;border-radius:7px;
+            box-shadow:inset 0 0 0 2px rgba(255,255,255,0.25);
+          "></div>
+        </div>`
+      : `<div style="position:relative;width:44px;height:44px;">
+          <div style="position:absolute;inset:0;border-radius:50%;background:${c}33;animation:pulse-r 1.8s ease-out infinite;"></div>
+          <div style="position:absolute;inset:0;border-radius:50%;background:${c}1a;animation:pulse-r 1.8s 0.6s ease-out infinite;"></div>
+          <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-52%);font-size:20px;">🔥</div>
+        </div>`;
 
-            renderChart(data);
-            renderTable(data);
-            
-            // อัปเดตไอคอนใหม่หลังจากมีการเปลี่ยน DOM
-            if (window.lucide) {
-                window.lucide.createIcons();
-            }
-        }
+    const iconSize  = f.image_url ? [52,52] : [44,44];
+    const iconAnchor= f.image_url ? [26,26] : [22,22];
+    const icon = L.divIcon({className:'',html:iconHtml,iconSize,iconAnchor,popupAnchor:[0,-26]});
 
-        // --- 5. ฟังก์ชันวาดกราฟ (Premium Smooth Chart with Drop Shadow) ---
-        function renderChart(data) {
-            const options = {
-                series: [{
-                    name: 'PM2.5',
-                    data: data.map(d => d.pm25)
-                }],
-                chart: {
-                    type: 'area',
-                    height: 350,
-                    toolbar: { show: false },
-                    fontFamily: 'Prompt, sans-serif',
-                    animations: {
-                        enabled: true,
-                        easing: 'easeinout',
-                        speed: 1200,
-                        animateGradually: {
-                            enabled: true,
-                            delay: 180
-                        },
-                        dynamicAnimation: {
-                            enabled: true,
-                            speed: 400
-                        }
-                    },
-                    dropShadow: {
-                        enabled: true,
-                        top: 3,
-                        left: 0,
-                        blur: 10,
-                        opacity: 0.15
-                    }
-                },
-                colors: ['#D4AF37'], // สีทอง
-                fill: {
-                    type: 'gradient',
-                    gradient: {
-                        shadeIntensity: 1,
-                        opacityFrom: 0.6,
-                        opacityTo: 0.05,
-                        stops: [0, 85, 100]
-                    }
-                },
-                dataLabels: { 
-                    enabled: true,
-                    offsetY: -8,
-                    style: {
-                        fontSize: '13px',
-                        fontFamily: 'Prompt',
-                        fontWeight: 'bold',
-                        colors: ['#1A2530']
-                    },
-                    background: {
-                        enabled: true,
-                        foreColor: '#fff',
-                        borderRadius: 6,
-                        padding: 6,
-                        borderWidth: 0,
-                        opacity: 0.95
-                    }
-                },
-                stroke: { 
-                    curve: 'smooth', 
-                    width: 4,
-                    lineCap: 'round'
-                },
-                xaxis: {
-                    categories: data.map(d => {
-                        if(d.type === 'current') return 'วันนี้';
-                        if(d.type === 'forecast') return d.date; // โชว์วันสำหรับพยากรณ์
-                        return d.date.substring(0,5); // ย่อวันที่
-                    }),
-                    axisBorder: { show: false },
-                    axisTicks: { show: false },
-                    labels: { style: { colors: '#888', fontWeight: 600, fontFamily: 'Prompt' } }
-                },
-                yaxis: {
-                    min: 0,
-                    max: Math.max(...data.map(d => d.pm25)) + 20,
-                    labels: { style: { colors: '#888', fontWeight: 500 } }
-                },
-                grid: {
-                    borderColor: '#f0f0f0',
-                    strokeDashArray: 5,
-                    xaxis: { lines: { show: true } },
-                    yaxis: { lines: { show: true } }
-                },
-                markers: {
-                    size: 6,
-                    colors: ['#fff'],
-                    strokeColors: '#D4AF37',
-                    strokeWidth: 3,
-                    hover: { 
-                        size: 9,
-                        sizeOffset: 2
-                    },
-                    discrete: []
-                },
-                annotations: {
-                    yaxis: [{
-                        y: 37.5,
-                        borderColor: '#e74c3c',
-                        strokeDashArray: 4,
-                        label: {
-                            borderColor: 'transparent',
-                            style: { color: '#fff', background: '#e74c3c', fontWeight: 600, fontFamily: 'Prompt', padding: {left: 10, right: 10, top: 4, bottom: 4} },
-                            text: 'เกินมาตรฐาน (37.5)'
-                        }
-                    }]
-                },
-                tooltip: {
-                    theme: 'light',
-                    style: {
-                        fontSize: '14px',
-                        fontFamily: 'Prompt'
-                    },
-                    marker: {
-                        show: true
-                    },
-                    y: { 
-                        formatter: function (val) { 
-                            return val.toFixed(1) + " µg/m³" 
-                        } 
-                    },
-                    custom: function({series, seriesIndex, dataPointIndex, w}) {
-                        const value = series[seriesIndex][dataPointIndex];
-                        const level = getPM25Level(value);
-                        return `
-                            <div style="padding: 12px; background: white; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
-                                <div style="font-weight: bold; color: ${level.color}; margin-bottom: 4px;">
-                                    ${value.toFixed(1)} µg/m³
-                                </div>
-                                <div style="font-size: 12px; color: #666;">
-                                    ${level.text}
-                                </div>
-                            </div>
-                        `;
-                    }
-                }
-            };
+    // Popup content — rich card with photo
+    const lv2 = lv(f.pm25);
+    const popupContent = `
+      <div style="width:260px;font-family:'Noto Sans Thai',sans-serif;">
+        ${f.image_url ? `
+        <div style="position:relative;margin:-1px -1px 0;border-radius:11px 11px 0 0;overflow:hidden;height:150px;">
+          <img src="${f.image_url}"
+            style="width:100%;height:100%;object-fit:cover;display:block;cursor:pointer;"
+            onclick="window.open('${f.image_url}','_blank')"
+            title="คลิกดูรูปขนาดเต็ม"
+            onerror="this.parentElement.style.display='none'"
+          />
+          <div style="position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,0.5) 0%,transparent 60%);"></div>
+          <div style="position:absolute;bottom:8px;left:10px;display:flex;align-items:center;gap:6px;">
+            <span style="background:${c};color:#fff;padding:2px 8px;border-radius:5px;font-size:10px;font-weight:800;">${f.sev}</span>
+            <span style="background:rgba(0,0,0,0.5);color:#fff;padding:2px 8px;border-radius:5px;font-size:10px;font-weight:700;">${f.time} น.</span>
+          </div>
+          <div style="position:absolute;top:8px;right:8px;background:rgba(255,255,255,0.15);backdrop-filter:blur(4px);border-radius:5px;padding:2px 6px;font-size:9px;color:#fff;cursor:pointer;" onclick="window.open('${f.image_url}','_blank')">🔍 ดูเต็ม</div>
+        </div>
+        ` : ''}
+        <div style="padding:12px;">
+          <div style="font-size:13px;font-weight:800;color:#1C1A17;margin-bottom:8px;display:flex;align-items:center;gap:6px;">
+            🔥 <span>${f.name}</span>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px;">
+            <div style="background:#FFF5F5;border:1px solid #FEE2E2;border-radius:7px;padding:6px 8px;">
+              <div style="font-size:9px;color:#9A3412;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:2px;">PM2.5</div>
+              <div style="font-size:16px;font-weight:800;color:${lv2.ringColor};font-family:'IBM Plex Mono',monospace;">${f.pm25}</div>
+              <div style="font-size:9px;color:#9A3412;">µg/m³ · ${lv2.label}</div>
+            </div>
+            <div style="background:#F9F8F4;border:1px solid rgba(212,175,55,0.2);border-radius:7px;padding:6px 8px;">
+              <div style="font-size:9px;color:#706B60;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:2px;">เวลา</div>
+              <div style="font-size:14px;font-weight:700;color:#1C1A17;font-family:'IBM Plex Mono',monospace;">${f.time}</div>
+              <div style="font-size:9px;color:#706B60;">น. · วันนี้</div>
+            </div>
+          </div>
+          ${f.reporter ? `
+          <div style="display:flex;align-items:center;gap:6px;padding:6px 8px;background:#F9F8F4;border-radius:7px;border:1px solid rgba(212,175,55,0.15);">
+            <div style="width:24px;height:24px;background:linear-gradient(135deg,#C9971C,#D4AF37);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0;">👤</div>
+            <div>
+              <div style="font-size:9px;color:#A89E8E;text-transform:uppercase;letter-spacing:0.06em;">รายงานโดย</div>
+              <div style="font-size:11px;font-weight:700;color:#1C1A17;">${f.reporter}</div>
+            </div>
+            <div style="margin-left:auto;background:#06C755;border-radius:4px;padding:2px 6px;font-size:9px;color:#fff;font-weight:700;">LINE OA</div>
+          </div>
+          ` : ''}
+        </div>
+      </div>
+    `;
 
-            const chart = new ApexCharts(document.querySelector("#chart-container"), options);
-            chart.render();
-        }
+    L.marker([f.lat,f.lon],{icon})
+      .addTo(fireMarkersLayer)
+      .bindPopup(popupContent, {
+        maxWidth:280, minWidth:260,
+        className:'fire-popup-custom',
+        closeButton:true, autoClose:false, closeOnClick:false
+      });
+  });
 
-        // --- 6. ฟังก์ชันสร้างตาราง (TARGETED UPDATE) ---
-        function renderTable(data) {
-            const tbody = document.getElementById('table-body');
-            
-            // ถ้ามีข้อมูลเดิมอยู่แล้ว ให้ update แทนการสร้างใหม่ทั้งหมด
-            const existingRows = tbody.querySelectorAll('tr');
-            const reversedData = [...data].reverse();
+  // Try loading real fire reports
+  loadFireReports();
 
-            reversedData.forEach((row, index) => {
-                const level = getPM25Level(row.pm25);
-                
-                let typeHtml = '';
-                let rowClass = 'hover:bg-yellow-50/40 transition-colors duration-300';
-                
-                if (row.type === 'current') {
-                    typeHtml = '<span class="bg-gradient-to-r from-[#C29B44] to-[#D4AF37] text-white px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap shadow-sm">วันนี้</span>';
-                    rowClass += ' bg-yellow-50/30';
-                } else if (row.type === 'forecast') {
-                    typeHtml = '<span class="bg-purple-100 border border-purple-200 text-purple-700 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap">พยากรณ์</span>';
-                } else {
-                    typeHtml = '<span class="text-gray-400 text-xs font-medium whitespace-nowrap px-2">ย้อนหลัง</span>';
-                }
+  // Label
+  const lIcon=L.divIcon({className:'',html:`<div style="background:white;border:1px solid rgba(212,175,55,0.3);border-radius:6px;padding:3px 10px;font-family:'Noto Sans Thai',sans-serif;font-size:11px;font-weight:700;color:#1C1A17;box-shadow:0 1px 5px rgba(0,0,0,0.1);white-space:nowrap;">นครพนม</div>`,iconAnchor:[35,10]});
+  L.marker([17.42,104.77],{icon:lIcon,interactive:false}).addTo(leafletMap);
+}
 
-                const rowHTML = `
-                    <td class="p-5 text-sm font-semibold text-[#1A2530] whitespace-nowrap">${row.date}</td>
-                    <td class="p-5 text-sm">${typeHtml}</td>
-                    <td class="p-5 text-lg font-bold text-[#1A2530] text-right">${row.pm25.toFixed(1)}</td>
-                    <td class="p-5 whitespace-nowrap">
-                        <span class="px-4 py-2 rounded-xl text-xs font-bold text-white inline-flex items-center shadow-md transform hover:scale-105 transition-transform" style="background-color: ${level.color}">
-                            ${level.text}
-                        </span>
-                    </td>
-                `;
+async function loadFireReports() {
+  try {
+    const BACKEND_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+      ? '' // same origin when running locally
+      : 'https://project-pm25.onrender.com'; // production backend
 
-                if (existingRows[index]) {
-                    // Update existing row
-                    existingRows[index].className = rowClass;
-                    existingRows[index].innerHTML = rowHTML;
-                } else {
-                    // Create new row
-                    const tr = document.createElement('tr');
-                    tr.className = rowClass;
-                    tr.innerHTML = rowHTML;
-                    tbody.appendChild(tr);
-                }
-            });
+    const response = await fetch(`${BACKEND_URL}/api/fire-reports`);
+    const data = await response.json();
+    if(data.data && Array.isArray(data.data) && data.data.length > 0) {
+      fireMarkersLayer.clearLayers();
+      data.data.forEach(report=>{
+        const lat = report.latitude, lon = report.longitude;
+        if(!lat || !lon) return;
 
-            // Remove extra rows if data is smaller
-            while (tbody.children.length > reversedData.length) {
-                tbody.removeChild(tbody.lastChild);
-            }
-        }
+        // Photo marker icon
+        const iconHtml = report.image_url
+          ? `<div style="width:56px;height:56px;border-radius:10px;overflow:hidden;border:3px solid #EF4444;box-shadow:0 4px 14px rgba(239,68,68,0.45),0 2px 6px rgba(0,0,0,0.2);cursor:pointer;position:relative;">
+              <img src="${report.image_url}" style="width:100%;height:100%;object-fit:cover;"
+                onerror="this.parentElement.innerHTML='<div style=\'background:#ef4444;width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:white;font-size:24px;\'>🔥</div>'"/>
+              <div style="position:absolute;inset:0;box-shadow:inset 0 0 0 2px rgba(255,255,255,0.2);border-radius:7px;"></div>
+            </div>`
+          : `<div style="background:#EF4444;width:48px;height:48px;border-radius:50%;border:3px solid white;box-shadow:0 4px 14px rgba(239,68,68,0.4);display:flex;align-items:center;justify-content:center;font-size:24px;cursor:pointer;position:relative;">
+              🔥
+              <div style="position:absolute;inset:-6px;border-radius:50%;background:rgba(239,68,68,0.2);animation:pulse-r 1.8s ease-out infinite;"></div>
+            </div>`;
 
-        // --- 7. Live Data Simulation Engine (Premium Feature) ---
-        let simulationInterval = null;
-        
-        function simulateRealtimeUpdates() {
-            if (!appData || appData.length === 0) return;
-            
-            // หา current data
-            const currentIndex = appData.findIndex(d => d.type === 'current');
-            if (currentIndex === -1) return;
-            
-            // สุ่มเปลี่ยนค่า PM2.5 เล็กน้อย (±2)
-            const variation = (Math.random() - 0.5) * 4; // -2 to +2
-            const newValue = Math.max(0, appData[currentIndex].pm25 + variation);
-            appData[currentIndex].pm25 = parseFloat(newValue.toFixed(1));
-            
-            // Update เฉพาะส่วนที่เปลี่ยน (Targeted DOM Update)
-            const level = getPM25Level(newValue);
-            const valEl = document.getElementById('current-pm25-val');
-            const oldValue = parseFloat(valEl.textContent) || 0;
-            
-            // Smooth count-up animation
-            animateValue(valEl, oldValue, newValue, 800);
-            valEl.style.color = level.color;
-            
-            // Update badge with fade effect
-            const badgeEl = document.getElementById('current-pm25-badge');
-            badgeEl.style.opacity = '0.5';
-            setTimeout(() => {
-                badgeEl.style.backgroundColor = level.color;
-                badgeEl.innerHTML = `
-                    <i data-lucide="${level.icon}" class="w-5 h-5 mr-2"></i>
-                    <span>${level.text}</span>
-                `;
-                badgeEl.style.opacity = '1';
-                if (window.lucide) window.lucide.createIcons();
-            }, 400);
-            
-            // Update marker position
-            const markerPosition = Math.min((newValue / 100) * 100, 100);
-            document.getElementById('indicator-marker').style.left = `${markerPosition}%`;
-            document.getElementById('indicator-val').textContent = newValue.toFixed(1);
-            
-            // Update table row (targeted)
-            renderTable(appData);
-        }
+        const iconSize   = report.image_url ? [56,56] : [48,48];
+        const iconAnchor = report.image_url ? [28,28] : [24,24];
+        const icon = L.divIcon({className:'',html:iconHtml,iconSize,iconAnchor,popupAnchor:[0,-28]});
 
-        // --- 8. ฟังก์ชันสร้างแผนที่และโหลดจุดไฟไหม้ ---
-        let map = null;
-        let markersLayer = null;
-
-        async function initializeMap() {
-            try {
-                console.log('🗺️ Initializing map...');
-                
-                // ตรวจสอบว่า Leaflet โหลดแล้วหรือยัง
-                if (typeof L === 'undefined') {
-                    console.error('❌ Leaflet library not loaded!');
-                    return;
-                }
-                
-                // สร้างแผนที่ โฟกัสที่นครพนม
-                map = L.map('map').setView([17.4065, 104.7686], 11);
-                console.log('✅ Map instance created');
-
-                // เพิ่ม OpenStreetMap tiles
-                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                    attribution: '© OpenStreetMap contributors',
-                    maxZoom: 18
-                }).addTo(map);
-                console.log('✅ Map tiles added');
-
-                // สร้าง layer สำหรับ markers
-                markersLayer = L.layerGroup().addTo(map);
-                console.log('✅ Markers layer created');
-
-                // โหลดข้อมูลจุดไฟไหม้
-                await loadFireReports();
-                console.log('✅ Map initialization complete');
-            } catch (error) {
-                console.error('❌ Error initializing map:', error);
-                // แสดงข้อความ error บนแผนที่
-                const mapEl = document.getElementById('map');
-                if (mapEl) {
-                    mapEl.innerHTML = `
-                        <div style="display: flex; align-items: center; justify-center; height: 100%; background: #f3f4f6; color: #666; font-family: 'Prompt', sans-serif; text-align: center; padding: 20px;">
-                            <div>
-                                <p style="font-size: 18px; font-weight: bold; margin-bottom: 8px;">⚠️ ไม่สามารถโหลดแผนที่ได้</p>
-                                <p style="font-size: 14px;">${error.message}</p>
-                            </div>
-                        </div>
-                    `;
-                }
-            }
-        }
-
-        async function loadFireReports() {
-            console.log('📍 Loading fire reports...');
-            try {
-                const response = await fetch('/api/fire-reports');
-                const data = await response.json();
-                
-                console.log('📊 Fire reports response:', data);
-                console.log('📊 Number of reports:', data.count);
-                
-                // API returns { data: [...], count: N } not { success: true, data: [...] }
-                if (data.data && Array.isArray(data.data)) {
-                    const reports = data.data;
-                    console.log(`✅ Processing ${reports.length} fire reports`);
-                    
-                    // อัพเดทจำนวนจุด
-                    document.getElementById('fire-count').textContent = `${reports.length} จุด`;
-                    
-                    // ล้าง markers เก่า
-                    markersLayer.clearLayers();
-                    console.log('🗑️ Cleared old markers');
-                    
-                    // เพิ่ม marker แต่ละจุด
-                    reports.forEach((report, index) => {
-                        const lat = report.latitude;
-                        const lon = report.longitude;
-                        
-                        console.log(`📍 Report ${index + 1}:`, {
-                            lat,
-                            lon,
-                            image_url: report.image_url,
-                            created_at: report.created_at
-                        });
-                        
-                        if (lat && lon) {
-                            // ใช้รูปภาพจริงแทนจุดกลม
-                            let iconHtml = '';
-                            if (report.image_url) {
-                                // แสดงรูปภาพที่ลูกค้าส่งมาเป็น marker
-                                iconHtml = `
-                                    <div style="
-                                        width: 60px; 
-                                        height: 60px; 
-                                        border-radius: 12px; 
-                                        overflow: hidden;
-                                        border: 3px solid #ef4444;
-                                        box-shadow: 0 4px 12px rgba(239, 68, 68, 0.5);
-                                        cursor: pointer;
-                                        transition: transform 0.2s;
-                                    " onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">
-                                        <img src="${report.image_url}" 
-                                             style="width: 100%; height: 100%; object-fit: cover;"
-                                             alt="Fire Report"
-                                             onerror="this.parentElement.innerHTML='<div style=\\'background:#ef4444;width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:white;font-size:24px;\\'>🔥</div>'" />
-                                    </div>
-                                `;
-                            } else {
-                                // ถ้าไม่มีรูป ใช้ไอคอนไฟ
-                                iconHtml = `
-                                    <div style="
-                                        background-color: #ef4444; 
-                                        width: 48px; 
-                                        height: 48px; 
-                                        border-radius: 50%; 
-                                        border: 3px solid white; 
-                                        box-shadow: 0 4px 12px rgba(0,0,0,0.4);
-                                        display: flex;
-                                        align-items: center;
-                                        justify-content: center;
-                                        font-size: 24px;
-                                        cursor: pointer;
-                                    ">🔥</div>
-                                `;
-                            }
-                            
-                            const fireIcon = L.divIcon({
-                                className: 'custom-fire-marker',
-                                html: iconHtml,
-                                iconSize: report.image_url ? [60, 60] : [48, 48],
-                                iconAnchor: report.image_url ? [30, 30] : [24, 24],
-                                popupAnchor: [0, report.image_url ? -30 : -24]
-                            });
-                            
-                            // สร้าง marker
-                            const marker = L.marker([lat, lon], { icon: fireIcon });
-                            
-                            // สร้าง popup content
-                            const reportDate = new Date(report.created_at);
-                            const dateStr = reportDate.toLocaleDateString('th-TH', {
-                                year: 'numeric',
-                                month: 'long',
-                                day: 'numeric',
-                                hour: '2-digit',
-                                minute: '2-digit'
-                            });
-                            
-                            let popupContent = `
-                                <div style="min-width: 280px; max-width: 350px; font-family: 'Prompt', sans-serif;">
-                                    <h3 style="font-weight: bold; color: #ef4444; margin-bottom: 12px; font-size: 16px; display: flex; align-items: center; gap: 8px;">
-                                        🔥 รายงานจุดไฟไหม้
-                                    </h3>
-                            `;
-                            
-                            if (report.image_url) {
-                                popupContent += `
-                                    <img src="${report.image_url}" 
-                                         style="width: 100%; height: 200px; object-fit: cover; border-radius: 12px; margin-bottom: 12px; cursor: pointer; border: 2px solid #ef4444;"
-                                         alt="รูปภาพจุดไฟไหม้"
-                                         onclick="window.open('${report.image_url}', '_blank')"
-                                         title="คลิกเพื่อดูรูปขนาดเต็ม" />
-                                `;
-                            }
-                            
-                            popupContent += `
-                                    <div style="font-size: 13px; color: #374151; line-height: 1.8; background: #f9fafb; padding: 12px; border-radius: 8px;">
-                                        <p style="margin: 6px 0; display: flex; align-items: start;">
-                                            <strong style="min-width: 80px; color: #1f2937;">📍 พิกัด:</strong>
-                                            <span>${lat.toFixed(6)}, ${lon.toFixed(6)}</span>
-                                        </p>
-                                        <p style="margin: 6px 0; display: flex; align-items: start;">
-                                            <strong style="min-width: 80px; color: #1f2937;">🕐 เวลา:</strong>
-                                            <span>${dateStr}</span>
-                                        </p>
-                            `;
-                            
-                            if (report.user_display_name) {
-                                popupContent += `
-                                    <p style="margin: 6px 0; display: flex; align-items: start;">
-                                        <strong style="min-width: 80px; color: #1f2937;">👤 รายงานโดย:</strong>
-                                        <span>${report.user_display_name}</span>
-                                    </p>
-                                `;
-                            }
-                            
-                            if (report.pm25_value) {
-                                const level = getPM25Level(report.pm25_value);
-                                popupContent += `
-                                    <p style="margin: 6px 0; display: flex; align-items: start;">
-                                        <strong style="min-width: 80px; color: #1f2937;">💨 PM2.5:</strong>
-                                        <span>
-                                            ${report.pm25_value} µg/m³
-                                            <span style="background: ${level.color}; color: white; padding: 3px 10px; border-radius: 6px; font-size: 11px; margin-left: 6px; font-weight: bold;">
-                                                ${level.text}
-                                            </span>
-                                        </span>
-                                    </p>
-                                `;
-                            }
-                            
-                            popupContent += `
-                                    </div>
-                                </div>
-                            `;
-                            
-                            marker.bindPopup(popupContent, {
-                                maxWidth: 350,
-                                minWidth: 280,
-                                className: 'custom-popup',
-                                closeButton: true,
-                                autoClose: false,
-                                closeOnClick: false
-                            });
-                            
-                            // เปิด popup อัตโนมัติเมื่อคลิก
-                            marker.on('click', function() {
-                                this.openPopup();
-                            });
-                            
-                            markersLayer.addLayer(marker);
-                        }
-                    });
-                    
-                    // ถ้ามีจุดไฟไหม้ ให้ zoom ไปที่จุดเหล่านั้น
-                    if (reports.length > 0 && markersLayer.getLayers().length > 0) {
-                        const bounds = markersLayer.getBounds();
-                        map.fitBounds(bounds, { padding: [50, 50], maxZoom: 13 });
-                    }
-                    
-                    console.log(`✅ Loaded ${reports.length} fire reports successfully`);
-                } else {
-                    console.warn('No fire reports data found or invalid format:', data);
-                    document.getElementById('fire-count').textContent = '0 จุด';
-                }
-            } catch (error) {
-                console.error('❌ Error loading fire reports:', error);
-                document.getElementById('fire-count').textContent = 'ไม่สามารถโหลดข้อมูล';
-            }
-        }
-
-        // --- 9. ฟังก์ชัน Download CSV ---
-        function handleDownloadCSV() {
-            if (appData.length === 0) return;
-            
-            const headers = ['วันที่', 'ค่า PM2.5 (µg/m³)', 'สถานะ', 'ประเภทข้อมูล'];
-            const csvContent = [
-                headers.join(','),
-                ...appData.map(row => {
-                    const status = getPM25Level(row.pm25).text;
-                    const typeStr = row.type === 'current' ? 'ปัจจุบัน' : row.type === 'forecast' ? 'พยากรณ์' : 'ย้อนหลัง';
-                    return `${row.date},${row.pm25},${status},${typeStr}`;
-                })
-            ].join('\n');
-
-            const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.setAttribute('download', `AQI_Nakhon_Phanom_${new Date().getTime()}.csv`);
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        }
-
-        // --- เริ่มการทำงานเมื่อโหลดหน้าเสร็จ ---
-        document.addEventListener('DOMContentLoaded', async () => {
-            // สร้าง Particles
-            createParticles();
-            lucide.createIcons();
-
-            // ดึงข้อมูล
-            const data = await fetchPM25Data();
-            
-            // แสดงข้อมูล
-            renderDashboard(data);
-
-            // ปิดหน้าจอโหลด เปิดหน้าจอหลัก พร้อม Animation
-            const loader = document.getElementById('loader');
-            const appContent = document.getElementById('app-content');
-            
-            loader.classList.add('hidden-fade');
-            setTimeout(() => {
-                loader.style.display = 'none';
-                appContent.classList.remove('hidden');
-                
-                // ค่อยๆ Fade in เนื้อหา
-                appContent.style.opacity = '0';
-                appContent.style.animation = 'fadeIn 1s forwards';
-                
-                lucide.createIcons(); // รีเฟรช Icon
-                
-                // เริ่มต้นแผนที่หลังจาก DOM แสดงผลแล้ว (Phase 2)
-                setTimeout(async () => {
-                    console.log('🗺️ Starting map initialization...');
-                    await initializeMap();
-                }, 500);
-                
-                // เริ่ม Live Data Simulation (ทุก 5 วินาที)
-                simulationInterval = setInterval(simulateRealtimeUpdates, 5000);
-            }, 800);
+        const reportDate = new Date(report.created_at).toLocaleDateString('th-TH',{
+          year:'numeric',month:'long',day:'numeric',hour:'2-digit',minute:'2-digit'
         });
-        
-        // Add fade in keyframe programmatically
-        const style = document.createElement('style');
-        style.innerHTML = `@keyframes fadeIn { to { opacity: 1; } }`;
-        document.head.appendChild(style);
-    </script>
+        const pm25lv = report.pm25_value ? lv(report.pm25_value) : null;
+
+        const popupContent = `
+          <div style="width:260px;font-family:'Noto Sans Thai',sans-serif;">
+            ${report.image_url ? `
+            <div style="position:relative;height:160px;overflow:hidden;border-radius:11px 11px 0 0;">
+              <img src="${report.image_url}"
+                style="width:100%;height:100%;object-fit:cover;display:block;cursor:pointer;"
+                onclick="window.open('${report.image_url}','_blank')"
+                title="คลิกดูรูปขนาดเต็ม"
+                onerror="this.parentElement.style.display='none'"
+              />
+              <div style="position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,0.5),transparent 60%);"></div>
+              <div style="position:absolute;top:8px;right:8px;background:rgba(0,0,0,0.4);backdrop-filter:blur(4px);border-radius:5px;padding:2px 7px;font-size:9px;color:#fff;cursor:pointer;" onclick="window.open('${report.image_url}','_blank')">🔍 ดูเต็ม</div>
+              <div style="position:absolute;bottom:8px;left:10px;">
+                <span style="background:#EF4444;color:#fff;padding:2px 8px;border-radius:5px;font-size:10px;font-weight:800;">🔥 ไฟไหม้</span>
+              </div>
+            </div>
+            ` : ''}
+            <div style="padding:12px;">
+              <div style="font-size:13px;font-weight:800;color:#1C1A17;margin-bottom:8px;">🔥 รายงานจุดไฟไหม้</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px;">
+                ${pm25lv ? `
+                <div style="background:#FFF5F5;border:1px solid #FEE2E2;border-radius:7px;padding:6px 8px;">
+                  <div style="font-size:9px;color:#9A3412;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:2px;">PM2.5</div>
+                  <div style="font-size:16px;font-weight:800;color:${pm25lv.ringColor};font-family:'IBM Plex Mono',monospace;">${report.pm25_value}</div>
+                  <div style="font-size:9px;color:#9A3412;">µg/m³ · ${pm25lv.label}</div>
+                </div>` : ''}
+                <div style="background:#F9F8F4;border:1px solid rgba(212,175,55,0.2);border-radius:7px;padding:6px 8px;${pm25lv?'':'grid-column:1/-1;'}">
+                  <div style="font-size:9px;color:#706B60;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:2px;">📍 พิกัด</div>
+                  <div style="font-size:11px;font-weight:600;color:#1C1A17;font-family:'IBM Plex Mono',monospace;">${lat.toFixed(4)}</div>
+                  <div style="font-size:11px;font-weight:600;color:#1C1A17;font-family:'IBM Plex Mono',monospace;">${lon.toFixed(4)}</div>
+                </div>
+              </div>
+              <div style="font-size:11px;color:#706B60;margin-bottom:6px;display:flex;align-items:center;gap:5px;">
+                <span>🕐</span><span>${reportDate}</span>
+              </div>
+              ${report.user_display_name ? `
+              <div style="display:flex;align-items:center;gap:6px;padding:6px 8px;background:#F9F8F4;border-radius:7px;border:1px solid rgba(212,175,55,0.15);">
+                <div style="width:24px;height:24px;background:linear-gradient(135deg,#C9971C,#D4AF37);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0;">👤</div>
+                <div style="flex:1;">
+                  <div style="font-size:9px;color:#A89E8E;text-transform:uppercase;letter-spacing:0.06em;">รายงานโดย</div>
+                  <div style="font-size:11px;font-weight:700;color:#1C1A17;">${report.user_display_name}</div>
+                </div>
+                <div style="background:#06C755;border-radius:4px;padding:2px 6px;font-size:9px;color:#fff;font-weight:700;">LINE OA</div>
+              </div>
+              ` : ''}
+            </div>
+          </div>
+        `;
+
+        L.marker([lat,lon],{icon})
+          .addTo(fireMarkersLayer)
+          .bindPopup(popupContent, {
+            maxWidth:280, minWidth:260,
+            className:'fire-popup-custom',
+            closeButton:true, autoClose:false, closeOnClick:false
+          });
+      });
+      document.getElementById('fire-count-badge').textContent = `${data.data.length} จุด`;
+    }
+  } catch(e) { /* API not available, use static data */ }
+}
+
+/* ──────────────────────────────────
+   API DATA (from index.html)
+────────────────────────────────── */
+let appData = [];
+let apiChart = null;
+let simulationInterval = null;
+
+function animateValue(element, start, end, duration) {
+  if(!element) return;
+  const range = end-start, increment = range/(duration/16);
+  let current = start;
+  const timer = setInterval(()=>{
+    current += increment;
+    if((increment>0&&current>=end)||(increment<0&&current<=end)){ current=end; clearInterval(timer); }
+    element.textContent = current.toFixed(1);
+  },16);
+}
+
+async function fetchPM25Data() {
+  const TOKEN = '6e19dc4d73747ab27c397b590fdbd504f1f496fc';
+  try {
+    const searchRes = await fetch(`https://api.waqi.info/search/?token=${TOKEN}&keyword=${encodeURIComponent('nakhon phanom')}`);
+    const searchData = await searchRes.json();
+    if(searchData.status!=='ok'||searchData.data.length===0) throw new Error('ไม่พบสถานี');
+    const feedRes = await fetch(`https://api.waqi.info/feed/@${searchData.data[0].uid}/?token=${TOKEN}`);
+    const feedData = await feedRes.json();
+    if(feedData.status!=='ok') throw new Error('ดึงข้อมูลล้มเหลว');
+
+    const data = feedData.data;
+    let formatted = [];
+    let id = 1;
+    const formatDate = d => {
+      const dt = new Date(d);
+      return `${String(dt.getDate()).padStart(2,'0')}/${String(dt.getMonth()+1).padStart(2,'0')}/${dt.getFullYear()+543}`;
+    };
+    const todayStr = data.time.s.split(' ')[0];
+    const today = new Date(todayStr); today.setHours(0,0,0,0);
+    const daily = data.forecast?.daily?.pm25||[];
+    daily.forEach(item=>{
+      const d = new Date(item.day); d.setHours(0,0,0,0);
+      let type = d.getTime()===today.getTime()?'current':d.getTime()>today.getTime()?'forecast':'history';
+      let pm25Val = type==='current'?(data.iaqi?.pm25?.v||item.avg):item.avg;
+      formatted.push({id:id++,date:formatDate(item.day),pm25:parseFloat(pm25Val),type,rawTimestamp:d.getTime()});
+    });
+    if(!formatted.find(d=>d.type==='current')&&data.iaqi?.pm25)
+      formatted.push({id:id++,date:formatDate(todayStr),pm25:parseFloat(data.iaqi.pm25.v),type:'current',rawTimestamp:today.getTime()});
+    formatted.sort((a,b)=>a.rawTimestamp-b.rawTimestamp);
+    const ci = formatted.findIndex(d=>d.type==='current');
+    if(ci!==-1) formatted = formatted.slice(Math.max(0,ci-4),Math.min(formatted.length,ci+4));
+    return formatted;
+  } catch(e) {
+    console.warn('API fallback to mock:', e.message);
+    return [
+      {id:1,date:'18/03/2569',pm25:14.5,type:'history'},{id:2,date:'19/03/2569',pm25:22.0,type:'history'},
+      {id:3,date:'20/03/2569',pm25:45.2,type:'history'},{id:4,date:'21/03/2569',pm25:58.0,type:'history'},
+      {id:5,date:'22/03/2569',pm25:58.4,type:'current'},{id:6,date:'23/03/2569',pm25:39.7,type:'forecast'},
+      {id:7,date:'24/03/2569',pm25:25.0,type:'forecast'},
+    ];
+  }
+}
+
+function renderAPIChart(data) {
+  if(apiChart) apiChart.destroy();
+  const colors = data.map(d=>d.type==='current'?'#C9971C':d.type==='forecast'?'#6366F1':'#D4CDBF');
+  const opts = {
+    series:[{name:'PM2.5', data:data.map(d=>d.pm25)}],
+    chart:{
+      type:'area', height:200, background:'transparent', toolbar:{show:false},
+      animations:{enabled:true,easing:'easeinout',speed:1000}, fontFamily:'Noto Sans Thai,sans-serif',
+      dropShadow:{enabled:true,top:3,left:0,blur:10,opacity:0.1},
+    },
+    colors:['#C9971C'],
+    fill:{type:'gradient',gradient:{shadeIntensity:1,opacityFrom:0.6,opacityTo:0.05,stops:[0,85,100]}},
+    stroke:{curve:'smooth',width:3,lineCap:'round'},
+    dataLabels:{
+      enabled:true,offsetY:-8,
+      style:{fontSize:'11px',fontFamily:'IBM Plex Mono',fontWeight:'bold',colors:colors},
+      background:{enabled:true,foreColor:'#1C1A17',borderRadius:5,padding:4,borderWidth:0,opacity:0.9},
+    },
+    markers:{size:5,colors:['#fff'],strokeColors:colors,strokeWidth:2,hover:{size:7}},
+    xaxis:{
+      categories:data.map(d=>{
+        if(d.type==='current') return 'วันนี้';
+        if(d.type==='forecast') return d.date.substring(0,5);
+        return d.date.substring(0,5);
+      }),
+      axisBorder:{show:false}, axisTicks:{show:false},
+      labels:{style:{colors:'#A89E8E',fontWeight:600}},
+    },
+    yaxis:{min:0,max:Math.max(...data.map(d=>d.pm25))+20,labels:{style:{colors:['#A89E8E']}}},
+    grid:{borderColor:'rgba(212,175,55,0.1)',strokeDashArray:5,xaxis:{lines:{show:true}},yaxis:{lines:{show:true}}},
+    annotations:{yaxis:[{y:37.5,borderColor:'#E74C3C',strokeDashArray:4,label:{borderColor:'transparent',style:{color:'#fff',background:'#E74C3C',fontWeight:600,fontFamily:'Noto Sans Thai'},text:'เกินมาตรฐาน (37.5)'}}]},
+    tooltip:{
+      theme:'light', style:{fontSize:'12px',fontFamily:'Noto Sans Thai'},
+      y:{formatter:v=>v.toFixed(1)+' µg/m³'},
+      custom:({series,seriesIndex,dataPointIndex})=>{
+        const v=series[seriesIndex][dataPointIndex];
+        const lv2=getPM25Level(v);
+        return `<div style="padding:10px;background:white;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.1);font-family:'Noto Sans Thai',sans-serif;"><div style="font-weight:800;color:${lv2.color};font-family:'IBM Plex Mono',monospace;">${v.toFixed(1)} µg/m³</div><div style="font-size:11px;color:#666;margin-top:2px;">${lv2.text}</div></div>`;
+      }
+    },
+  };
+  apiChart = new ApexCharts(document.querySelector('#chart-container'),opts);
+  apiChart.render();
+}
+
+function renderAPITable(data) {
+  const tbody = document.getElementById('table-body');
+  const reversedData = [...data].reverse();
+  reversedData.forEach((row,index)=>{
+    const level = getPM25Level(row.pm25);
+    let typeHtml = '';
+    let rowClass = '';
+    if(row.type==='current'){
+      typeHtml=`<span style="background:linear-gradient(135deg,#C9971C,#D4AF37);color:white;padding:3px 10px;border-radius:8px;font-size:11px;font-weight:700;">วันนี้</span>`;
+      rowClass='style="background:rgba(253,248,230,0.3);"';
+    } else if(row.type==='forecast'){
+      typeHtml=`<span style="background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.3);color:#6366F1;padding:3px 10px;border-radius:8px;font-size:11px;font-weight:700;">พยากรณ์</span>`;
+    } else {
+      typeHtml=`<span style="color:var(--stone-4);font-size:11px;">ย้อนหลัง</span>`;
+    }
+    const tr = tbody.children[index] || document.createElement('tr');
+    tr.setAttribute('style',rowClass?'background:rgba(253,248,230,0.3);':'');
+    tr.innerHTML=`
+      <td style="padding:10px 13px;font-size:13px;font-weight:600;color:var(--stone);">${row.date}</td>
+      <td style="padding:10px 13px;">${typeHtml}</td>
+      <td style="padding:10px 13px;font-size:14px;font-weight:800;color:var(--stone);text-align:right;font-family:'IBM Plex Mono',monospace;">${row.pm25.toFixed(1)}</td>
+      <td style="padding:10px 13px;">
+        <span style="padding:3px 10px;border-radius:8px;font-size:11px;font-weight:700;color:white;background:${level.color};">${level.text}</span>
+      </td>
+    `;
+    if(!tbody.children[index]) tbody.appendChild(tr);
+  });
+  while(tbody.children.length>reversedData.length) tbody.removeChild(tbody.lastChild);
+}
+
+function renderAPIStatus(data) {
+  const curr = data.find(d=>d.type==='current');
+  if(curr){
+    const level = getPM25Level(curr.pm25);
+    document.getElementById('api-date').innerHTML=`📅 ${curr.date} · อัปเดตล่าสุด`;
+    document.getElementById('api-status').innerHTML=`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' width='11' height='11'><path d='M22 11.08V12a10 10 0 1 1-5.93-9.14'/><polyline points='22 4 12 14.01 9 11.01'/></svg> โหลดสำเร็จ`;
+    document.getElementById('api-status').style.color = '#16A34A';
+    document.getElementById('api-status').style.background = '#F0FDF4';
+    document.getElementById('api-status').style.border = '1px solid #BBF7D0';
+
+    const valEl = document.getElementById('current-pm25-val');
+    animateValue(valEl, 0, curr.pm25, 1200);
+    valEl.style.color = level.color;
+
+    const badge = document.getElementById('current-pm25-badge');
+    badge.style.background = level.color;
+    badge.innerHTML = `<span>${level.text}</span>`;
+
+    const pct = Math.min((curr.pm25/100)*100,100);
+    document.getElementById('indicator-marker').style.left = pct+'%';
+    document.getElementById('indicator-val').textContent = curr.pm25.toFixed(1);
+  }
+}
+
+function simulateRealtimeUpdates() {
+  if(!appData||appData.length===0) return;
+  const ci = appData.findIndex(d=>d.type==='current');
+  if(ci===-1) return;
+  const variation = (Math.random()-0.5)*4;
+  const newValue = Math.max(0, appData[ci].pm25+variation);
+  appData[ci].pm25 = parseFloat(newValue.toFixed(1));
+  const level = getPM25Level(newValue);
+  const valEl = document.getElementById('current-pm25-val');
+  animateValue(valEl, parseFloat(valEl.textContent)||0, newValue, 800);
+  valEl.style.color = level.color;
+  const badge = document.getElementById('current-pm25-badge');
+  badge.style.opacity='0.5';
+  setTimeout(()=>{ badge.style.background=level.color; badge.innerHTML=`<span>${level.text}</span>`; badge.style.opacity='1'; },400);
+  const pct = Math.min((newValue/100)*100,100);
+  document.getElementById('indicator-marker').style.left=pct+'%';
+  document.getElementById('indicator-val').textContent=newValue.toFixed(1);
+  renderAPITable(appData);
+}
+
+/* ──────────────────────────────────
+   CSV DOWNLOAD
+────────────────────────────────── */
+function handleDownloadCSV() {
+  const rows = TABLE_ROWS;
+  const headers = ['อำเภอ','ล่าสุด (µg/m³)','คาดการณ์ 19:00','คาดการณ์ 20:00','คาดการณ์ 21:00','เฉลี่ย 24ชม.','แนวโน้ม'];
+  const csvContent = [
+    headers.join(','),
+    ...rows.map(r=>`${r.district},${r.now},${r.f[0]},${r.f[1]},${r.f[2]},${r.avg},${r.trend}`)
+  ].join('\n');
+  const blob = new Blob(['\uFEFF'+csvContent],{type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href=url; link.setAttribute('download',`PM25_NakhonPhanom_${new Date().getTime()}.csv`);
+  document.body.appendChild(link); link.click(); document.body.removeChild(link);
+}
+
+/* ──────────────────────────────────
+   LIVE SIMULATION (all systems)
+────────────────────────────────── */
+const tempHistory = Array.from({length:12},()=>32+Math.random()*4);
+const visHistory  = Array.from({length:12},()=>3+Math.random()*3);
+
+function simulate() {
+  currentPM   = Math.max(5,Math.min(150,currentPM+(Math.random()-0.5)*4));
+  currentTemp = Math.max(28,Math.min(42,currentTemp+(Math.random()-0.5)*0.4));
+  currentHumid= Math.max(30,Math.min(95,currentHumid+(Math.random()-0.5)*1.5));
+  currentWind = Math.max(2,Math.min(40,currentWind+(Math.random()-0.5)*1.2));
+  currentVis  = Math.max(1,Math.min(15,currentVis+(Math.random()-0.5)*0.3));
+  currentPress= Math.max(1000,Math.min(1020,currentPress+(Math.random()-0.5)*0.5));
+  windDeg     = (windDeg+(Math.random()-0.5)*20+360)%360;
+
+  updateAQI(currentPM);
+  updateEnv();
+
+  tempHistory.shift(); tempHistory.push(currentTemp);
+  visHistory.shift();  visHistory.push(currentVis);
+  renderSparkbar('temp-spark', tempHistory, '#C9971C');
+  renderSparkbar('vis-spark',  visHistory,  '#6366F1');
+
+  updateStations();
+  simulateRealtimeUpdates();
+
+  // Update chart footer stats
+  const avg = Math.round(HIST.reduce((a,b)=>a+b,0)/HIST.length*10)/10;
+  document.getElementById('cf-avg').textContent = avg;
+  document.getElementById('cf-max').textContent = Math.max(...HIST);
+  document.getElementById('cf-min').textContent = Math.min(...HIST);
+}
+
+/* ──────────────────────────────────
+   INIT
+────────────────────────────────── */
+document.addEventListener('DOMContentLoaded', async () => {
+  lucide.createIcons();
+  startClock();
+
+  // Hide loader after short delay
+  setTimeout(async ()=>{
+    // Init all static components
+    updateAQI(CURRENT_PM25);
+    updateEnv();
+    renderSparkbar('temp-spark', tempHistory, '#C9971C');
+    renderSparkbar('vis-spark',  visHistory,  '#6366F1');
+    renderForecastList();
+    renderStations();
+    renderFireList();
+    renderTable();
+    renderHourlyChart();
+    setTimeout(initMap, 300);
+
+    // Load API data
+    document.getElementById('loader').classList.add('fade-out');
+
+    const data = await fetchPM25Data();
+    appData = data;
+    renderAPIStatus(data);
+    renderAPITable(data);
+    setTimeout(()=>renderAPIChart(data), 600);
+
+    // Start live simulation every 5 seconds
+    simulationInterval = setInterval(simulate, 5000);
+    lucide.createIcons();
+  }, 1400);
+});
+</script>
 </body>
 </html>
