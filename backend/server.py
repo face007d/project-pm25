@@ -9,6 +9,8 @@ import hashlib
 import base64
 from datetime import date, timedelta, datetime
 from zoneinfo import ZoneInfo
+import io
+from PIL import Image
 warnings.filterwarnings('ignore')
 
 # Thailand timezone
@@ -388,6 +390,72 @@ def line_webhook():
     return 'OK', 200
 
 
+def upload_image_to_supabase(image_content, user_id, message_id):
+    """
+    ดาวน์โหลดรูปจาก LINE, resize เป็น 768px, และอัพโหลดไปยัง Supabase Storage
+    Returns: public URL ของรูปภาพ หรือ None ถ้าล้มเหลว
+    """
+    try:
+        # อ่านข้อมูลรูปภาพ
+        image_data = b''
+        for chunk in image_content.iter_content():
+            image_data += chunk
+        
+        # เปิดรูปด้วย PIL
+        image = Image.open(io.BytesIO(image_data))
+        
+        # Resize ให้กว้างสุด 768px (รักษาอัตราส่วน)
+        max_width = 768
+        if image.width > max_width:
+            ratio = max_width / image.width
+            new_height = int(image.height * ratio)
+            image = image.resize((max_width, new_height), Image.Resampling.LANCZOS)
+        
+        # แปลงเป็น RGB ถ้าเป็น RGBA
+        if image.mode == 'RGBA':
+            image = image.convert('RGB')
+        
+        # บันทึกเป็น JPEG ใน memory
+        output = io.BytesIO()
+        image.save(output, format='JPEG', quality=85, optimize=True)
+        output.seek(0)
+        
+        # สร้างชื่อไฟล์ unique
+        timestamp = datetime.now(THAILAND_TZ).strftime('%Y%m%d_%H%M%S')
+        filename = f"{user_id}_{timestamp}_{message_id}.jpg"
+        
+        # อัพโหลดไปยัง Supabase Storage
+        supabase_url = os.getenv('SUPABASE_URL')
+        supabase_key = os.getenv('SUPABASE_KEY')
+        
+        if not supabase_url or not supabase_key:
+            print("⚠️ Supabase credentials not found")
+            return None
+        
+        from supabase import create_client
+        supabase = create_client(supabase_url, supabase_key)
+        
+        # อัพโหลดไฟล์
+        bucket_name = 'fire_images'
+        response = supabase.storage.from_(bucket_name).upload(
+            filename,
+            output.getvalue(),
+            file_options={"content-type": "image/jpeg"}
+        )
+        
+        # สร้าง public URL
+        public_url = supabase.storage.from_(bucket_name).get_public_url(filename)
+        
+        print(f"✅ Image uploaded successfully: {public_url}")
+        return public_url
+        
+    except Exception as e:
+        print(f"❌ Error uploading image to Supabase: {e}")
+        import traceback
+        traceback.print_exc()
+        return None
+
+
 def save_fire_report_from_session(user_id, session, reply_token, address=None):
     """บันทึกรายงานไฟไหม้จาก session ที่สมบูรณ์"""
     try:
@@ -633,17 +701,21 @@ if LINE_BOT_AVAILABLE and handler:
 
     @handler.add(MessageEvent, message=ImageMessage)
     def handle_image_message(event):
-        """จัดการรูปภาพ"""
+        """จัดการรูปภาพ - ดาวน์โหลดและอัพโหลดไปยัง Supabase"""
         user_id = event.source.user_id
         message_id = event.message.id
         
         try:
-            # ดาวน์โหลดรูปภาพ
+            # ดาวน์โหลดรูปภาพจาก LINE
             message_content = line_bot_api.get_message_content(message_id)
             
-            # บันทึกรูปชั่วคราว (ในระบบจริงควรอัปโหลดไป cloud storage)
-            # ตอนนี้เราจะใช้ LINE CDN URL
-            image_url = f"https://api-data.line.me/v2/bot/message/{message_id}/content"
+            # อัพโหลดไปยัง Supabase Storage (resize เป็น 768px)
+            image_url = upload_image_to_supabase(message_content, user_id, message_id)
+            
+            if not image_url:
+                # ถ้าอัพโหลดล้มเหลว ใช้ LINE URL แทน (แต่จะหมดอายุ)
+                image_url = f"https://api-data.line.me/v2/bot/message/{message_id}/content"
+                print("⚠️ Using LINE URL as fallback (will expire)")
             
             # ดึง session ปัจจุบัน
             session = db.get_or_create_session(user_id)
@@ -660,7 +732,7 @@ if LINE_BOT_AVAILABLE and handler:
                 )
                 return
             
-            # อัปเดต session ด้วยรูปภาพ
+            # อัปเดต session ด้วยรูปภาพ (ใช้ Supabase URL)
             db.update_session_image(
                 session_id=session['id'],
                 image_url=image_url,
