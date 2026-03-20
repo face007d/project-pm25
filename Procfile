@@ -1,2 +1,1 @@
-# PM2.5 Web Service - Updated 2026-03-20
-web: gunicorn backend.server:app
+web: gunicorn backend.server:app --bind 0.0.0.0:$PORT
