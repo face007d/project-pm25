@@ -1556,18 +1556,6 @@ function updateStations() {
   // Refresh station data every 5 minutes
   fetchStationsData();
 }
-  const rows = document.querySelectorAll('#station-list .station-row');
-  rows.forEach((row,i)=>{
-    if(!stationsData[i]) return;
-    const L = lv(stationsData[i].pm25);
-    const dot = row.querySelector('.station-dot');
-    if(dot){ dot.style.background=L.ringColor; dot.style.boxShadow=`0 0 5px ${L.ringColor}66`; }
-    const vals = row.querySelectorAll('div[style*="font-size:15px"]');
-    if(vals[0]) vals[0].textContent=stationsData[i].pm25.toFixed(1);
-  });
-  const avg = stationsData.reduce((a,b)=>a+b.pm25,0)/stationsData.length;
-  document.getElementById('sb-avg').textContent = avg.toFixed(1);
-}
 
 /* ──────────────────────────────────
    MAIN HOURLY CHART (pm25_v3 style)
