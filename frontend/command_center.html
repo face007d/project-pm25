@@ -1,52 +1,1115 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PM2.5 Command Center - Nakhon Phanom</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        
-        body {
-            font-family: 'Prompt', 'Inter', sans-serif;
-            background: #0a0e27;
-            color: #e0e7ff;
-            overflow-x: hidden;
-            position: relative;
-        }
-        
-        /* Particle Canvas Background */
-        #particles-canvas {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 0;
-            pointer-events: none;
-        }
-        
-        /* Glassmorphism Cards */
-        .glass-card {
-            background: rgba(15, 23, 42, 0.7);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border: 1px solid rgba(148, 163, 184, 0.1);
-            border-radius: 24px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        
-        .glass-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-            border-color: rgba(148, 163, 184, 0.2);
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nakhon Phanom Command Center</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Prompt:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,300&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest"></script>
+<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+<style>
+/* ═══════════════════════════════════════════
+   DESIGN TOKENS
+═══════════════════════════════════════════ */
+:root {
+  --sand:       #F9F8F6;
+  --sand-2:     #F2F0EC;
+  --stone:      #292524;
+  --stone-2:    #44403C;
+  --stone-3:    #78716C;
+  --stone-4:    #A8A29E;
+  --gold:       #C9971C;
+  --gold-lt:    #D4AF37;
+  --gold-dk:    #A07610;
+  --gold-pale:  #FDF8E8;
+  --gold-border:rgba(212,175,55,0.22);
+  --glass-bg:   rgba(255,255,255,0.72);
+  --glass-bd:   rgba(212,175,55,0.18);
+  --shadow-sm:  0 1px 3px rgba(41,37,36,0.07), 0 1px 2px rgba(41,37,36,0.04);
+  --shadow-md:  0 4px 16px rgba(41,37,36,0.08), 0 1px 4px rgba(41,37,36,0.05);
+  --shadow-lg:  0 12px 40px rgba(41,37,36,0.10), 0 2px 8px rgba(41,37,36,0.05);
+  --r:          16px;
+  --r-sm:       10px;
+}
+
+/* ═══ RESET ═══ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: 'Prompt', sans-serif;
+  background-color: var(--sand);
+  color: var(--stone);
+  min-height: 100vh;
+  overflow-x: hidden;
+  position: relative;
+}
+
+/* ═══ BACKGROUND TEXTURE ═══ */
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background:
+    radial-gradient(ellipse 80% 60% at 15% 10%, rgba(212,175,55,0.06) 0%, transparent 55%),
+    radial-gradient(ellipse 60% 50% at 85% 85%, rgba(201,151,28,0.05) 0%, transparent 50%),
+    radial-gradient(ellipse 40% 40% at 50% 50%, rgba(249,248,246,0.0) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+body::after {
+  content: '';
+  position: fixed; inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.025'/%3E%3C/svg%3E");
+  background-size: 180px 180px;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.6;
+}
+
+/* ═══ GLASS CARD ═══ */
+.glass {
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px) saturate(1.4);
+  -webkit-backdrop-filter: blur(20px) saturate(1.4);
+  border: 1px solid var(--glass-bd);
+  border-radius: var(--r);
+  box-shadow: var(--shadow-md);
+  position: relative;
+  overflow: hidden;
+}
+.glass::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.45) 0%, rgba(255,255,255,0.0) 60%);
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 0;
+}
+.glass > * { position: relative; z-index: 1; }
+
+/* ═══ GOLD GRADIENT TEXT ═══ */
+.gold-text {
+  background: linear-gradient(135deg, #C9971C 0%, #D4AF37 40%, #E8C84A 60%, #B8860B 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.gold-text-sm {
+  background: linear-gradient(90deg, #B8860B, #D4AF37, #C9971C);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* ═══ GOLD LINE ACCENT ═══ */
+.gold-line {
+  display: inline-block;
+  width: 32px; height: 2px;
+  background: linear-gradient(90deg, #D4AF37, transparent);
+  border-radius: 2px;
+  vertical-align: middle;
+}
+
+/* ═══ BENTO GRID ═══ */
+#bento {
+  display: grid;
+  grid-template-columns: 280px 1fr 1fr 1fr;
+  grid-template-rows: auto auto auto;
+  gap: 14px;
+}
+
+/* Card slot definitions */
+.slot-sidebar    { grid-column: 1; grid-row: 1 / 4; }
+.slot-aqi        { grid-column: 2; grid-row: 1; }
+.slot-forecast   { grid-column: 3; grid-row: 1; }
+.slot-map        { grid-column: 4; grid-row: 1; }
+.slot-env        { grid-column: 2 / 5; grid-row: 2; display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 14px; }
+.slot-chart      { grid-column: 2 / 4; grid-row: 3; }
+.slot-stations   { grid-column: 4; grid-row: 3; }
+
+/* ═══ HEADER ═══ */
+#header {
+  position: relative; z-index: 10;
+  background: rgba(249,248,246,0.92);
+  backdrop-filter: blur(24px);
+  border-bottom: 1px solid var(--gold-border);
+  box-shadow: 0 1px 0 rgba(212,175,55,0.10), var(--shadow-sm);
+}
+
+/* ═══ LIVE DOT ═══ */
+.live-dot-wrap { position: relative; display: inline-flex; align-items: center; justify-content: center; }
+.live-dot { width: 8px; height: 8px; border-radius: 50%; background: #22c55e; position: relative; z-index: 1; }
+.live-ring {
+  position: absolute; inset: -4px;
+  border-radius: 50%; border: 1.5px solid #22c55e;
+  animation: liveRing 2s ease-out infinite;
+}
+@keyframes liveRing { 0%{transform:scale(0.7);opacity:0.8} 100%{transform:scale(1.9);opacity:0} }
+
+/* ═══ AQI METER CIRCLE ═══ */
+.aqi-ring-wrap { position: relative; width: 140px; height: 140px; flex-shrink: 0; }
+#aqi-ring-svg { transform: rotate(-90deg); }
+#aqi-ring-track { fill: none; stroke: #F2F0EC; stroke-width: 10; stroke-linecap: round; }
+#aqi-ring-fill  {
+  fill: none; stroke-width: 10; stroke-linecap: round;
+  stroke-dasharray: 380; stroke-dashoffset: 380;
+  transition: stroke-dashoffset 1.2s cubic-bezier(0.4,0,0.2,1), stroke 0.8s ease;
+}
+.aqi-ring-inner {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+}
+
+/* ═══ PM STATUS BADGE ═══ */
+.pm-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 4px 10px; border-radius: 20px;
+  font-size: 11px; font-weight: 600;
+  border: 1px solid;
+  transition: all 0.5s ease;
+}
+
+/* ═══ FORECAST MINI CARD ═══ */
+.fc-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 12px; border-radius: var(--r-sm);
+  background: rgba(249,248,246,0.6);
+  border: 1px solid rgba(212,175,55,0.1);
+  transition: background 0.2s;
+}
+.fc-row:hover { background: var(--gold-pale); }
+
+/* ═══ ENV CARD ═══ */
+.env-card { padding: 16px; }
+.env-icon-wrap {
+  width: 40px; height: 40px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(135deg, rgba(212,175,55,0.12), rgba(212,175,55,0.06));
+  border: 1px solid rgba(212,175,55,0.2);
+  margin-bottom: 10px;
+}
+.env-big {
+  font-size: 30px; font-weight: 800;
+  line-height: 1; letter-spacing: -1px;
+  color: var(--stone);
+}
+.env-unit { font-size: 13px; color: var(--stone-3); font-weight: 400; }
+.env-label { font-size: 10px; color: var(--stone-4); text-transform: uppercase; letter-spacing: 0.1em; margin-top: 6px; }
+.env-sub { font-size: 11px; color: var(--stone-3); margin-top: 3px; }
+.sparkbar { display: flex; align-items: flex-end; gap: 2px; height: 24px; margin-top: 10px; }
+.sparkbar-col { flex: 1; border-radius: 2px; min-height: 3px; transition: height 0.3s ease; }
+
+/* ═══ WIND COMPASS ═══ */
+.compass-wrap { position: relative; width: 60px; height: 60px; flex-shrink: 0; }
+.compass-ring {
+  width: 100%; height: 100%; border-radius: 50%;
+  border: 1.5px solid rgba(212,175,55,0.25);
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(249,248,246,0.6);
+  position: relative;
+}
+.compass-needle {
+  position: absolute; width: 2px; height: 22px; left: 50%;
+  transform-origin: bottom center;
+  transition: transform 1s ease;
+}
+.needle-n { background: linear-gradient(to top, #D4AF37, #C9971C); border-radius: 2px 2px 0 0; top: calc(50% - 22px); transform: translateX(-50%); }
+.needle-s { background: rgba(120,113,108,0.3); border-radius: 0 0 2px 2px; top: 50%; transform: translateX(-50%); }
+
+/* ═══ CHART ═══ */
+#apex-chart { min-height: 200px; }
+
+/* ═══ STATION TABLE ═══ */
+.station-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 12px; border-radius: var(--r-sm);
+  cursor: pointer; transition: all 0.18s;
+  border: 1px solid transparent;
+}
+.station-row:hover { background: var(--gold-pale); border-color: rgba(212,175,55,0.2); }
+.station-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+/* ═══ SIDEBAR ═══ */
+.sidebar-logo-icon {
+  width: 48px; height: 48px; border-radius: 12px;
+  background: linear-gradient(135deg, #C9971C, #A07610);
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 4px 16px rgba(201,151,28,0.35);
+}
+.nav-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 14px; border-radius: 10px;
+  font-size: 13px; color: var(--stone-3);
+  cursor: pointer; transition: all 0.18s;
+  border: 1px solid transparent;
+}
+.nav-item:hover { background: var(--gold-pale); color: var(--stone); border-color: rgba(212,175,55,0.2); }
+.nav-item.active { background: var(--gold-pale); color: var(--gold-dk); border-color: rgba(212,175,55,0.3); font-weight: 600; }
+.nav-item.active svg { stroke: var(--gold); }
+
+/* ═══ MAP PLACEHOLDER ═══ */
+#mini-map { height: 100%; min-height: 140px; position: relative; overflow: hidden; border-radius: var(--r); }
+.map-marker {
+  position: absolute; transform: translate(-50%,-50%);
+  width: 14px; height: 14px; border-radius: 50%;
+  border: 2px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+.map-pulse { animation: mapPulse 2.5s ease-out infinite; }
+@keyframes mapPulse {
+  0% { box-shadow: 0 0 0 0 rgba(current,0.6), 0 2px 8px rgba(0,0,0,0.2); }
+  100% { box-shadow: 0 0 0 12px rgba(current,0), 0 2px 8px rgba(0,0,0,0.2); }
+}
+.map-river { position: absolute; border-radius: 0 0 60% 40% / 0 0 40% 60%; }
+
+/* ═══ ANIMATIONS ═══ */
+@keyframes fadeSlideUp {
+  from { opacity:0; transform:translateY(20px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+@keyframes shimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+.anim { animation: fadeSlideUp 0.6s ease both; }
+.d1 { animation-delay: 0.05s; }
+.d2 { animation-delay: 0.12s; }
+.d3 { animation-delay: 0.19s; }
+.d4 { animation-delay: 0.26s; }
+.d5 { animation-delay: 0.33s; }
+.d6 { animation-delay: 0.40s; }
+.d7 { animation-delay: 0.47s; }
+.d8 { animation-delay: 0.54s; }
+
+/* ═══ SCROLLBAR ═══ */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(212,175,55,0.3); border-radius: 2px; }
+
+/* ═══ RESPONSIVE ═══ */
+@media (max-width: 1200px) {
+  #bento {
+    grid-template-columns: 240px 1fr 1fr;
+    grid-template-rows: auto;
+  }
+  .slot-sidebar  { grid-column:1; grid-row:1/5; }
+  .slot-aqi      { grid-column:2; grid-row:1; }
+  .slot-forecast { grid-column:3; grid-row:1; }
+  .slot-map      { grid-column:2/4; grid-row:2; }
+  .slot-env      { grid-column:2/4; grid-row:3; grid-template-columns:1fr 1fr; gap:14px; }
+  .slot-chart    { grid-column:2/4; grid-row:4; }
+  .slot-stations { grid-column:2/4; grid-row:5; }
+}
+@media (max-width: 768px) {
+  #bento {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto;
+  }
+  .slot-sidebar  { grid-column:1; grid-row:1; }
+  .slot-aqi      { grid-column:1; grid-row:2; }
+  .slot-forecast { grid-column:1; grid-row:3; }
+  .slot-map      { grid-column:1; grid-row:4; }
+  .slot-env      { grid-column:1; grid-row:5; grid-template-columns:1fr 1fr; }
+  .slot-chart    { grid-column:1; grid-row:6; }
+  .slot-stations { grid-column:1; grid-row:7; }
+  #header-title  { font-size:15px; }
+}
+
+/* ═══ TRANSITION ALL ═══ */
+.val-animate { transition: all 0.6s ease; }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════
+  HEADER
+══════════════════════════════════════ -->
+<header id="header" class="px-6 py-3">
+  <div class="max-w-screen-2xl mx-auto flex items-center justify-between gap-4">
+
+    <!-- Left: Title -->
+    <div class="flex items-center gap-3">
+      <div style="width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,#C9971C,#A07610);display:flex;align-items:center;justify-content:center;box-shadow:0 2px 10px rgba(201,151,28,0.3);">
+        <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.59 4.59A2 2 0 1 1 11 8H2m10.59 11.41A2 2 0 1 0 14 16H2m15.73-8.27A2.5 2.5 0 1 1 19.5 12H2"/></svg>
+      </div>
+      <div>
+        <div id="header-title" style="font-size:13px;font-weight:700;letter-spacing:0.12em;color:var(--stone-2);text-transform:uppercase;">
+          NAKHON PHANOM <span class="gold-text">COMMAND CENTER</span>
+        </div>
+        <div style="font-size:10px;color:var(--stone-4);letter-spacing:0.06em;">ระบบติดตามคุณภาพอากาศและสิ่งแวดล้อม · Environmental Monitoring</div>
+      </div>
+    </div>
+
+    <!-- Center: Status tags -->
+    <div class="hidden md:flex items-center gap-3">
+      <div style="display:flex;align-items:center;gap:6px;padding:5px 12px;border-radius:20px;background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.2);">
+        <div class="live-dot-wrap"><div class="live-dot"></div><div class="live-ring"></div></div>
+        <span style="font-size:11px;font-weight:600;color:#15803d;letter-spacing:0.06em;">LIVE</span>
+      </div>
+      <div style="padding:4px 12px;border-radius:20px;background:var(--gold-pale);border:1px solid var(--gold-border);font-size:11px;font-weight:600;color:var(--gold-dk);">
+        5 สถานี ONLINE
+      </div>
+    </div>
+
+    <!-- Right: Clock -->
+    <div class="flex flex-col items-end">
+      <div id="hdr-time" style="font-size:20px;font-weight:700;letter-spacing:0.05em;color:var(--stone);font-variant-numeric:tabular-nums;">--:--:--</div>
+      <div id="hdr-date" style="font-size:11px;color:var(--stone-4);"></div>
+    </div>
+
+  </div>
+</header>
+
+<!-- ══════════════════════════════════════
+  PAGE
+══════════════════════════════════════ -->
+<main class="max-w-screen-2xl mx-auto p-4 relative z-10" style="padding-top:16px;">
+<div id="bento">
+
+  <!-- ── SIDEBAR ── -->
+  <div class="glass slot-sidebar anim d1" style="padding:20px 16px;display:flex;flex-direction:column;gap:6px;">
+
+    <div class="sidebar-logo-icon mx-auto mb-2">
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+    </div>
+    <div class="text-center mb-4">
+      <div style="font-size:13px;font-weight:700;color:var(--stone);">นครพนม</div>
+      <div style="font-size:10px;color:var(--stone-4);letter-spacing:0.08em;">NAKHON PHANOM</div>
+    </div>
+
+    <!-- Nav -->
+    <div class="nav-item active">
+      <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
+      <span>ภาพรวม</span>
+    </div>
+    <div class="nav-item">
+      <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+      <span>แผนที่สด</span>
+    </div>
+    <div class="nav-item">
+      <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>
+      <span>จุดความร้อน</span>
+    </div>
+    <div class="nav-item">
+      <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+      <span>วิเคราะห์ข้อมูล</span>
+    </div>
+    <div class="nav-item">
+      <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
+      <span>รายงาน</span>
+    </div>
+    <div class="nav-item" style="margin-top:4px;">
+      <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <span>ค้นหาพื้นที่</span>
+    </div>
+
+    <div style="flex:1;"></div>
+    <div style="height:1px;background:var(--gold-border);margin:8px 0;"></div>
+
+    <!-- Quick stats -->
+    <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.12em;color:var(--stone-4);padding:4px 4px 8px;">สถิติวันนี้</div>
+    <div style="display:flex;flex-direction:column;gap:6px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 10px;border-radius:8px;background:rgba(249,248,246,0.7);border:1px solid rgba(212,175,55,0.1);">
+        <span style="font-size:11px;color:var(--stone-3);">จุดความร้อน</span>
+        <span style="font-size:13px;font-weight:700;color:#dc2626;" id="sb-fires">5</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 10px;border-radius:8px;background:rgba(249,248,246,0.7);border:1px solid rgba(212,175,55,0.1);">
+        <span style="font-size:11px;color:var(--stone-3);">PM2.5 เฉลี่ย 24ชม.</span>
+        <span style="font-size:13px;font-weight:700;" id="sb-avg" style="color:var(--stone);">52.1</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 10px;border-radius:8px;background:rgba(249,248,246,0.7);border:1px solid rgba(212,175,55,0.1);">
+        <span style="font-size:11px;color:var(--stone-3);">สถานีออนไลน์</span>
+        <span style="font-size:13px;font-weight:700;color:#16a34a;">5/5</span>
+      </div>
+    </div>
+
+    <div style="height:1px;background:var(--gold-border);margin:8px 0;"></div>
+    <div style="font-size:10px;color:var(--stone-4);text-align:center;line-height:1.7;">
+      อัปเดตอัตโนมัติทุก 5 วินาที<br>
+      <span style="color:var(--stone-4);">แหล่งข้อมูล: WAQI · GISTDA</span>
+    </div>
+  </div>
+
+  <!-- ── AQI MAIN CARD ── -->
+  <div class="glass slot-aqi anim d2" style="padding:20px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+      <div>
+        <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.14em;color:var(--stone-4);margin-bottom:3px;">ดัชนีคุณภาพอากาศ</div>
+        <div style="font-size:15px;font-weight:700;color:var(--stone);">PM2.5 ปัจจุบัน</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;background:var(--gold-pale);border:1px solid var(--gold-border);">
+        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#C9971C" stroke-width="2.5"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/></svg>
+        <span style="font-size:10px;font-weight:600;color:var(--gold-dk);">อ.เมืองนครพนม</span>
+      </div>
+    </div>
+
+    <!-- AQI Ring + Number -->
+    <div style="display:flex;align-items:center;gap:20px;">
+      <div class="aqi-ring-wrap">
+        <svg id="aqi-ring-svg" width="140" height="140" viewBox="0 0 140 140">
+          <circle id="aqi-ring-track" cx="70" cy="70" r="60"/>
+          <circle id="aqi-ring-fill"  cx="70" cy="70" r="60" stroke="#D4AF37"/>
+        </svg>
+        <div class="aqi-ring-inner">
+          <div id="aqi-value" style="font-size:36px;font-weight:800;letter-spacing:-2px;line-height:1;color:var(--stone);" class="val-animate">58.4</div>
+          <div style="font-size:10px;color:var(--stone-4);letter-spacing:0.04em;">µg/m³</div>
+          <div style="font-size:9px;color:var(--stone-4);margin-top:1px;">PM2.5</div>
+        </div>
+      </div>
+
+      <div style="flex:1;">
+        <!-- Level badge -->
+        <div id="aqi-badge" class="pm-badge val-animate" style="background:rgba(224,90,43,0.1);color:#9a3412;border-color:rgba(224,90,43,0.25);margin-bottom:8px;font-size:12px;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" id="aqi-badge-icon"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+          <span id="aqi-label">ไม่ดีต่อสุขภาพ</span>
+        </div>
+        <div id="aqi-advice" style="font-size:11px;color:var(--stone-3);line-height:1.6;margin-bottom:10px;">
+          ทุกคนควรลดกิจกรรมกลางแจ้ง สวมหน้ากาก N95 เมื่อออกนอกบ้าน
+        </div>
+
+        <!-- AQI scale bar -->
+        <div style="margin-bottom:6px;">
+          <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+            <span style="font-size:9px;color:var(--stone-4);">ดีมาก</span>
+            <span style="font-size:9px;color:var(--stone-4);">อันตราย</span>
+          </div>
+          <div style="height:6px;border-radius:3px;overflow:visible;background:linear-gradient(90deg,#b7e4a0,#f9e07f,#f5a623,#e05a2b,#c0392b);position:relative;">
+            <div id="aqi-needle" style="position:absolute;top:50%;width:3px;height:14px;background:var(--stone);border-radius:2px;transform:translate(-50%,-50%);box-shadow:0 0 0 2px white,0 0 0 3px var(--stone);transition:left 1.2s cubic-bezier(0.4,0,0.2,1);left:38%;">
+            </div>
+          </div>
+          <div style="display:flex;justify-content:space-between;margin-top:3px;">
+            <span style="font-size:8px;color:var(--stone-4);">0</span>
+            <span style="font-size:8px;color:var(--stone-4);">25</span>
+            <span style="font-size:8px;color:var(--stone-4);">50</span>
+            <span style="font-size:8px;color:var(--stone-4);">90</span>
+            <span style="font-size:8px;color:var(--stone-4);">150+</span>
+          </div>
+        </div>
+
+        <!-- Tomorrow prediction inline -->
+        <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;background:linear-gradient(135deg,var(--gold-pale),rgba(253,248,232,0.5));border:1px solid var(--gold-border);">
+          <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#C9971C" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+          <div style="flex:1;">
+            <div style="font-size:9px;color:var(--stone-4);letter-spacing:0.06em;text-transform:uppercase;">พยากรณ์พรุ่งนี้ (AI)</div>
+            <div style="display:flex;align-items:baseline;gap:4px;margin-top:1px;">
+              <span id="fc-tomorrow-val" style="font-size:18px;font-weight:800;color:var(--gold-dk);font-variant-numeric:tabular-nums;" class="val-animate">44.0</span>
+              <span style="font-size:10px;color:var(--stone-3);">µg/m³</span>
+              <span id="fc-tomorrow-badge" style="font-size:9px;background:rgba(245,166,35,0.15);color:#7a3e00;border-radius:4px;padding:1px 6px;font-weight:600;border:1px solid rgba(245,166,35,0.3);">เริ่มมีผล</span>
+            </div>
+          </div>
+          <div style="text-align:right;">
+            <div id="fc-arrow" style="font-size:18px;">↘</div>
+            <div id="fc-diff" style="font-size:10px;color:#16a34a;font-weight:600;">-14.4</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── FORECAST CARD ── -->
+  <div class="glass slot-forecast anim d3" style="padding:18px;display:flex;flex-direction:column;gap:10px;">
+    <div>
+      <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.14em;color:var(--stone-4);margin-bottom:2px;">พยากรณ์ PM2.5</div>
+      <div style="font-size:15px;font-weight:700;color:var(--stone);">8 ชั่วโมงข้างหน้า</div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:6px;" id="forecast-list">
+      <!-- JS fills this -->
+    </div>
+
+    <div style="height:1px;background:var(--gold-border);margin:2px 0;"></div>
+
+    <!-- Tomorrow summary -->
+    <div style="padding:10px 12px;border-radius:10px;background:linear-gradient(135deg,rgba(212,175,55,0.08),rgba(212,175,55,0.03));border:1px solid var(--gold-border);">
+      <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.12em;color:var(--stone-4);margin-bottom:6px;">
+        🌅 พยากรณ์พรุ่งนี้ · 15 มี.ค.
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
+        <div style="text-align:center;">
+          <div style="font-size:10px;color:var(--stone-4);">เช้า</div>
+          <div style="font-size:16px;font-weight:800;color:var(--stone);" id="tm-morning">48</div>
+          <div style="font-size:9px;color:var(--stone-4);">µg/m³</div>
+        </div>
+        <div style="text-align:center;border-left:1px solid var(--gold-border);border-right:1px solid var(--gold-border);">
+          <div style="font-size:10px;color:var(--stone-4);">กลางวัน</div>
+          <div style="font-size:16px;font-weight:800;color:var(--stone);" id="tm-noon">38</div>
+          <div style="font-size:9px;color:var(--stone-4);">µg/m³</div>
+        </div>
+        <div style="text-align:center;">
+          <div style="font-size:10px;color:var(--stone-4);">เย็น</div>
+          <div style="font-size:16px;font-weight:800;color:var(--stone);" id="tm-eve">44</div>
+          <div style="font-size:9px;color:var(--stone-4);">µg/m³</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── MINI MAP ── -->
+  <div class="glass slot-map anim d4" style="padding:0;overflow:hidden;min-height:200px;">
+    <div style="padding:12px 14px 8px;border-bottom:1px solid var(--gold-border);display:flex;align-items:center;justify-content:space-between;">
+      <div style="font-size:12px;font-weight:700;color:var(--stone);">แผนที่สถานี</div>
+      <div style="font-size:10px;color:var(--stone-4);">จ.นครพนม</div>
+    </div>
+    <div id="mini-map" style="height:calc(100% - 41px);background:linear-gradient(160deg,#e8f0e0 0%,#d4e8c8 40%,#a8d4b0 70%,#5ba87a 100%);position:relative;overflow:hidden;">
+      <!-- Mekong River -->
+      <div style="position:absolute;right:0;top:0;bottom:0;width:30px;background:linear-gradient(90deg,rgba(91,168,200,0.3),rgba(91,168,200,0.7));border-left:1px solid rgba(91,168,200,0.4);"></div>
+      <!-- Map markers -->
+      <div id="map-markers"></div>
+      <!-- Legend -->
+      <div style="position:absolute;bottom:8px;left:8px;background:rgba(255,255,255,0.85);backdrop-filter:blur(8px);border-radius:6px;padding:5px 8px;font-size:9px;color:var(--stone-3);border:1px solid var(--gold-border);">
+        <div style="display:flex;align-items:center;gap:4px;margin-bottom:2px;"><div style="width:7px;height:7px;border-radius:50%;background:#e05a2b;"></div>สถานีวัด</div>
+        <div style="display:flex;align-items:center;gap:4px;"><div style="width:7px;height:7px;border-radius:50%;background:#ef4444;"></div>จุดความร้อน</div>
+      </div>
+      <div style="position:absolute;right:34px;top:8px;font-size:10px;color:rgba(91,168,200,0.9);font-weight:600;writing-mode:vertical-rl;letter-spacing:2px;">แม่น้ำโขง</div>
+    </div>
+  </div>
+
+  <!-- ── ENV CARDS ── -->
+  <div class="slot-env">
+
+    <!-- Temperature -->
+    <div class="glass env-card anim d5">
+      <div class="env-icon-wrap">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#C9971C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z"/></svg>
+      </div>
+      <div style="display:flex;align-items:baseline;gap:4px;">
+        <div class="env-big val-animate" id="temp-val">34.2</div>
+        <div class="env-unit">°C</div>
+      </div>
+      <div class="env-label">อุณหภูมิ</div>
+      <div class="env-sub" id="temp-sub">สูงกว่าปกติ +2.1°</div>
+      <div class="sparkbar" id="temp-spark"></div>
+    </div>
+
+    <!-- Humidity -->
+    <div class="glass env-card anim d5">
+      <div class="env-icon-wrap">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#C9971C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z"/></svg>
+      </div>
+      <div style="display:flex;align-items:baseline;gap:4px;">
+        <div class="env-big val-animate" id="humid-val">62</div>
+        <div class="env-unit">%</div>
+      </div>
+      <div class="env-label">ความชื้นสัมพัทธ์</div>
+      <div class="env-sub" id="humid-sub">ปานกลาง</div>
+      <!-- Humidity circle -->
+      <div style="margin-top:10px;position:relative;height:6px;background:#F2F0EC;border-radius:3px;overflow:hidden;">
+        <div id="humid-bar" style="height:100%;border-radius:3px;background:linear-gradient(90deg,#93c5fd,#3b82f6);transition:width 0.8s ease;width:62%;"></div>
+      </div>
+    </div>
+
+    <!-- Wind -->
+    <div class="glass env-card anim d5">
+      <div class="env-icon-wrap">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#C9971C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.59 4.59A2 2 0 1 1 11 8H2m10.59 11.41A2 2 0 1 0 14 16H2m15.73-8.27A2.5 2.5 0 1 1 19.5 12H2"/></svg>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div>
+          <div style="display:flex;align-items:baseline;gap:4px;">
+            <div class="env-big val-animate" id="wind-val">12.5</div>
+            <div class="env-unit">กม./ชม.</div>
+          </div>
+          <div class="env-label">ความเร็วลม</div>
+          <div class="env-sub" id="wind-dir">ทิศตะวันออกเฉียงเหนือ</div>
+        </div>
+        <div class="compass-wrap" style="margin-left:auto;">
+          <div class="compass-ring">
+            <div style="position:absolute;font-size:7px;color:var(--stone-4);top:3px;left:50%;transform:translateX(-50%);font-weight:700;">N</div>
+            <div style="position:absolute;font-size:7px;color:var(--stone-4);bottom:3px;left:50%;transform:translateX(-50%);">S</div>
+            <div style="position:absolute;font-size:7px;color:var(--stone-4);right:3px;top:50%;transform:translateY(-50%);">E</div>
+            <div style="position:absolute;font-size:7px;color:var(--stone-4);left:3px;top:50%;transform:translateY(-50%);">W</div>
+            <div class="compass-needle needle-n" id="compass-needle" style="transform:translateX(-50%) rotate(45deg); transform-origin: bottom center;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Visibility / Pressure -->
+    <div class="glass env-card anim d5">
+      <div class="env-icon-wrap">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#C9971C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+      </div>
+      <div style="display:flex;align-items:baseline;gap:4px;">
+        <div class="env-big val-animate" id="vis-val">4.2</div>
+        <div class="env-unit">กม.</div>
+      </div>
+      <div class="env-label">ทัศนวิสัย</div>
+      <div class="env-sub">ความดัน <span id="press-val" style="font-weight:600;color:var(--stone);">1008</span> hPa</div>
+      <div style="margin-top:10px;display:flex;gap:3px;align-items:flex-end;height:24px;" id="vis-spark"></div>
+    </div>
+
+  </div><!-- .slot-env -->
+
+  <!-- ── CHART ── -->
+  <div class="glass slot-chart anim d7" style="padding:18px 16px 10px;">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
+      <div>
+        <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.14em;color:var(--stone-4);margin-bottom:2px;">แนวโน้ม 24 ชั่วโมง + พยากรณ์</div>
+        <div style="font-size:15px;font-weight:700;color:var(--stone);">กราฟ PM2.5 รายชั่วโมง</div>
+      </div>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+        <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--stone-3);">
+          <div style="width:14px;height:3px;background:linear-gradient(90deg,#C9971C,#D4AF37);border-radius:2px;"></div>ข้อมูลจริง
+        </div>
+        <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--stone-3);">
+          <div style="width:14px;height:2px;background:#3b82f6;border-radius:2px;border-top:2px dashed #3b82f6;"></div>คาดการณ์วันนี้
+        </div>
+        <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--stone-3);">
+          <div style="width:14px;height:3px;background:#93c5fd;border-radius:2px;opacity:0.8;"></div>พรุ่งนี้
+        </div>
+      </div>
+    </div>
+    <!-- Day badges -->
+    <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;">
+      <div style="display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;background:var(--gold-pale);border:1px solid var(--gold-border);font-size:10px;font-weight:600;color:var(--gold-dk);">
+        📅 วันนี้ · 14 มี.ค. 2569
+      </div>
+      <div style="display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;background:#eff6ff;border:1px solid #bfdbfe;font-size:10px;font-weight:600;color:#1d4ed8;">
+        ↗ คาดการณ์ช่วงค่ำ (19–21น.)
+      </div>
+      <div style="display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;background:#fff7ed;border:1px solid #fed7aa;font-size:10px;font-weight:600;color:#c2410c;">
+        🌅 พรุ่งนี้ · 15 มี.ค.
+      </div>
+    </div>
+    <div id="apex-chart"></div>
+    <!-- Chart footer stats -->
+    <div style="display:flex;gap:16px;padding-top:10px;border-top:1px solid var(--gold-border);flex-wrap:wrap;">
+      <div style="text-align:center;">
+        <div style="font-size:13px;font-weight:800;color:var(--stone);" id="chart-avg">52.1</div>
+        <div style="font-size:9px;color:var(--stone-4);text-transform:uppercase;letter-spacing:0.08em;">เฉลี่ย 24ชม.</div>
+      </div>
+      <div style="width:1px;background:var(--gold-border);"></div>
+      <div style="text-align:center;">
+        <div style="font-size:13px;font-weight:800;color:#e05a2b;" id="chart-max">80.0</div>
+        <div style="font-size:9px;color:var(--stone-4);text-transform:uppercase;letter-spacing:0.08em;">สูงสุดวันนี้</div>
+      </div>
+      <div style="width:1px;background:var(--gold-border);"></div>
+      <div style="text-align:center;">
+        <div style="font-size:13px;font-weight:800;color:#16a34a;" id="chart-min">12.0</div>
+        <div style="font-size:9px;color:var(--stone-4);text-transform:uppercase;letter-spacing:0.08em;">ต่ำสุดวันนี้</div>
+      </div>
+      <div style="width:1px;background:var(--gold-border);"></div>
+      <div style="text-align:center;">
+        <div style="font-size:13px;font-weight:800;" id="chart-tomorrow" style="color:var(--gold-dk);">44.0</div>
+        <div style="font-size:9px;color:var(--stone-4);text-transform:uppercase;letter-spacing:0.08em;">คาดพรุ่งนี้</div>
+      </div>
+      <div style="flex:1;"></div>
+      <div style="display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:8px;background:#f0fdf4;border:1px solid #bbf7d0;font-size:10px;font-weight:600;color:#15803d;">
+        📉 แนวโน้มดีขึ้นพรุ่งนี้
+      </div>
+    </div>
+  </div>
+
+  <!-- ── STATIONS ── -->
+  <div class="glass slot-stations anim d8" style="padding:14px;display:flex;flex-direction:column;gap:0;overflow:hidden;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+      <div>
+        <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.14em;color:var(--stone-4);margin-bottom:1px;">สถานีตรวจวัด</div>
+        <div style="font-size:14px;font-weight:700;color:var(--stone);">จ.นครพนม</div>
+      </div>
+      <div style="padding:3px 8px;border-radius:6px;background:var(--gold-pale);border:1px solid var(--gold-border);font-size:10px;font-weight:600;color:var(--gold-dk);">
+        5 สถานี
+      </div>
+    </div>
+    <div style="overflow-y:auto;display:flex;flex-direction:column;gap:4px;" id="station-list">
+      <!-- JS fills -->
+    </div>
+    <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--gold-border);">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <div style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--stone-3);">
+          <div style="width:8px;height:8px;border-radius:2px;background:#b7e4a0;"></div>ดี ≤25
+        </div>
+        <div style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--stone-3);">
+          <div style="width:8px;height:8px;border-radius:2px;background:#f9e07f;"></div>ปานกลาง
+        </div>
+        <div style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--stone-3);">
+          <div style="width:8px;height:8px;border-radius:2px;background:#f5a623;"></div>เริ่มมีผล
+        </div>
+        <div style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--stone-3);">
+          <div style="width:8px;height:8px;border-radius:2px;background:#e05a2b;"></div>ไม่ดี
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- #bento -->
+</main>
+
+<!-- ══════════════════════════════════════
+  SCRIPTS
+══════════════════════════════════════ -->
+<script>
+/* ═══════════════════════════════════
+   MOCK DATA
+═══════════════════════════════════ */
+const STATIONS_DATA = [
+  { id:'s1', name:'โรงพยาบาลนครพนม',    pm25:58.4, lat:55, lon:45 },
+  { id:'s2', name:'ตลาดอินโดจีน',        pm25:44.1, lat:62, lon:52 },
+  { id:'s3', name:'สะพานมิตรภาพ 3',     pm25:71.2, lat:42, lon:35 },
+  { id:'s4', name:'มหาวิทยาลัยนครพนม',  pm25:52.8, lat:70, lon:40 },
+  { id:'s5', name:'เทศบาลเมืองนครพนม',  pm25:39.5, lat:50, lon:58 },
+];
+const FIRES_DATA = [
+  { lat:30, lon:30 }, { lat:75, lon:25 }, { lat:40, lon:70 },
+];
+
+const HIST_24H = [12,18,25,33,42,58,71,69,62,55,48,52,61,74,80,78,70,65,58,61,55,48,42,38];
+const FC_TONIGHT = [35,40,45]; // 19,20,21
+const FC_TOMORROW = [34,30,28,26,28,35,44,52,48,44,41,38]; // 22→09+1
+
+const FORECAST_HOURS = [
+  { label:'19:00', val:35 },
+  { label:'20:00', val:40 },
+  { label:'21:00', val:45 },
+  { label:'22:00', val:38 },
+  { label:'23:00', val:34 },
+  { label:'00:00 (+1)', val:30 },
+  { label:'06:00 (+1)', val:44 },
+  { label:'09:00 (+1)', val:48 },
+];
+
+/* ═══════════════════════════════════
+   LEVEL HELPER
+═══════════════════════════════════ */
+function getLevel(v) {
+  if (v<=25)  return { label:'คุณภาพดีเยี่ยม', bg:'#b7e4a0', fg:'#1a5c0e', dot:'#22c55e',  advice:'อากาศสะอาด เหมาะกับกิจกรรมกลางแจ้งทุกประเภท',     ring:'#22c55e', needle:v/25*20+'%' };
+  if (v<=37)  return { label:'คุณภาพปานกลาง',  bg:'#f9e07f', fg:'#7a5e00', dot:'#eab308',  advice:'ผู้มีโรคระบบทางเดินหายใจอาจได้รับผลกระทบ',           ring:'#eab308', needle:(20+(v-25)/12*20)+'%' };
+  if (v<=50)  return { label:'เริ่มมีผลต่อสุขภาพ',bg:'#f5a623',fg:'#7a3e00',dot:'#f59e0b', advice:'ควรลดเวลากลางแจ้ง โดยเฉพาะเด็กและผู้ป่วย',             ring:'#f59e0b', needle:(40+(v-37)/13*15)+'%' };
+  if (v<=90)  return { label:'ไม่ดีต่อสุขภาพ', bg:'#e05a2b', fg:'#ffffff', dot:'#ef4444',  advice:'ทุกคนควรลดกิจกรรมกลางแจ้ง สวมหน้ากาก N95',           ring:'#e05a2b', needle:(55+(v-50)/40*25)+'%' };
+  if (v<=150) return { label:'อันตราย',          bg:'#c0392b', fg:'#ffffff', dot:'#b91c1c',  advice:'อันตราย! หลีกเลี่ยงการออกนอกอาคารโดยเด็ดขาด',        ring:'#c0392b', needle:(80+(v-90)/60*20)+'%' };
+  return             { label:'วิกฤต',            bg:'#7f1d1d', fg:'#ffffff', dot:'#7f1d1d',  advice:'วิกฤต! ห้ามออกนอกอาคาร เปิดเครื่องฟอกอากาศทันที',    ring:'#7f1d1d', needle:'98%' };
+}
+
+/* ═══════════════════════════════════
+   CLOCK
+═══════════════════════════════════ */
+function startClock() {
+  function tick() {
+    const now = new Date();
+    document.getElementById('hdr-time').innerText = now.toLocaleTimeString('th-TH', { hour12:false });
+    const dateStr = now.toLocaleDateString('th-TH', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+    document.getElementById('hdr-date').innerText = dateStr;
+  }
+  tick();
+  setInterval(tick, 1000);
+}
+
+/* ═══════════════════════════════════
+   AQI UPDATE
+═══════════════════════════════════ */
+let currentPM = 58.4;
+function updateAQI(val) {
+  const lv = getLevel(val);
+  // Number
+  document.getElementById('aqi-value').innerText = val.toFixed(1);
+  // Badge
+  const badge = document.getElementById('aqi-badge');
+  badge.style.background = lv.bg + '22';
+  badge.style.color = lv.fg === '#ffffff' ? '#9a3412' : lv.fg;
+  badge.style.borderColor = lv.bg + '55';
+  document.getElementById('aqi-label').innerText = lv.label;
+  // Advice
+  document.getElementById('aqi-advice').innerText = lv.advice;
+  // Needle
+  document.getElementById('aqi-needle').style.left = lv.needle;
+  // Ring
+  const circumference = 380;
+  const pct = Math.min(val / 150, 1);
+  const offset = circumference - pct * circumference;
+  document.getElementById('aqi-ring-fill').style.strokeDashoffset = offset;
+  document.getElementById('aqi-ring-fill').style.stroke = lv.ring;
+  // Tomorrow forecast
+  const tmVal = Math.max(10, val * 0.75 + (Math.random()-0.5)*4);
+  const tmLv  = getLevel(tmVal);
+  document.getElementById('fc-tomorrow-val').innerText = tmVal.toFixed(1);
+  document.getElementById('fc-tomorrow-badge').innerText = tmLv.label;
+  document.getElementById('fc-tomorrow-badge').style.background = tmLv.bg + '22';
+  document.getElementById('fc-tomorrow-badge').style.color = tmLv.fg === '#ffffff' ? '#7a3e00' : tmLv.fg;
+  const diff = tmVal - val;
+  document.getElementById('fc-diff').innerText = (diff > 0 ? '+' : '') + diff.toFixed(1);
+  document.getElementById('fc-diff').style.color = diff < 0 ? '#16a34a' : '#dc2626';
+  document.getElementById('fc-arrow').innerText = diff < 0 ? '↘' : '↗';
+}
+
+/* ═══════════════════════════════════
+   ENV UPDATE (targeted)
+═══════════════════════════════════ */
+let currentTemp = 34.2, currentHumid = 62, currentWind = 12.5;
+let currentVis = 4.2, currentPress = 1008;
+let windDeg = 45;
+
+function updateEnv() {
+  document.getElementById('temp-val').innerText  = currentTemp.toFixed(1);
+  document.getElementById('humid-val').innerText = Math.round(currentHumid);
+  document.getElementById('wind-val').innerText  = currentWind.toFixed(1);
+  document.getElementById('vis-val').innerText   = currentVis.toFixed(1);
+  document.getElementById('press-val').innerText = Math.round(currentPress);
+  document.getElementById('humid-bar').style.width = Math.round(currentHumid) + '%';
+  // Compass needle
+  const compass = document.getElementById('compass-needle');
+  if (compass) compass.style.transform = `translateX(-50%) rotate(${windDeg}deg)`;
+  const dirs = ['เหนือ','ตะวันออกเฉียงเหนือ','ตะวันออก','ตะวันออกเฉียงใต้','ใต้','ตะวันตกเฉียงใต้','ตะวันตก','ตะวันตกเฉียงเหนือ'];
+  document.getElementById('wind-dir').innerText = 'ทิศ' + dirs[Math.round(windDeg/45) % 8];
+  document.getElementById('temp-sub').innerText = currentTemp > 32 ? `สูงกว่าปกติ +${(currentTemp-32).toFixed(1)}°` : 'ปกติ';
+  const humLbl = currentHumid < 40 ? 'แห้ง' : currentHumid < 60 ? 'พอเหมาะ' : currentHumid < 80 ? 'ปานกลาง' : 'ชื้นมาก';
+  document.getElementById('humid-sub').innerText = humLbl;
+}
+
+/* ═══════════════════════════════════
+   SPARKBARS
+═══════════════════════════════════ */
+function renderSparkbar(containerId, data, color) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  el.innerHTML = '';
+  const maxV = Math.max(...data);
+  data.forEach((v, i) => {
+    const bar = document.createElement('div');
+    bar.className = 'sparkbar-col';
+    bar.style.background = i === data.length-1 ? color : color + '55';
+    bar.style.height = Math.max(3, (v/maxV)*24) + 'px';
+    el.appendChild(bar);
+  });
+}
+
+/* ═══════════════════════════════════
+   FORECAST LIST
+═══════════════════════════════════ */
+function renderForecastList() {
+  const el = document.getElementById('forecast-list');
+  el.innerHTML = '';
+  FORECAST_HOURS.forEach((f, i) => {
+    const lv = getLevel(f.val);
+    const isNext = f.label.includes('+1');
+    const row = document.createElement('div');
+    row.className = 'fc-row';
+    row.style.opacity = 0;
+    row.style.animation = `fadeSlideUp 0.4s ease ${0.05+i*0.06}s both`;
+    row.innerHTML = `
+      <div style="display:flex;align-items:center;gap:8px;flex:1;">
+        <div style="font-size:12px;font-weight:600;color:${isNext?'#c2410c':'var(--stone-2)'};width:72px;flex-shrink:0;">${isNext?'🌙 ':'⏰ '}${f.label}</div>
+        <div style="flex:1;height:5px;border-radius:3px;background:#F2F0EC;overflow:hidden;">
+          <div style="height:100%;width:${Math.min(f.val/120*100,100)}%;background:${lv.bg};border-radius:3px;transition:width 0.8s ease;"></div>
+        </div>
+      </div>
+      <div style="font-size:12px;font-weight:700;color:${lv.fg==='#ffffff'?'#9a3412':lv.fg};margin-left:10px;min-width:44px;text-align:right;">${f.val}</div>
+      <div style="margin-left:6px;padding:2px 7px;border-radius:4px;background:${lv.bg}33;color:${lv.fg==='#ffffff'?'#9a3412':lv.fg};font-size:9px;font-weight:600;border:1px solid ${lv.bg}55;min-width:64px;text-align:center;">${lv.label}</div>
+    `;
+    el.appendChild(row);
+  });
+}
+
+/* ═══════════════════════════════════
+   TOMORROW SUMMARY
+═══════════════════════════════════ */
+function renderTomorrowSummary() {
+  document.getElementById('tm-morning').innerText = '48';
+  document.getElementById('tm-noon').innerText    = '38';
+  document.getElementById('tm-eve').innerText     = '44';
+  document.getElementById('chart-tomorrow').innerText = '44.0';
+}
+
+/* ═══════════════════════════════════
+   STATION LIST
+═══════════════════════════════════ */
+function renderStations() {
+  const el = document.getElementById('station-list');
+  el.innerHTML = '';
+  STATIONS_DATA.forEach((s, i) => {
+    const lv = getLevel(s.pm25);
+    const row = document.createElement('div');
+    row.className = 'station-row';
+    row.style.animation = `fadeSlideUp 0.4s ease ${0.1+i*0.07}s both`;
+    row.innerHTML = `
+      <div class="station-dot" style="background:${lv.dot};box-shadow:0 0 5px ${lv.dot}66;"></div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:12px;font-weight:600;color:var(--stone);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${s.name}</div>
+        <div style="font-size:10px;color:var(--stone-4);margin-top:1px;">${lv.label}</div>
+      </div>
+      <div style="text-align:right;flex-shrink:0;">
+        <div style="font-size:14px;font-weight:800;color:var(--stone);font-variant-numeric:tabular-nums;">${s.pm25.toFixed(1)}</div>
+        <div style="font-size:9px;color:var(--stone-4);">µg/m³</div>
+      </div>
+      <div style="margin-left:8px;padding:3px 7px;border-radius:5px;background:${lv.bg}33;font-size:10px;font-weight:700;color:${lv.fg==='#ffffff'?'#9a3412':lv.fg};border:1px solid ${lv.bg}55;flex-shrink:0;">${lv.label.split('คุณภาพ').pop()}</div>
+    `;
+    el.appendChild(row);
+  });
+}
+
+function updateStations() {
+  // Targeted updates only — no innerHTML replace
+  STATIONS_DATA.forEach(s => {
+    s.pm25 = Math.max(5, Math.min(150, s.pm25 + (Math.random()-0.5)*3));
+  });
+  const rows = document.querySelectorAll('#station-list .station-row');
+  rows.forEach((row, i) => {
+    if (!STATIONS_DATA[i]) return;
+    const lv = getLevel(STATIONS_DATA[i].pm25);
+    const dot = row.querySelector('.station-dot');
+    if (dot) { dot.style.background = lv.dot; dot.style.boxShadow = `0 0 5px ${lv.dot}66`; }
+    const valEl = row.querySelectorAll('div[style*="font-size:14px"]');
+    if (valEl[0]) valEl[0].innerText = STATIONS_DATA[i].pm25.toFixed(1);
+  });
+  document.getElementById('sb-avg').innerText = (STATIONS_DATA.reduce((a,b)=>a+b.pm25,0)/STATIONS_DATA.length).toFixed(1);
+}
+
+/* ═══════════════════════════════════
+   MAP MARKERS
+═══════════════════════════════════ */
+function renderMapMarkers() {
+  const el = document.getElementById('map-markers');
+  if (!el) return;
+  // Station markers
+  STATIONS_DATA.forEach(s => {
+    const lv = getLevel(s.pm25);
+    const div = document.createElement('div');
+    div.className = 'map-marker';
+    div.style.cssText = `left:${s.lon}%;top:${s.lat}%;background:${lv.dot};box-shadow:0 0 0 3px ${lv.dot}44, 0 2px 8px rgba(0,0,0,0.2);animation:mapPulse 2.5s ease-out infinite;`;
+    div.title = `${s.name}: ${s.pm25} µg/m³`;
+    el.appendChild(div);
+  });
+  // Fire dots
+  FIRES_DATA.forEach(f => {
+    const div = document.createElement('div');
+    div.style.cssText = `position:absolute;left:${f.lon}%;top:${f.lat}%;width:10px;height:10px;border-radius:50%;background:#ef4444;transform:translate(-50%,-50%);box-shadow:0 0 0 3px rgba(239,68,68,0.3), 0 2px 6px rgba(0,0,0,0.15);`;
+    div.title = 'จุดความร้อน';
+    el.appendChild(div);
+  });
+}
+
+/* ═══════════════════════════════════
+   APEXCHART
+═══════════════════════════════════ */
+let apexChart = null;
+function initChart() {
+  const histLabels   = Array.from({length:24},(_,i)=>`${String(i).padStart(2,'0')}:00`);
+  const tnLabels     = ['19:00','20:00','21:00'];
+  const tmLabels     = ['22:00','23:00','00:00','01:00','02:00','03:00','04:00','05:00','06:00','07:00','08:00','09:00'];
+  const allLabels    = [...histLabels,...tnLabels,...tmLabels];
+
+  const histData  = [...HIST_24H,   ...Array(tnLabels.length+tmLabels.length).fill(null)];
+  const tnData    = [...Array(24).fill(null), ...FC_TONIGHT, ...Array(tmLabels.length).fill(null)];
+  const tmData    = [...Array(24+tnLabels.length).fill(null), ...FC_TOMORROW];
+
+  const opts = {
+    series:[
+      { name:'PM2.5 จริง (24ชม.)',  type:'area', data:histData },
+      { name:'คาดการณ์ช่วงค่ำ',      type:'line', data:tnData  },
+      { name:'พยากรณ์พรุ่งนี้',       type:'area', data:tmData  },
+    ],
+    chart:{
+      height:220, background:'transparent', toolbar:{show:false},
+      animations:{ enabled:true, easing:'easeinout', speed:1000 },
+      fontFamily:'Prompt, sans-serif',
+    },
+    colors:['#C9971C','#3b82f6','#93c5fd'],
+    fill:{
+      type:['gradient','solid','gradient'],
+      gradient:{
+        type:'vertical',
+        shadeIntensity:0.5,
+        opacityFrom:[0.35,1,0.2],
+        opacityTo:[0.05,1,0.05],
+        stops:[0,100],
+      },
+    },
+    stroke:{ curve:'smooth', width:[2.5,2,2], dashArray:[0,5,0] },
+    dataLabels:{ enabled:false },
+    markers:{ size:[0,0,0] },
+    xaxis:{
+      categories:allLabels,
+      labels:{ rotate:-45, style:{fontSize:'9px',colors:Array(allLabels.length).fill('#A8A29E')},
+        formatter:(v,i)=>{ const idx=allLabels.indexOf(v); return idx%4===0?v:''; }
+      },
+      axisBorder:{show:false}, axisTicks:{show:false},
+    },
+    yaxis:{
+      min:0, max:110,
+      labels:{ style:{fontSize:'10px',colors:['#A8A29E']}, formatter:v=>v },
+      title:{ text:'µg/m³', style:{fontSize:'10px',color:'#A8A29E'} },
+    },
+    grid:{ borderColor:'#F2F0EC', strokeDashArray:3, padding:{top:-10,right:8,bottom:0,left:0} },
+    annotations:{
+      xaxis:[
+        { x:'19:00', x2:'21:00', fillColor:'#eff6ff', opacity:0.5,
+          label:{text:'ช่วงค่ำ',style:{fontSize:'9px',color:'#1d4ed8',background:'#eff6ff'},position:'top',offsetY:6} },
+        { x:'22:00', x2:'09:00', fillColor:'#fff7ed', opacity:0.4,
+          label:{text:'พรุ่งนี้',style:{fontSize:'9px',color:'#c2410c',background:'#fff7ed'},position:'top',offsetY:6} },
+      ],
+      yaxis:[
+        { y:25,  borderColor:'#b7e4a0', strokeDashArray:4, label:{text:'ดี',       style:{fontSize:'9px',color:'#1a5c0e',background:'#f0fdf4'}} },
+        { y:50,  borderColor:'#f5a623', strokeDashArray:4, label:{text:'เริ่มมีผล', style:{fontSize:'9px',color:'#7a3e00',background:'#fef3e0'}} },
+        { y:90,  borderColor:'#e05a2b', strokeDashArray:4, label:{text:'ไม่ดี',    style:{fontSize:'9px',color:'#9a3412',background:'#fee8e0'}} },
+      ],
+    },
+    tooltip:{
+      theme:'light', shared:true, intersect:false,
+      style:{fontFamily:'Prompt,sans-serif',fontSize:'11px'},
+      y:{ formatter:v=>v!=null?v+' µg/m³':'—' },
+    },
+    legend:{
+      show:true, position:'top', horizontalAlign:'left',
+      fontSize:'11px', fontFamily:'Prompt,sans-serif',
+      offsetY:0, markers:{width:10,height:10,radius:3},
+    },
+  };
+  apexChart = new ApexCharts(document.getElementById('apex-chart'), opts);
+  apexChart.render();
+}
+
+/* ═══════════════════════════════════
+   SIMULATION
+═══════════════════════════════════ */
+const tempHistory  = Array.from({length:12},()=>32+Math.random()*4);
+const visHistory   = Array.from({length:12},()=>3+Math.random()*3);
+
+function simulate() {
+  // PM2.5
+  currentPM = Math.max(5, Math.min(150, currentPM + (Math.random()-0.5)*4));
+  updateAQI(currentPM);
+
+  // Env
+  currentTemp  = Math.max(28, Math.min(42, currentTemp  + (Math.random()-0.5)*0.4));
+  currentHumid = Math.max(30, Math.min(95, currentHumid + (Math.random()-0.5)*1.5));
+  currentWind  = Math.max(2,  Math.min(40, currentWind  + (Math.random()-0.5)*1.2));
+  currentVis   = Math.max(1,  Math.min(15, currentVis   + (Math.random()-0.5)*0.3));
+  currentPress = Math.max(1000, Math.min(1020, currentPress + (Math.random()-0.5)*0.5));
+  windDeg      = (windDeg + (Math.random()-0.5)*20 + 360) % 360;
+  updateEnv();
+
+  // Sparkbars
+  tempHistory.shift(); tempHistory.push(currentTemp);
+  visHistory.shift();  visHistory.push(currentVis);
+  renderSparkbar('temp-spark', tempHistory, '#C9971C');
+  renderSparkbar('vis-spark',  visHistory,  '#6366f1');
+
+  // Stations
+  updateStations();
+
+  // Chart footer stats
+  document.getElementById('chart-avg').innerText = (HIST_24H.reduce((a,b)=>a+b,0)/HIST_24H.length).toFixed(1);
+  document.getElementById('chart-max').innerText = Math.max(...HIST_24H).toFixed(1);
+  document.getElementById('chart-min').innerText = Math.min(...HIST_24H).toFixed(1);
+}
+
+/* ═══════════════════════════════════
+   INIT
+═══════════════════════════════════ */
+document.addEventListener('DOMContentLoaded', () => {
+  lucide.createIcons();
+  startClock();
+  updateAQI(currentPM);
+  updateEnv();
+  renderSparkbar('temp-spark', tempHistory, '#C9971C');
+  renderSparkbar('vis-spark',  visHistory,  '#6366f1');
+  renderForecastList();
+  renderTomorrowSummary();
+  renderStations();
+  renderMapMarkers();
+  setTimeout(initChart, 400);
+
+  // Live simulation every 4 seconds
+  setInterval(simulate, 4000);
+});
+</script>
+</body>
+</html>
