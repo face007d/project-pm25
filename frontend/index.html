@@ -1437,7 +1437,7 @@ function startClock() {
 /* ──────────────────────────────────
    AQI RING (command_center style)
 ────────────────────────────────── */
-let currentPM = CURRENT_PM25;
+let currentPM = 0; // Will be updated from WAQI API
 
 function updateAQI(val) {
   const L = lv(val);
@@ -1465,12 +1465,12 @@ function updateAQI(val) {
 /* ──────────────────────────────────
    ENV CARDS (command_center style)
 ────────────────────────────────── */
-let currentTemp  = 34.2;
-let currentHumid = 62;
-let currentWind  = 12.5;
-let currentVis   = 4.2;
-let currentPress = 1008;
-let windDeg      = 22;
+let currentTemp  = 0;
+let currentHumid = 0;
+let currentWind  = 0;
+let currentVis   = 0;
+let currentPress = 0;
+let windDeg      = 0;
 const WIND_DIRS  = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
 
 function updateEnv() {
@@ -1952,6 +1952,23 @@ async function fetchPM25Data() {
     if(feedData.status!=='ok') throw new Error('ดึงข้อมูลล้มเหลว');
 
     const data = feedData.data;
+    
+    // Update waqiData with weather information
+    waqiData.pm25 = data.iaqi?.pm25?.v || 0;
+    waqiData.temp = data.iaqi?.t?.v || 0;
+    waqiData.humidity = data.iaqi?.h?.v || 0;
+    waqiData.wind = data.iaqi?.w?.v || 0;
+    waqiData.pressure = data.iaqi?.p?.v || 0;
+    waqiData.dew = data.iaqi?.dew?.v || 0;
+    waqiData.aqi = data.aqi || 0;
+    
+    // Update legacy variables for compatibility
+    currentTemp = waqiData.temp;
+    currentHumid = waqiData.humidity;
+    currentWind = waqiData.wind;
+    currentVis = waqiData.dew;
+    currentPress = waqiData.pressure;
+    
     let formatted = [];
     let id = 1;
     const formatDate = d => {
@@ -2339,7 +2356,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Hide loader after short delay
   setTimeout(async ()=>{
     // Init all static components
-    updateAQI(CURRENT_PM25);
+    updateAQI(waqiData.pm25 || 0);
     updateEnv();
     renderSparkbar('temp-spark', tempHistory, '#C9971C');
     renderSparkbar('vis-spark',  visHistory,  '#6366F1');
@@ -2355,6 +2372,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const data = await fetchPM25Data();
     appData = data;
+    
+    // Update waqiData and currentPM from fetched data
+    const currentData = data.find(d => d.type === 'current');
+    if (currentData) {
+      waqiData.pm25 = currentData.pm25;
+      currentPM = currentData.pm25;
+      updateAQI(currentPM);
+    }
+    
     renderAPIStatus(data);
     renderAPITable(data);
     setTimeout(()=>renderAPIChart(data), 600);
