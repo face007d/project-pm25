@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: project-pm25
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn backend.server:app --bind 0.0.0.0:$PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: PORT
+        generateValue: true
