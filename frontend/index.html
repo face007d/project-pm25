@@ -2259,11 +2259,126 @@ function simulate() {
 }
 
 /* ──────────────────────────────────
+   NAVIGATION & SEARCH
+────────────────────────────────── */
+
+// Navigation Tabs
+function initNavigation() {
+  const navBtns = document.querySelectorAll('.nav-btn');
+  const sections = {
+    'ภาพรวม': ['#page'],  // แสดงทั้งหมด
+    'แผนที่': ['.top-row'],  // แสดงเฉพาะแผนที่
+    'พยากรณ์': ['.chart-card', '.realtime-row'],  // แสดงกราฟและพยากรณ์
+    'สถิติ': ['.bottom-row'],  // แสดงตารางและสถิติ
+    'รายงาน': ['.fire-card']  // แสดงรายงานไฟไหม้
+  };
+
+  navBtns.forEach((btn, index) => {
+    btn.addEventListener('click', () => {
+      // Update active state
+      navBtns.forEach(b => b.classList.remove('act'));
+      btn.classList.add('act');
+
+      const tabName = btn.textContent.trim();
+      
+      // Show all sections first
+      document.querySelectorAll('.top-row, .env-strip, .chart-card, .realtime-row, .bottom-row').forEach(el => {
+        el.style.display = '';
+      });
+
+      // If not "ภาพรวม", hide all then show specific
+      if (tabName !== 'ภาพรวม') {
+        document.querySelectorAll('.top-row, .env-strip, .chart-card, .realtime-row, .bottom-row').forEach(el => {
+          el.style.display = 'none';
+        });
+
+        // Show specific sections
+        const showSections = sections[tabName] || [];
+        showSections.forEach(selector => {
+          document.querySelectorAll(selector).forEach(el => {
+            el.style.display = '';
+          });
+        });
+      }
+    });
+  });
+}
+
+// Search Functionality
+function initSearch() {
+  const searchBar = document.querySelector('.hero-search');
+  if (!searchBar) return;
+
+  searchBar.addEventListener('click', () => {
+    const searchTerm = prompt('🔍 ค้นหา:\n\nพิมพ์ชื่อสถานที่, อำเภอ, หรือคำที่เกี่ยวข้อง\n(เช่น "ไฟไหม้", "เมือง", "PM2.5")');
+    
+    if (!searchTerm || searchTerm.trim() === '') return;
+
+    performSearch(searchTerm.trim().toLowerCase());
+  });
+}
+
+function performSearch(term) {
+  let found = false;
+
+  // ค้นหาในจุดไฟไหม้
+  if (term.includes('ไฟ') || term.includes('fire')) {
+    // แสดงแท็บรายงาน
+    document.querySelectorAll('.nav-btn')[4].click();
+    alert(`✅ พบ: แสดงรายงานจุดไฟไหม้`);
+    found = true;
+  }
+  // ค้นหา PM2.5
+  else if (term.includes('pm') || term.includes('ฝุ่น') || term.includes('อากาศ')) {
+    // แสดงแท็บภาพรวม
+    document.querySelectorAll('.nav-btn')[0].click();
+    alert(`✅ พบ: แสดงข้อมูล PM2.5 และคุณภาพอากาศ`);
+    found = true;
+  }
+  // ค้นหาแผนที่
+  else if (term.includes('แผน') || term.includes('map')) {
+    // แสดงแท็บแผนที่
+    document.querySelectorAll('.nav-btn')[1].click();
+    alert(`✅ พบ: แสดงแผนที่`);
+    found = true;
+  }
+  // ค้นหาพยากรณ์
+  else if (term.includes('พยากรณ์') || term.includes('forecast') || term.includes('ทำนาย')) {
+    // แสดงแท็บพยากรณ์
+    document.querySelectorAll('.nav-btn')[2].click();
+    alert(`✅ พบ: แสดงการพยากรณ์`);
+    found = true;
+  }
+  // ค้นหาสถิติ
+  else if (term.includes('สถิติ') || term.includes('stats') || term.includes('ตาราง')) {
+    // แสดงแท็บสถิติ
+    document.querySelectorAll('.nav-btn')[3].click();
+    alert(`✅ พบ: แสดงสถิติและตาราง`);
+    found = true;
+  }
+  // ค้นหาสถานที่
+  else if (term.includes('เมือง') || term.includes('นครพนม')) {
+    // แสดงแท็บภาพรวม
+    document.querySelectorAll('.nav-btn')[0].click();
+    alert(`✅ พบ: แสดงข้อมูลสถานีเมืองนครพนม`);
+    found = true;
+  }
+
+  if (!found) {
+    alert(`❌ ไม่พบผลลัพธ์สำหรับ "${term}"\n\nลองค้นหาด้วยคำอื่น เช่น:\n• "ไฟไหม้" - ดูรายงานจุดไฟไหม้\n• "PM2.5" - ดูคุณภาพอากาศ\n• "แผนที่" - ดูแผนที่\n• "พยากรณ์" - ดูการพยากรณ์`);
+  }
+}
+
+/* ──────────────────────────────────
    INIT
 ────────────────────────────────── */
 document.addEventListener('DOMContentLoaded', async () => {
   lucide.createIcons();
   startClock();
+  
+  // Initialize Navigation and Search
+  initNavigation();
+  initSearch();
 
   // Hide loader after short delay
   setTimeout(async ()=>{

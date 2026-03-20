@@ -440,7 +440,8 @@ class SupabaseDB:
     def get_fire_reports(
         self,
         limit: int = 50,
-        status: Optional[str] = None
+        status: Optional[str] = None,
+        hours: Optional[int] = None
     ) -> List[Dict[str, Any]]:
         """
         ดึงรายงานจุดไฟไหม้
@@ -448,6 +449,7 @@ class SupabaseDB:
         Args:
             limit: จำนวนรายการ
             status: กรองตามสถานะ (pending, verified, resolved, false_alarm)
+            hours: กรองเฉพาะรายงานภายใน X ชั่วโมงล่าสุด (เช่น 48)
         
         Returns:
             List ของรายงาน
@@ -457,6 +459,12 @@ class SupabaseDB:
             
             if status:
                 query = query.eq('status', status)
+            
+            # กรองตามเวลา (เช่น 48 ชั่วโมงล่าสุด)
+            if hours:
+                from datetime import datetime, timedelta
+                cutoff_time = datetime.now() - timedelta(hours=hours)
+                query = query.gte('created_at', cutoff_time.isoformat())
             
             result = query.order('created_at', desc=True).limit(limit).execute()
             return result.data

@@ -880,18 +880,21 @@ if LINE_BOT_AVAILABLE and handler:
 
 @app.route('/api/fire-reports', methods=['GET'])
 def get_fire_reports_api():
-    """API: ดึงรายงานจุดไฟไหม้"""
+    """API: ดึงรายงานจุดไฟไหม้ (รองรับ filter 48 ชั่วโมง)"""
     if not DB_AVAILABLE:
         return jsonify({'error': 'Database not available'}), 503
     
     try:
         limit = request.args.get('limit', 50, type=int)
         status = request.args.get('status')
+        hours = request.args.get('hours', 48, type=int)  # Default 48 ชั่วโมง
         
-        reports = db.get_fire_reports(limit=limit, status=status)
+        reports = db.get_fire_reports(limit=limit, status=status, hours=hours)
         return jsonify({
             'data': reports,
-            'count': len(reports)
+            'count': len(reports),
+            'hours': hours,
+            'message': f'แสดงรายงาน {hours} ชั่วโมงล่าสุด'
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
