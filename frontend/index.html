@@ -1548,13 +1548,44 @@ function renderForecastList() {
 ────────────────────────────────── */
 let stationsData = []; // Will be populated from WAQI API
 
+async function fetchStationsData() {
+  const TOKEN = '6e19dc4d73747ab27c397b590fdbd504f1f496fc';
+  try {
+    // ดึงข้อมูลสถานีอุตุนิยมวิทยานครพนม (UID: 9696)
+    const response = await fetch(`https://api.waqi.info/feed/@9696/?token=${TOKEN}`);
+    const data = await response.json();
+    
+    if (data.status === 'ok') {
+      const pm25 = data.data.iaqi?.pm25?.v || 0;
+      stationsData = [{
+        name: 'สถานีอุตุนิยมวิทยานครพนม',
+        pm25: pm25,
+        lat: 17.3917,
+        lon: 104.7794,
+        status: 'online'
+      }];
+      
+      renderStations();
+      
+      // Update map if available
+      if (leafletMap) {
+        addStationMarkers();
+      }
+    }
+  } catch (e) {
+    console.warn('Failed to fetch station data:', e);
+    stationsData = [];
+    renderStations();
+  }
+}
+
 function renderStations() {
   const el = document.getElementById('station-list');
   if (!el) return;
   el.innerHTML='';
   
   if (stationsData.length === 0) {
-    el.innerHTML = '<div style="padding:20px;text-align:center;color:#A89E8E;">ไม่มีข้อมูลสถานี</div>';
+    el.innerHTML = '<div style="padding:20px;text-align:center;color:#A89E8E;">กำลังโหลดข้อมูล...</div>';
     return;
   }
   
@@ -1577,12 +1608,25 @@ function renderStations() {
     `;
     el.appendChild(row);
   });
-  const avg = stationsData.reduce((a,b)=>a+b.pm25,0)/stationsData.length;
-  document.getElementById('sb-avg').textContent = avg.toFixed(1);
+  
+  // Update average
+  if (stationsData.length > 0) {
+    const avg = stationsData.reduce((a,b)=>a+b.pm25,0)/stationsData.length;
+    const avgEl = document.getElementById('sb-avg');
+    if (avgEl) avgEl.textContent = avg.toFixed(1);
+  }
+  
+  // Update station count
+  const countEl = document.querySelector('.card-sub');
+  if (countEl && countEl.textContent.includes('สถานี')) {
+    countEl.textContent = `Live · ${stationsData.length} สถานี`;
+  }
 }
 
 function updateStations() {
-  stationsData.forEach(s=>{ s.pm25 = Math.max(5,Math.min(150,s.pm25+(Math.random()-0.5)*3)); });
+  // Refresh station data every 5 minutes
+  fetchStationsData();
+}
   const rows = document.querySelectorAll('#station-list .station-row');
   rows.forEach((row,i)=>{
     if(!stationsData[i]) return;
@@ -1723,14 +1767,19 @@ function renderFireList() {
 ────────────────────────────────── */
 let leafletMap = null;
 let fireMarkersLayer = null;
+let stationMarkersLayer = null;
 
-function initMap() {
-  leafletMap = L.map('map',{zoomControl:true,attributionControl:false}).setView([17.48,104.73],10);
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{
-    subdomains:'abcd', maxZoom:19
-  }).addTo(leafletMap);
-
-  // Station markers (only if stationsData is available)
+function addStationMarkers() {
+  if (!leafletMap) return;
+  
+  // Remove old markers
+  if (stationMarkersLayer) {
+    leafletMap.removeLayer(stationMarkersLayer);
+  }
+  
+  stationMarkersLayer = L.layerGroup().addTo(leafletMap);
+  
+  // Add station markers
   if (stationsData && stationsData.length > 0) {
     stationsData.forEach(s=>{
       const L2 = lv(s.pm25);
@@ -1745,15 +1794,24 @@ function initMap() {
         ">${Math.round(s.pm25)}</div>
       </div>`;
       const icon = L.divIcon({className:'',html,iconSize:[34,34],iconAnchor:[17,17],popupAnchor:[0,-17]});
-      L.marker([s.lat,s.lon],{icon}).addTo(leafletMap).bindPopup(`
+      L.marker([s.lat,s.lon],{icon}).addTo(stationMarkersLayer).bindPopup(`
         <div class="lp-name">📡 ${s.name}</div>
-        <div class="lp-row"><span>PM2.5 ปัจจุบัน</span><b style="color:${L2.ringColor}">${s.pm25} µg/m³</b></div>
+        <div class="lp-row"><span>PM2.5 ปัจจุบัน</span><b style="color:${L2.ringColor}">${s.pm25.toFixed(1)} µg/m³</b></div>
         <div class="lp-row"><span>ระดับ</span><b>${L2.label}</b></div>
         <div class="lp-row"><span>สถานะ</span><b style="color:#16A34A">● ออนไลน์</b></div>
       `);
     });
   }
+}
 
+function initMap() {
+  leafletMap = L.map('map',{zoomControl:true,attributionControl:false}).setView([17.48,104.73],10);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{
+    subdomains:'abcd', maxZoom:19
+  }).addTo(leafletMap);
+
+  // Add station markers
+  addStationMarkers();
 
   // Fire markers — photo-style + rich popup with image
   fireMarkersLayer = L.layerGroup().addTo(leafletMap);
@@ -2411,7 +2469,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     renderSparkbar('temp-spark', tempHistory, '#C9971C');
     renderSparkbar('vis-spark',  visHistory,  '#6366F1');
     renderForecastList();
-    renderStations();
     renderFireList();
     renderTable();
     renderHourlyChart();
@@ -2430,6 +2487,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       currentPM = currentData.pm25;
       updateAQI(currentPM);
     }
+    
+    // Fetch station data
+    await fetchStationsData();
     
     renderAPIStatus(data);
     renderAPITable(data);
