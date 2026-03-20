@@ -1042,6 +1042,19 @@ tbody td.num { text-align:center; }
         </div>
       </div>
 
+      <!-- FORECAST MINI (from command_center) -->
+      <div class="glass-card">
+        <div class="card-gold-top"></div>
+        <div class="card-header">
+          <div class="card-title">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+            <span class="card-title-gold">พยากรณ์รายชั่วโมง</span>
+          </div>
+          <span class="card-sub">ช่วงค่ำถึงพรุ่งนี้</span>
+        </div>
+        <div style="padding:12px 14px;" id="forecast-list"></div>
+      </div>
+
     </div>
   </div><!-- .top-row -->
 
@@ -1157,21 +1170,53 @@ tbody td.num { text-align:center; }
   </div>
 
   <!-- ─────── BOTTOM ROW: Table + Fire + Stations ─────── -->
-  <div class="section-label"><span>จุดความร้อน และสถานีวัดอากาศ</span></div>
+  <div class="section-label"><span>ข้อมูลรายอำเภอ และจุดความร้อน</span></div>
 
   <div class="bottom-row fade-in-up">
+
+    <!-- TABLE -->
+    <div class="glass-card">
+      <div class="card-gold-top"></div>
+      <div class="card-header">
+        <div class="card-title">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18"/></svg>
+          <span class="card-title-gold">ข้อมูล PM2.5 จังหวัดนครพนม — รายอำเภอ</span>
+        </div>
+        <button class="btn-gold" onclick="handleDownloadCSV()">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+          ดาวน์โหลด CSV
+        </button>
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>อำเภอ</th>
+              <th class="num">ล่าสุด<br><span style="font-size:9px;font-weight:400;">µg/m³</span></th>
+              <th class="num fc-head">19:00</th>
+              <th class="num fc-head">20:00</th>
+              <th class="num fc-head">21:00</th>
+              <th class="num">เฉลี่ย<br><span style="font-size:9px;">24ชม.</span></th>
+              <th>แนวโน้ม</th>
+              <th>รายละเอียด</th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+    </div>
 
     <!-- FIRE PANEL -->
     <div class="glass-card fire-card">
       <div class="card-gold-top"></div>
       <div class="fire-header">
         <div class="fire-title">🔥 จุดความร้อน</div>
-        <span class="fire-badge" id="fire-count-badge">0 จุด</span>
+        <span class="fire-badge" id="fire-count-badge">5 จุด</span>
       </div>
       <div class="fire-list" id="fire-list"></div>
       <div style="padding:8px 12px 10px;border-top:1px solid #FEE2E2;background:#FFF5F5;font-size:10px;color:#B91C1C;display:flex;align-items:center;gap:5px;">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="11" height="11"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
-        รายงานจาก LINE OA · 48 ชม.ล่าสุด
+        ข้อมูลจาก FIRMS NASA · อัปเดตทุก 3 ชม.
       </div>
     </div>
 
@@ -1337,20 +1382,64 @@ tbody td.num { text-align:center; }
 ══════════════════════════════════════════════ -->
 <script>
 /* ──────────────────────────────────
-/* ──────────────────────────────────
-   REAL DATA FROM WAQI API
+   STATIC DATA (pm25_v3 structure)
 ────────────────────────────────── */
+const CURRENT_PM25 = 58.4;
 
-// ข้อมูลจริงจะถูกดึงจาก WAQI API
-let waqiData = {
-  pm25: 0,
-  temp: 0,
-  humidity: 0,
-  wind: 0,
-  pressure: 0,
-  dew: 0,
-  aqi: 0
-};
+const STATIONS = [
+  { name:'โรงพยาบาลนครพนม',   pm25:58.4, lat:17.4065, lon:104.7686 },
+  { name:'ตลาดอินโดจีน',       pm25:44.1, lat:17.3960, lon:104.7750 },
+  { name:'สะพานมิตรภาพ 3',    pm25:71.2, lat:17.4200, lon:104.7800 },
+  { name:'เทศบาลเมืองนครพนม', pm25:39.5, lat:17.3850, lon:104.7600 },
+  { name:'มหาวิทยาลัยนครพนม', pm25:52.8, lat:17.4100, lon:104.7500 },
+];
+const FIRES = [
+  {
+    name:'บ้านนาทม อ.นาทม', lat:17.560, lon:104.680, time:'09:42', pm25:88.2, sev:'สูง',
+    reporter:'สมชาย ใจดี',
+    image_url:'https://images.unsplash.com/photo-1625047509248-ec889cbff17f?w=600&q=80'
+  },
+  {
+    name:'อ.ท่าอุเทน ริมโขง', lat:17.600, lon:104.720, time:'08:15', pm25:62.0, sev:'กลาง',
+    reporter:'มาลี สุขใจ',
+    image_url:'https://images.unsplash.com/photo-1563197678-b09088a3060b?w=600&q=80'
+  },
+  {
+    name:'บ้านโพนสา อ.โพนสวรรค์', lat:17.680, lon:104.700, time:'07:55', pm25:45.5, sev:'ต่ำ',
+    reporter:'ประยุทธ์ นาดี',
+    image_url:'https://images.unsplash.com/photo-1518173946687-a4c8892bbd9f?w=600&q=80'
+  },
+  {
+    name:'อ.ศรีสงคราม ป่าสน', lat:17.350, lon:104.620, time:'07:30', pm25:101.3, sev:'สูง',
+    reporter:'วิไล รักษ์ป่า',
+    image_url:'https://images.unsplash.com/photo-1574182245530-967d9b3831af?w=600&q=80'
+  },
+  {
+    name:'บ้านดอนโมง อ.บ้านแพง', lat:18.000, lon:104.700, time:'06:58', pm25:55.0, sev:'กลาง',
+    reporter:'สุพจน์ เกษตรดี',
+    image_url:'https://images.unsplash.com/photo-1547394765-185e1e68f34e?w=600&q=80'
+  },
+];
+const HIST = [12,18,25,33,42,58,71,69,62,55,48,52,61,74,80,78,70,65,58,61,55,48,42,38];
+const FC_TONIGHT = [{h:'19:00',v:35},{h:'20:00',v:40},{h:'21:00',v:45}];
+const FC_TOMORROW = [
+  {h:'22:00',v:38},{h:'23:00',v:34},{h:'00:00',v:30},{h:'01:00',v:28},{h:'02:00',v:26},
+  {h:'03:00',v:28},{h:'04:00',v:35},{h:'05:00',v:44},{h:'06:00',v:52},{h:'07:00',v:48},
+];
+const TABLE_ROWS = [
+  { district:'อ.เมืองนครพนม',  now:58.4, f:[55.0,52.0,48.0], avg:52.1, trend:'down',  highlight:true  },
+  { district:'อ.ท่าอุเทน',     now:71.2, f:[68.0,65.0,61.0], avg:66.8, trend:'down',  highlight:false },
+  { district:'อ.ธาตุพนม',      now:44.1, f:[46.0,48.0,50.0], avg:43.5, trend:'up',    highlight:false },
+  { district:'อ.นาแก',         now:39.5, f:[40.0,41.5,43.0], avg:38.9, trend:'up',    highlight:false },
+  { district:'อ.โพนสวรรค์',    now:52.8, f:[50.0,47.5,45.0], avg:50.2, trend:'down',  highlight:false },
+  { district:'อ.ศรีสงคราม',    now:101.3,f:[95.0,89.0,82.0], avg:88.4, trend:'down',  highlight:false },
+  { district:'อ.นาทม',         now:88.2, f:[83.0,78.0,72.0], avg:81.5, trend:'down',  highlight:false },
+  { district:'อ.บ้านแพง',      now:55.0, f:[53.0,51.0,48.5], avg:53.8, trend:'down',  highlight:false },
+  { district:'อ.วังยาง',       now:32.1, f:[33.5,35.0,37.0], avg:31.0, trend:'up',    highlight:false },
+  { district:'อ.เรณูนคร',      now:47.6, f:[45.0,43.0,41.0], avg:46.0, trend:'down',  highlight:false },
+  { district:'อ.นาหว้า',       now:29.3, f:[30.0,31.5,33.0], avg:28.8, trend:'stable',highlight:false },
+  { district:'อ.โพนสวรรค์ใต้', now:61.0, f:[58.0,55.0,51.0], avg:57.3, trend:'down',  highlight:false },
+];
 
 /* ──────────────────────────────────
    PM2.5 LEVEL FUNCTION
@@ -1392,7 +1481,7 @@ function startClock() {
 /* ──────────────────────────────────
    AQI RING (command_center style)
 ────────────────────────────────── */
-let currentPM = 0; // Will be updated from WAQI API
+let currentPM = CURRENT_PM25;
 
 function updateAQI(val) {
   const L = lv(val);
@@ -1420,12 +1509,12 @@ function updateAQI(val) {
 /* ──────────────────────────────────
    ENV CARDS (command_center style)
 ────────────────────────────────── */
-let currentTemp  = 0;
-let currentHumid = 0;
-let currentWind  = 0;
-let currentVis   = 0;
-let currentPress = 0;
-let windDeg      = 0;
+let currentTemp  = 34.2;
+let currentHumid = 62;
+let currentWind  = 12.5;
+let currentVis   = 4.2;
+let currentPress = 1008;
+let windDeg      = 22;
 const WIND_DIRS  = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
 
 function updateEnv() {
@@ -1471,53 +1560,34 @@ function renderSparkbar(id, data, color) {
 /* ──────────────────────────────────
    FORECAST LIST (command_center style)
 ────────────────────────────────── */
-const ALL_FC = []; // Will be populated from WAQI API forecast data
+const ALL_FC = [
+  ...FC_TONIGHT.map(d=>({...d,type:'tonight'})),
+  ...FC_TOMORROW.slice(0,5).map(d=>({...d,type:'tomorrow'}))
+];
+function renderForecastList() {
+  const el = document.getElementById('forecast-list'); el.innerHTML='';
+  ALL_FC.forEach(item=>{
+    const L = lv(item.v);
+    const pct = Math.min((item.v/120)*100,100);
+    const row = document.createElement('div');
+    row.className='fc-row';
+    row.innerHTML=`
+      <div class="fc-time">${item.h}</div>
+      <div class="fc-bar-wrap"><div class="fc-bar-fill" style="width:${pct}%;background:${L.bg};"></div></div>
+      <div class="fc-val-tag" style="color:${L.fg==='#FFFFFF'?L.ringColor:L.fg};">${item.v}</div>
+      <div style="font-size:10px;color:var(--stone-4);min-width:60px;text-align:right;">${L.label}</div>
+    `;
+    el.appendChild(row);
+  });
+}
+
 /* ──────────────────────────────────
    STATION LIST (command_center style)
 ────────────────────────────────── */
-let stationsData = []; // Will be populated from WAQI API
-
-async function fetchStationsData() {
-  const TOKEN = '6e19dc4d73747ab27c397b590fdbd504f1f496fc';
-  try {
-    // ดึงข้อมูลสถานีอุตุนิยมวิทยานครพนม (UID: 9696)
-    const response = await fetch(`https://api.waqi.info/feed/@9696/?token=${TOKEN}`);
-    const data = await response.json();
-    
-    if (data.status === 'ok') {
-      const pm25 = data.data.iaqi?.pm25?.v || 0;
-      stationsData = [{
-        name: 'สถานีอุตุนิยมวิทยานครพนม',
-        pm25: pm25,
-        lat: 17.3917,
-        lon: 104.7794,
-        status: 'online'
-      }];
-      
-      renderStations();
-      
-      // Update map if available
-      if (leafletMap) {
-        addStationMarkers();
-      }
-    }
-  } catch (e) {
-    console.warn('Failed to fetch station data:', e);
-    stationsData = [];
-    renderStations();
-  }
-}
+let stationsData = STATIONS.map(s=>({...s}));
 
 function renderStations() {
-  const el = document.getElementById('station-list');
-  if (!el) return;
-  el.innerHTML='';
-  
-  if (stationsData.length === 0) {
-    el.innerHTML = '<div style="padding:20px;text-align:center;color:#A89E8E;">กำลังโหลดข้อมูล...</div>';
-    return;
-  }
-  
+  const el = document.getElementById('station-list'); el.innerHTML='';
   stationsData.forEach((s,i)=>{
     const L = lv(s.pm25);
     const row = document.createElement('div');
@@ -1537,47 +1607,48 @@ function renderStations() {
     `;
     el.appendChild(row);
   });
-  
-  // Update average
-  if (stationsData.length > 0) {
-    const avg = stationsData.reduce((a,b)=>a+b.pm25,0)/stationsData.length;
-    const avgEl = document.getElementById('sb-avg');
-    if (avgEl) avgEl.textContent = avg.toFixed(1);
-  }
-  
-  // Update station count
-  const countEl = document.querySelector('.card-sub');
-  if (countEl && countEl.textContent.includes('สถานี')) {
-    countEl.textContent = `Live · ${stationsData.length} สถานี`;
-  }
+  const avg = stationsData.reduce((a,b)=>a+b.pm25,0)/stationsData.length;
+  document.getElementById('sb-avg').textContent = avg.toFixed(1);
 }
 
 function updateStations() {
-  // Refresh station data every 5 minutes
-  fetchStationsData();
+  stationsData.forEach(s=>{ s.pm25 = Math.max(5,Math.min(150,s.pm25+(Math.random()-0.5)*3)); });
+  const rows = document.querySelectorAll('#station-list .station-row');
+  rows.forEach((row,i)=>{
+    if(!stationsData[i]) return;
+    const L = lv(stationsData[i].pm25);
+    const dot = row.querySelector('.station-dot');
+    if(dot){ dot.style.background=L.ringColor; dot.style.boxShadow=`0 0 5px ${L.ringColor}66`; }
+    const vals = row.querySelectorAll('div[style*="font-size:15px"]');
+    if(vals[0]) vals[0].textContent=stationsData[i].pm25.toFixed(1);
+  });
+  const avg = stationsData.reduce((a,b)=>a+b.pm25,0)/stationsData.length;
+  document.getElementById('sb-avg').textContent = avg.toFixed(1);
 }
 
 /* ──────────────────────────────────
    MAIN HOURLY CHART (pm25_v3 style)
 ────────────────────────────────── */
 function renderHourlyChart() {
-  const chartEl = document.getElementById('apex-main');
-  if (!chartEl) return;
-  
-  // Simplified chart with empty data for now
   const histLabels = Array.from({length:24},(_,i)=>`${String(i).padStart(2,'0')}:00`);
-  const histData   = Array(24).fill(null);
-  const allLabels  = histLabels;
+  const tnLabels   = FC_TONIGHT.map(d=>d.h);
+  const tmLabels   = FC_TOMORROW.map(d=>d.h);
+  const allLabels  = [...histLabels,...tnLabels,...tmLabels];
+  const histData   = [...HIST,...Array(tnLabels.length+tmLabels.length).fill(null)];
+  const tnData     = [...Array(24).fill(null),...FC_TONIGHT.map(d=>d.v),...Array(tmLabels.length).fill(null)];
+  const tmData     = [...Array(24+tnLabels.length).fill(null),...FC_TOMORROW.map(d=>d.v)];
 
-  new ApexCharts(chartEl,{
+  new ApexCharts(document.getElementById('apex-main'),{
     series:[
       { name:'ข้อมูลจริง (วันนี้)', type:'bar',  data:histData },
+      { name:'คาดการณ์ช่วงค่ำ',     type:'line', data:tnData   },
+      { name:'พยากรณ์พรุ่งนี้',      type:'bar',  data:tmData   },
     ],
     chart:{ height:200, background:'transparent', toolbar:{show:false}, animations:{enabled:true,easing:'easeinout',speed:900}, fontFamily:'Noto Sans Thai,sans-serif' },
     plotOptions:{ bar:{borderRadius:3,columnWidth:'70%'} },
-    stroke:{ width:[0], curve:'smooth', dashArray:[0] },
-    colors:['#C9971C'],
-    fill:{ opacity:[0.85] },
+    stroke:{ width:[0,2.5,0], curve:'smooth', dashArray:[0,5,0] },
+    colors:['#C9971C','#2563EB','#93C5FD'],
+    fill:{ opacity:[0.85,1,0.65] },
     dataLabels:{ enabled:false },
     xaxis:{
       categories:allLabels,
@@ -1613,77 +1684,46 @@ function renderHourlyChart() {
 }
 
 /* ──────────────────────────────────
-   FIRE LIST (pm25_v3 structure)
+   TABLE (pm25_v3 structure)
 ────────────────────────────────── */
-let fireReportsData = []; // Will store fire reports from API
-
-async function fetchFireReports() {
-  try {
-    const response = await fetch('/api/fire-reports?hours=48');
-    const data = await response.json();
-    
-    if (data && Array.isArray(data)) {
-      fireReportsData = data;
-      renderFireList();
-      
-      // Update map if available
-      if (leafletMap && fireMarkersLayer) {
-        updateFireMarkers();
-      }
-      
-      // Update count badge
-      const badge = document.getElementById('fire-count-badge');
-      if (badge) {
-        badge.textContent = `${fireReportsData.length} จุด`;
-      }
-    }
-  } catch (e) {
-    console.warn('Failed to fetch fire reports:', e);
-    fireReportsData = [];
-    renderFireList();
-  }
+function renderTable() {
+  const tbody = document.getElementById('tbody');
+  TABLE_ROWS.forEach(row=>{
+    const L=lv(row.now), L0=lv(row.f[0]), L1=lv(row.f[1]), L2=lv(row.f[2]), La=lv(row.avg);
+    const tr = document.createElement('tr');
+    if(row.highlight) tr.className='hl';
+    tr.innerHTML=`
+      <td class="pname">${row.district}${row.highlight?'<span style="font-size:10px;background:var(--gold-pale);color:var(--gold-dk);border-radius:4px;padding:1px 6px;margin-left:6px;font-weight:700;">หลัก</span>':''}</td>
+      <td class="num"><span class="pm-chip" style="background:${L.bg};color:${L.fg};">${row.now}</span></td>
+      <td class="num"><span class="pm-chip" style="background:${L0.bg};color:${L0.fg};">${row.f[0]}</span></td>
+      <td class="num"><span class="pm-chip" style="background:${L1.bg};color:${L1.fg};">${row.f[1]}</span></td>
+      <td class="num"><span class="pm-chip" style="background:${L2.bg};color:${L2.fg};">${row.f[2]}</span></td>
+      <td class="num"><span class="pm-chip" style="background:${La.bg};color:${La.fg};">${row.avg}</span></td>
+      <td><div class="trend-cell">${trendHtml(row.trend)}</div></td>
+      <td><span class="act-link"><svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' width='11' height='11'><line x1='8' x2='21' y1='6' y2='6'/><line x1='8' x2='21' y1='12' y2='12'/><line x1='8' x2='21' y1='18' y2='18'/><line x1='3' x2='3.01' y1='6' y2='6'/><line x1='3' x2='3.01' y1='12' y2='12'/><line x1='3' x2='3.01' y1='18' y2='18'/></svg>รายละเอียด</span></td>
+    `;
+    tbody.appendChild(tr);
+  });
 }
 
+/* ──────────────────────────────────
+   FIRE LIST (pm25_v3 structure)
+────────────────────────────────── */
 function renderFireList() {
   const list = document.getElementById('fire-list');
-  if (!list) return;
-  list.innerHTML = '';
-  
-  if (fireReportsData.length === 0) {
-    list.innerHTML = '<div style="padding:20px;text-align:center;color:#A89E8E;">ไม่มีรายงานไฟไหม้</div>';
-    return;
-  }
-  
-  fireReportsData.forEach((f,i)=>{
+  const sc = {สูง:{c:'#DC2626',bg:'#FEE2E2'},กลาง:{c:'#D97706',bg:'#FEF9C3'},ต่ำ:{c:'#16A34A',bg:'#DCFCE7'}};
+  FIRES.forEach((f,i)=>{
+    const s = sc[f.sev];
     const el = document.createElement('div');
-    el.className='fire-item'; 
-    el.style.animationDelay=(i*0.07)+'s';
-    el.style.cursor='pointer';
-    
-    // Format time
-    const reportTime = new Date(f.created_at);
-    const timeStr = reportTime.toLocaleTimeString('th-TH', {hour: '2-digit', minute: '2-digit'});
-    const dateStr = reportTime.toLocaleDateString('th-TH', {day: 'numeric', month: 'short'});
-    
+    el.className='fire-item'; el.style.animationDelay=(i*0.07)+'s';
     el.innerHTML=`
-      <div class="fire-icon-wrap" style="background:#FEE2E2;border:2px solid #DC2626;">
-        ${f.image_url ? '📷' : '🔥'}
-      </div>
+      <div class="fire-icon-wrap">🔥</div>
       <div class="fire-info">
-        <div class="fire-name">${f.location_address || 'ไม่ระบุตำแหน่ง'}</div>
-        <div class="fire-meta">${timeStr} · ${dateStr}${f.pm25_value ? ` · PM2.5: ${f.pm25_value} µg/m³` : ''}</div>
-        ${f.user_display_name ? `<div style="font-size:9px;color:#A89E8E;margin-top:2px;">รายงานโดย: ${f.user_display_name}</div>` : ''}
+        <div class="fire-name">${f.name}</div>
+        <div class="fire-meta">${f.time} น. · PM2.5: ${f.pm25} µg/m³</div>
       </div>
-      ${f.image_url ? '<div style="width:40px;height:40px;border-radius:6px;overflow:hidden;flex-shrink:0;"><img src="'+f.image_url+'" style="width:100%;height:100%;object-fit:cover;"/></div>' : ''}
+      <div class="fire-sev" style="background:${s.bg};color:${s.c};">${f.sev}</div>
     `;
-    
-    // Click to show on map
-    el.onclick = () => {
-      if (leafletMap && f.latitude && f.longitude) {
-        leafletMap.setView([f.latitude, f.longitude], 14);
-      }
-    };
-    
     list.appendChild(el);
   });
 }
@@ -1693,42 +1733,6 @@ function renderFireList() {
 ────────────────────────────────── */
 let leafletMap = null;
 let fireMarkersLayer = null;
-let stationMarkersLayer = null;
-
-function addStationMarkers() {
-  if (!leafletMap) return;
-  
-  // Remove old markers
-  if (stationMarkersLayer) {
-    leafletMap.removeLayer(stationMarkersLayer);
-  }
-  
-  stationMarkersLayer = L.layerGroup().addTo(leafletMap);
-  
-  // Add station markers
-  if (stationsData && stationsData.length > 0) {
-    stationsData.forEach(s=>{
-      const L2 = lv(s.pm25);
-      const html=`<div style="position:relative;width:34px;height:34px;">
-        <div style="position:absolute;inset:0;border-radius:50%;background:${L2.ringColor}33;animation:pulse-r 2s ease-out infinite;"></div>
-        <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
-          width:24px;height:24px;border-radius:50%;
-          background:${L2.bg};border:2.5px solid white;
-          box-shadow:0 2px 10px rgba(0,0,0,0.18);
-          display:flex;align-items:center;justify-content:center;
-          font-size:9px;font-weight:800;color:${L2.fg};font-family:'IBM Plex Mono',monospace;
-        ">${Math.round(s.pm25)}</div>
-      </div>`;
-      const icon = L.divIcon({className:'',html,iconSize:[34,34],iconAnchor:[17,17],popupAnchor:[0,-17]});
-      L.marker([s.lat,s.lon],{icon}).addTo(stationMarkersLayer).bindPopup(`
-        <div class="lp-name">📡 ${s.name}</div>
-        <div class="lp-row"><span>PM2.5 ปัจจุบัน</span><b style="color:${L2.ringColor}">${s.pm25.toFixed(1)} µg/m³</b></div>
-        <div class="lp-row"><span>ระดับ</span><b>${L2.label}</b></div>
-        <div class="lp-row"><span>สถานะ</span><b style="color:#16A34A">● ออนไลน์</b></div>
-      `);
-    });
-  }
-}
 
 function initMap() {
   leafletMap = L.map('map',{zoomControl:true,attributionControl:false}).setView([17.48,104.73],10);
@@ -1736,95 +1740,120 @@ function initMap() {
     subdomains:'abcd', maxZoom:19
   }).addTo(leafletMap);
 
-  // Add station markers
-  addStationMarkers();
+  // Station markers
+  STATIONS.forEach(s=>{
+    const L2 = lv(s.pm25);
+    const html=`<div style="position:relative;width:34px;height:34px;">
+      <div style="position:absolute;inset:0;border-radius:50%;background:${L2.ringColor}33;animation:pulse-r 2s ease-out infinite;"></div>
+      <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+        width:24px;height:24px;border-radius:50%;
+        background:${L2.bg};border:2.5px solid white;
+        box-shadow:0 2px 10px rgba(0,0,0,0.18);
+        display:flex;align-items:center;justify-content:center;
+        font-size:9px;font-weight:800;color:${L2.fg};font-family:'IBM Plex Mono',monospace;
+      ">${Math.round(s.pm25)}</div>
+    </div>`;
+    const icon = L.divIcon({className:'',html,iconSize:[34,34],iconAnchor:[17,17],popupAnchor:[0,-17]});
+    L.marker([s.lat,s.lon],{icon}).addTo(leafletMap).bindPopup(`
+      <div class="lp-name">📡 ${s.name}</div>
+      <div class="lp-row"><span>PM2.5 ปัจจุบัน</span><b style="color:${L2.ringColor}">${s.pm25} µg/m³</b></div>
+      <div class="lp-row"><span>ระดับ</span><b>${L2.label}</b></div>
+      <div class="lp-row"><span>สถานะ</span><b style="color:#16A34A">● ออนไลน์</b></div>
+    `);
+  });
 
-  // Initialize fire markers layer
+  // Fire markers — photo-style + rich popup with image
   fireMarkersLayer = L.layerGroup().addTo(leafletMap);
+  FIRES.forEach(f=>{
+    const sc={สูง:'#DC2626',กลาง:'#D97706',ต่ำ:'#16A34A'};
+    const c=sc[f.sev];
+    const sevBg={สูง:'#FEE2E2',กลาง:'#FEF9C3',ต่ำ:'#DCFCE7'};
 
-  // Label
-  const lIcon=L.divIcon({className:'',html:`<div style="background:white;border:1px solid rgba(212,175,55,0.3);border-radius:6px;padding:3px 10px;font-family:'Noto Sans Thai',sans-serif;font-size:11px;font-weight:700;color:#1C1A17;box-shadow:0 1px 5px rgba(0,0,0,0.1);white-space:nowrap;">นครพนม</div>`,iconAnchor:[35,10]});
-  L.marker([17.42,104.77],{icon:lIcon,interactive:false}).addTo(leafletMap);
-}
-
-function updateFireMarkers() {
-  if (!leafletMap || !fireMarkersLayer) return;
-  
-  // Clear existing markers
-  fireMarkersLayer.clearLayers();
-  
-  if (fireReportsData.length === 0) return;
-  
-  fireReportsData.forEach(report=>{
-    const lat = report.latitude, lon = report.longitude;
-    if(!lat || !lon) return;
-
-    // Photo marker icon
-    const iconHtml = report.image_url
-      ? `<div style="width:56px;height:56px;border-radius:10px;overflow:hidden;border:3px solid #EF4444;box-shadow:0 4px 14px rgba(239,68,68,0.45),0 2px 6px rgba(0,0,0,0.2);cursor:pointer;position:relative;">
-          <img src="${report.image_url}" style="width:100%;height:100%;object-fit:cover;"
-            onerror="this.parentElement.innerHTML='<div style=\\'background:#ef4444;width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:white;font-size:24px;\\'>🔥</div>'"/>
-          <div style="position:absolute;inset:0;box-shadow:inset 0 0 0 2px rgba(255,255,255,0.2);border-radius:7px;"></div>
+    // Icon: รูปภาพจริงใน marker
+    const iconHtml = f.image_url
+      ? `<div style="
+            width:52px;height:52px;border-radius:10px;overflow:hidden;
+            border:3px solid ${c};
+            box-shadow:0 4px 14px ${c}55, 0 2px 6px rgba(0,0,0,0.2);
+            cursor:pointer;position:relative;
+          ">
+          <img src="${f.image_url}"
+            style="width:100%;height:100%;object-fit:cover;"
+            onerror="this.parentElement.innerHTML='<div style=\'background:${c};width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:22px;\'>🔥</div>'"
+          />
+          <div style="
+            position:absolute;bottom:0;left:0;right:0;
+            background:linear-gradient(to top,${c}cc,transparent);
+            padding:3px 4px 2px;
+            font-size:8px;font-weight:800;color:#fff;text-align:center;
+            font-family:'IBM Plex Mono',monospace;letter-spacing:0.05em;
+          ">${f.pm25} µg/m³</div>
+          <div style="
+            position:absolute;inset:0;border-radius:7px;
+            box-shadow:inset 0 0 0 2px rgba(255,255,255,0.25);
+          "></div>
         </div>`
-      : `<div style="background:#EF4444;width:48px;height:48px;border-radius:50%;border:3px solid white;box-shadow:0 4px 14px rgba(239,68,68,0.4);display:flex;align-items:center;justify-content:center;font-size:24px;cursor:pointer;position:relative;">
-          🔥
-          <div style="position:absolute;inset:-6px;border-radius:50%;background:rgba(239,68,68,0.2);animation:pulse-r 1.8s ease-out infinite;"></div>
+      : `<div style="position:relative;width:44px;height:44px;">
+          <div style="position:absolute;inset:0;border-radius:50%;background:${c}33;animation:pulse-r 1.8s ease-out infinite;"></div>
+          <div style="position:absolute;inset:0;border-radius:50%;background:${c}1a;animation:pulse-r 1.8s 0.6s ease-out infinite;"></div>
+          <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-52%);font-size:20px;">🔥</div>
         </div>`;
 
-    const iconSize = report.image_url ? [56,56] : [48,48];
-    const iconAnchor = report.image_url ? [28,28] : [24,24];
-    const icon = L.divIcon({className:'',html:iconHtml,iconSize,iconAnchor,popupAnchor:[0,-28]});
+    const iconSize  = f.image_url ? [52,52] : [44,44];
+    const iconAnchor= f.image_url ? [26,26] : [22,22];
+    const icon = L.divIcon({className:'',html:iconHtml,iconSize,iconAnchor,popupAnchor:[0,-26]});
 
-    // Format time
-    const reportTime = new Date(report.created_at);
-    const timeStr = reportTime.toLocaleTimeString('th-TH', {hour: '2-digit', minute: '2-digit'});
-    const dateStr = reportTime.toLocaleDateString('th-TH', {day: 'numeric', month: 'short', year: 'numeric'});
-
-    // Popup content
+    // Popup content — rich card with photo
+    const lv2 = lv(f.pm25);
     const popupContent = `
       <div style="width:260px;font-family:'Noto Sans Thai',sans-serif;">
-        ${report.image_url ? `
+        ${f.image_url ? `
         <div style="position:relative;margin:-1px -1px 0;border-radius:11px 11px 0 0;overflow:hidden;height:150px;">
-          <img src="${report.image_url}"
+          <img src="${f.image_url}"
             style="width:100%;height:100%;object-fit:cover;display:block;cursor:pointer;"
-            onclick="window.open('${report.image_url}','_blank')"
+            onclick="window.open('${f.image_url}','_blank')"
             title="คลิกดูรูปขนาดเต็ม"
             onerror="this.parentElement.style.display='none'"
           />
           <div style="position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,0.5) 0%,transparent 60%);"></div>
-          <div style="position:absolute;bottom:8px;left:10px;">
-            <span style="background:rgba(0,0,0,0.5);color:#fff;padding:2px 8px;border-radius:5px;font-size:10px;font-weight:700;">${timeStr}</span>
+          <div style="position:absolute;bottom:8px;left:10px;display:flex;align-items:center;gap:6px;">
+            <span style="background:${c};color:#fff;padding:2px 8px;border-radius:5px;font-size:10px;font-weight:800;">${f.sev}</span>
+            <span style="background:rgba(0,0,0,0.5);color:#fff;padding:2px 8px;border-radius:5px;font-size:10px;font-weight:700;">${f.time} น.</span>
           </div>
+          <div style="position:absolute;top:8px;right:8px;background:rgba(255,255,255,0.15);backdrop-filter:blur(4px);border-radius:5px;padding:2px 6px;font-size:9px;color:#fff;cursor:pointer;" onclick="window.open('${f.image_url}','_blank')">🔍 ดูเต็ม</div>
         </div>
         ` : ''}
         <div style="padding:12px;">
           <div style="font-size:13px;font-weight:800;color:#1C1A17;margin-bottom:8px;display:flex;align-items:center;gap:6px;">
-            🔥 <span>${report.location_address || 'รายงานไฟไหม้'}</span>
+            🔥 <span>${f.name}</span>
           </div>
-          <div style="font-size:11px;color:#706B60;margin-bottom:8px;">
-            📅 ${dateStr} เวลา ${timeStr}
-          </div>
-          ${report.pm25_value ? `
-          <div style="background:#FFF5F5;border:1px solid #FEE2E2;border-radius:7px;padding:6px 8px;margin-bottom:8px;">
-            <div style="font-size:9px;color:#9A3412;font-weight:700;">PM2.5 ขณะรายงาน</div>
-            <div style="font-size:16px;font-weight:800;color:#DC2626;font-family:'IBM Plex Mono',monospace;">${report.pm25_value} µg/m³</div>
-          </div>
-          ` : ''}
-          ${report.user_display_name ? `
-          <div style="display:flex;align-items:center;gap:6px;padding:6px 8px;background:#F9F8F4;border-radius:7px;border:1px solid rgba(212,175,55,0.15);">
-            <div style="width:24px;height:24px;background:linear-gradient(135deg,#C9971C,#D4AF37);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;">👤</div>
-            <div>
-              <div style="font-size:9px;color:#A89E8E;">รายงานโดย</div>
-              <div style="font-size:11px;font-weight:700;color:#1C1A17;">${report.user_display_name}</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px;">
+            <div style="background:#FFF5F5;border:1px solid #FEE2E2;border-radius:7px;padding:6px 8px;">
+              <div style="font-size:9px;color:#9A3412;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:2px;">PM2.5</div>
+              <div style="font-size:16px;font-weight:800;color:${lv2.ringColor};font-family:'IBM Plex Mono',monospace;">${f.pm25}</div>
+              <div style="font-size:9px;color:#9A3412;">µg/m³ · ${lv2.label}</div>
             </div>
-            <div style="margin-left:auto;background:#06C755;border-radius:4px;padding:2px 6px;font-size:9px;color:#fff;font-weight:700;">LINE</div>
+            <div style="background:#F9F8F4;border:1px solid rgba(212,175,55,0.2);border-radius:7px;padding:6px 8px;">
+              <div style="font-size:9px;color:#706B60;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:2px;">เวลา</div>
+              <div style="font-size:14px;font-weight:700;color:#1C1A17;font-family:'IBM Plex Mono',monospace;">${f.time}</div>
+              <div style="font-size:9px;color:#706B60;">น. · วันนี้</div>
+            </div>
+          </div>
+          ${f.reporter ? `
+          <div style="display:flex;align-items:center;gap:6px;padding:6px 8px;background:#F9F8F4;border-radius:7px;border:1px solid rgba(212,175,55,0.15);">
+            <div style="width:24px;height:24px;background:linear-gradient(135deg,#C9971C,#D4AF37);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0;">👤</div>
+            <div>
+              <div style="font-size:9px;color:#A89E8E;text-transform:uppercase;letter-spacing:0.06em;">รายงานโดย</div>
+              <div style="font-size:11px;font-weight:700;color:#1C1A17;">${f.reporter}</div>
+            </div>
+            <div style="margin-left:auto;background:#06C755;border-radius:4px;padding:2px 6px;font-size:9px;color:#fff;font-weight:700;">LINE OA</div>
           </div>
           ` : ''}
         </div>
       </div>
     `;
 
-    L.marker([lat,lon],{icon})
+    L.marker([f.lat,f.lon],{icon})
       .addTo(fireMarkersLayer)
       .bindPopup(popupContent, {
         maxWidth:280, minWidth:260,
@@ -1832,9 +1861,15 @@ function updateFireMarkers() {
         closeButton:true, autoClose:false, closeOnClick:false
       });
   });
+
+  // Try loading real fire reports
+  loadFireReports();
+
+  // Label
+  const lIcon=L.divIcon({className:'',html:`<div style="background:white;border:1px solid rgba(212,175,55,0.3);border-radius:6px;padding:3px 10px;font-family:'Noto Sans Thai',sans-serif;font-size:11px;font-weight:700;color:#1C1A17;box-shadow:0 1px 5px rgba(0,0,0,0.1);white-space:nowrap;">นครพนม</div>`,iconAnchor:[35,10]});
+  L.marker([17.42,104.77],{icon:lIcon,interactive:false}).addTo(leafletMap);
 }
 
-// Remove old loadFireReports function
 async function loadFireReports() {
   try {
     const BACKEND_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
@@ -1961,23 +1996,6 @@ async function fetchPM25Data() {
     if(feedData.status!=='ok') throw new Error('ดึงข้อมูลล้มเหลว');
 
     const data = feedData.data;
-    
-    // Update waqiData with weather information
-    waqiData.pm25 = data.iaqi?.pm25?.v || 0;
-    waqiData.temp = data.iaqi?.t?.v || 0;
-    waqiData.humidity = data.iaqi?.h?.v || 0;
-    waqiData.wind = data.iaqi?.w?.v || 0;
-    waqiData.pressure = data.iaqi?.p?.v || 0;
-    waqiData.dew = data.iaqi?.dew?.v || 0;
-    waqiData.aqi = data.aqi || 0;
-    
-    // Update legacy variables for compatibility
-    currentTemp = waqiData.temp;
-    currentHumid = waqiData.humidity;
-    currentWind = waqiData.wind;
-    currentVis = waqiData.dew;
-    currentPress = waqiData.pressure;
-    
     let formatted = [];
     let id = 1;
     const formatDate = d => {
@@ -2194,13 +2212,7 @@ function simulateRealtimeUpdates() {
    CSV DOWNLOAD
 ────────────────────────────────── */
 function handleDownloadCSV() {
-  const rows = []; // Empty for now - TABLE_ROWS removed
-  
-  if (rows.length === 0) {
-    alert('ไม่มีข้อมูลสำหรับดาวน์โหลด');
-    return;
-  }
-  
+  const rows = TABLE_ROWS;
   const headers = ['อำเภอ','ล่าสุด (µg/m³)','คาดการณ์ 19:00','คาดการณ์ 20:00','คาดการณ์ 21:00','เฉลี่ย 24ชม.','แนวโน้ม'];
   const csvContent = [
     headers.join(','),
@@ -2239,125 +2251,11 @@ function simulate() {
   updateStations();
   simulateRealtimeUpdates();
 
-  // Update chart footer stats (use tempHistory as fallback)
-  const histData = tempHistory.filter(v => v > 0);
-  if (histData.length > 0) {
-    const avg = Math.round(histData.reduce((a,b)=>a+b,0)/histData.length*10)/10;
-    document.getElementById('cf-avg').textContent = avg;
-    document.getElementById('cf-max').textContent = Math.max(...histData);
-    document.getElementById('cf-min').textContent = Math.min(...histData);
-  }
-}
-
-/* ──────────────────────────────────
-   NAVIGATION & SEARCH
-────────────────────────────────── */
-
-// Navigation Tabs
-function initNavigation() {
-  const navBtns = document.querySelectorAll('.nav-btn');
-  const sections = {
-    'ภาพรวม': ['#page'],  // แสดงทั้งหมด
-    'แผนที่': ['.top-row'],  // แสดงเฉพาะแผนที่
-    'พยากรณ์': ['.chart-card', '.realtime-row'],  // แสดงกราฟและพยากรณ์
-    'สถิติ': ['.bottom-row'],  // แสดงตารางและสถิติ
-    'รายงาน': ['.fire-card']  // แสดงรายงานไฟไหม้
-  };
-
-  navBtns.forEach((btn, index) => {
-    btn.addEventListener('click', () => {
-      // Update active state
-      navBtns.forEach(b => b.classList.remove('act'));
-      btn.classList.add('act');
-
-      const tabName = btn.textContent.trim();
-      
-      // Show all sections first
-      document.querySelectorAll('.top-row, .env-strip, .chart-card, .realtime-row, .bottom-row').forEach(el => {
-        el.style.display = '';
-      });
-
-      // If not "ภาพรวม", hide all then show specific
-      if (tabName !== 'ภาพรวม') {
-        document.querySelectorAll('.top-row, .env-strip, .chart-card, .realtime-row, .bottom-row').forEach(el => {
-          el.style.display = 'none';
-        });
-
-        // Show specific sections
-        const showSections = sections[tabName] || [];
-        showSections.forEach(selector => {
-          document.querySelectorAll(selector).forEach(el => {
-            el.style.display = '';
-          });
-        });
-      }
-    });
-  });
-}
-
-// Search Functionality
-function initSearch() {
-  const searchBar = document.querySelector('.hero-search');
-  if (!searchBar) return;
-
-  searchBar.addEventListener('click', () => {
-    const searchTerm = prompt('🔍 ค้นหา:\n\nพิมพ์ชื่อสถานที่, อำเภอ, หรือคำที่เกี่ยวข้อง\n(เช่น "ไฟไหม้", "เมือง", "PM2.5")');
-    
-    if (!searchTerm || searchTerm.trim() === '') return;
-
-    performSearch(searchTerm.trim().toLowerCase());
-  });
-}
-
-function performSearch(term) {
-  let found = false;
-
-  // ค้นหาในจุดไฟไหม้
-  if (term.includes('ไฟ') || term.includes('fire')) {
-    // แสดงแท็บรายงาน
-    document.querySelectorAll('.nav-btn')[4].click();
-    alert(`✅ พบ: แสดงรายงานจุดไฟไหม้`);
-    found = true;
-  }
-  // ค้นหา PM2.5
-  else if (term.includes('pm') || term.includes('ฝุ่น') || term.includes('อากาศ')) {
-    // แสดงแท็บภาพรวม
-    document.querySelectorAll('.nav-btn')[0].click();
-    alert(`✅ พบ: แสดงข้อมูล PM2.5 และคุณภาพอากาศ`);
-    found = true;
-  }
-  // ค้นหาแผนที่
-  else if (term.includes('แผน') || term.includes('map')) {
-    // แสดงแท็บแผนที่
-    document.querySelectorAll('.nav-btn')[1].click();
-    alert(`✅ พบ: แสดงแผนที่`);
-    found = true;
-  }
-  // ค้นหาพยากรณ์
-  else if (term.includes('พยากรณ์') || term.includes('forecast') || term.includes('ทำนาย')) {
-    // แสดงแท็บพยากรณ์
-    document.querySelectorAll('.nav-btn')[2].click();
-    alert(`✅ พบ: แสดงการพยากรณ์`);
-    found = true;
-  }
-  // ค้นหาสถิติ
-  else if (term.includes('สถิติ') || term.includes('stats') || term.includes('ตาราง')) {
-    // แสดงแท็บสถิติ
-    document.querySelectorAll('.nav-btn')[3].click();
-    alert(`✅ พบ: แสดงสถิติและตาราง`);
-    found = true;
-  }
-  // ค้นหาสถานที่
-  else if (term.includes('เมือง') || term.includes('นครพนม')) {
-    // แสดงแท็บภาพรวม
-    document.querySelectorAll('.nav-btn')[0].click();
-    alert(`✅ พบ: แสดงข้อมูลสถานีเมืองนครพนม`);
-    found = true;
-  }
-
-  if (!found) {
-    alert(`❌ ไม่พบผลลัพธ์สำหรับ "${term}"\n\nลองค้นหาด้วยคำอื่น เช่น:\n• "ไฟไหม้" - ดูรายงานจุดไฟไหม้\n• "PM2.5" - ดูคุณภาพอากาศ\n• "แผนที่" - ดูแผนที่\n• "พยากรณ์" - ดูการพยากรณ์`);
-  }
+  // Update chart footer stats
+  const avg = Math.round(HIST.reduce((a,b)=>a+b,0)/HIST.length*10)/10;
+  document.getElementById('cf-avg').textContent = avg;
+  document.getElementById('cf-max').textContent = Math.max(...HIST);
+  document.getElementById('cf-min').textContent = Math.min(...HIST);
 }
 
 /* ──────────────────────────────────
@@ -2366,19 +2264,18 @@ function performSearch(term) {
 document.addEventListener('DOMContentLoaded', async () => {
   lucide.createIcons();
   startClock();
-  
-  // Initialize Navigation and Search
-  initNavigation();
-  initSearch();
 
   // Hide loader after short delay
   setTimeout(async ()=>{
     // Init all static components
-    updateAQI(waqiData.pm25 || 0);
+    updateAQI(CURRENT_PM25);
     updateEnv();
     renderSparkbar('temp-spark', tempHistory, '#C9971C');
     renderSparkbar('vis-spark',  visHistory,  '#6366F1');
+    renderForecastList();
+    renderStations();
     renderFireList();
+    renderTable();
     renderHourlyChart();
     setTimeout(initMap, 300);
 
@@ -2387,31 +2284,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const data = await fetchPM25Data();
     appData = data;
-    
-    // Update waqiData and currentPM from fetched data
-    const currentData = data.find(d => d.type === 'current');
-    if (currentData) {
-      waqiData.pm25 = currentData.pm25;
-      currentPM = currentData.pm25;
-      updateAQI(currentPM);
-    }
-    
-    // Fetch station data
-    await fetchStationsData();
-    
-    // Fetch fire reports
-    await fetchFireReports();
-    
     renderAPIStatus(data);
     renderAPITable(data);
     setTimeout(()=>renderAPIChart(data), 600);
 
-    // Refresh data every 5 minutes
-    setInterval(() => {
-      fetchStationsData();
-      fetchFireReports();
-    }, 300000); // 5 minutes
-    
+    // Start live simulation every 5 seconds
+    simulationInterval = setInterval(simulate, 5000);
     lucide.createIcons();
   }, 1400);
 });
