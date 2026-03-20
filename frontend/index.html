@@ -1516,12 +1516,18 @@ function renderSparkbar(id, data, color) {
 /* ──────────────────────────────────
    FORECAST LIST (command_center style)
 ────────────────────────────────── */
-const ALL_FC = [
-  ...FC_TONIGHT.map(d=>({...d,type:'tonight'})),
-  ...FC_TOMORROW.slice(0,5).map(d=>({...d,type:'tomorrow'}))
-];
+const ALL_FC = []; // Will be populated from WAQI API forecast data
+
 function renderForecastList() {
-  const el = document.getElementById('forecast-list'); el.innerHTML='';
+  const el = document.getElementById('forecast-list'); 
+  if (!el) return;
+  el.innerHTML='';
+  
+  if (ALL_FC.length === 0) {
+    el.innerHTML = '<div style="padding:20px;text-align:center;color:#A89E8E;">ไม่มีข้อมูลพยากรณ์</div>';
+    return;
+  }
+  
   ALL_FC.forEach(item=>{
     const L = lv(item.v);
     const pct = Math.min((item.v/120)*100,100);
@@ -1586,25 +1592,23 @@ function updateStations() {
    MAIN HOURLY CHART (pm25_v3 style)
 ────────────────────────────────── */
 function renderHourlyChart() {
+  const chartEl = document.getElementById('apex-main');
+  if (!chartEl) return;
+  
+  // Simplified chart with empty data for now
   const histLabels = Array.from({length:24},(_,i)=>`${String(i).padStart(2,'0')}:00`);
-  const tnLabels   = FC_TONIGHT.map(d=>d.h);
-  const tmLabels   = FC_TOMORROW.map(d=>d.h);
-  const allLabels  = [...histLabels,...tnLabels,...tmLabels];
-  const histData   = [...HIST,...Array(tnLabels.length+tmLabels.length).fill(null)];
-  const tnData     = [...Array(24).fill(null),...FC_TONIGHT.map(d=>d.v),...Array(tmLabels.length).fill(null)];
-  const tmData     = [...Array(24+tnLabels.length).fill(null),...FC_TOMORROW.map(d=>d.v)];
+  const histData   = Array(24).fill(null);
+  const allLabels  = histLabels;
 
-  new ApexCharts(document.getElementById('apex-main'),{
+  new ApexCharts(chartEl,{
     series:[
       { name:'ข้อมูลจริง (วันนี้)', type:'bar',  data:histData },
-      { name:'คาดการณ์ช่วงค่ำ',     type:'line', data:tnData   },
-      { name:'พยากรณ์พรุ่งนี้',      type:'bar',  data:tmData   },
     ],
     chart:{ height:200, background:'transparent', toolbar:{show:false}, animations:{enabled:true,easing:'easeinout',speed:900}, fontFamily:'Noto Sans Thai,sans-serif' },
     plotOptions:{ bar:{borderRadius:3,columnWidth:'70%'} },
-    stroke:{ width:[0,2.5,0], curve:'smooth', dashArray:[0,5,0] },
-    colors:['#C9971C','#2563EB','#93C5FD'],
-    fill:{ opacity:[0.85,1,0.65] },
+    stroke:{ width:[0], curve:'smooth', dashArray:[0] },
+    colors:['#C9971C'],
+    fill:{ opacity:[0.85] },
     dataLabels:{ enabled:false },
     xaxis:{
       categories:allLabels,
@@ -2224,11 +2228,14 @@ function simulate() {
   updateStations();
   simulateRealtimeUpdates();
 
-  // Update chart footer stats
-  const avg = Math.round(HIST.reduce((a,b)=>a+b,0)/HIST.length*10)/10;
-  document.getElementById('cf-avg').textContent = avg;
-  document.getElementById('cf-max').textContent = Math.max(...HIST);
-  document.getElementById('cf-min').textContent = Math.min(...HIST);
+  // Update chart footer stats (use tempHistory as fallback)
+  const histData = tempHistory.filter(v => v > 0);
+  if (histData.length > 0) {
+    const avg = Math.round(histData.reduce((a,b)=>a+b,0)/histData.length*10)/10;
+    document.getElementById('cf-avg').textContent = avg;
+    document.getElementById('cf-max').textContent = Math.max(...histData);
+    document.getElementById('cf-min').textContent = Math.min(...histData);
+  }
 }
 
 /* ──────────────────────────────────
