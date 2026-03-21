@@ -1018,13 +1018,11 @@ tbody td.num { text-align:center; }
       </div>
       <div id="map"></div>
       <div class="map-legend-bar">
-        <span style="font-size:10px;font-weight:700;color:var(--stone-3);margin-right:4px;">ระดับ PM2.5:</span>
-        <div class="leg-item"><div class="leg-dot" style="background:#b7e4a0;"></div><span>ดี</span></div>
-        <div class="leg-item"><div class="leg-dot" style="background:#f9e07f;"></div><span>ปานกลาง</span></div>
-        <div class="leg-item"><div class="leg-dot" style="background:#f5a623;"></div><span>เริ่มมีผล</span></div>
-        <div class="leg-item"><div class="leg-dot" style="background:#e05a2b;"></div><span>ไม่ดี</span></div>
-        <div class="leg-item"><div class="leg-dot" style="background:#c0392b;"></div><span>อันตราย</span></div>
-        <div class="leg-item" style="margin-left:8px;"><div class="leg-dot" style="background:#ef4444;border-radius:50%;"></div><span>🔥 จุดความร้อน</span></div>
+        <span style="font-size:10px;font-weight:700;color:var(--stone-3);margin-right:4px;">สัญลักษณ์:</span>
+        <div class="leg-item"><div class="leg-dot" style="background:#DC2626;border-radius:50%;"></div><span>🔥 จุดความร้อนระดับสูง</span></div>
+        <div class="leg-item"><div class="leg-dot" style="background:#D97706;border-radius:50%;"></div><span>🔥 จุดความร้อนระดับกลาง</span></div>
+        <div class="leg-item"><div class="leg-dot" style="background:#16A34A;border-radius:50%;"></div><span>🔥 จุดความร้อนระดับต่ำ</span></div>
+        <div style="margin-left:auto;font-size:10px;color:var(--stone-4);">คลิกที่จุดไฟเพื่อดูรายละเอียด</div>
       </div>
     </div>
 
@@ -1637,27 +1635,27 @@ function initMap() {
     subdomains:'abcd', maxZoom:19
   }).addTo(leafletMap);
 
-  // Station markers
-  STATIONS.forEach(s=>{
-    const L2 = lv(s.pm25);
-    const html=`<div style="position:relative;width:34px;height:34px;">
-      <div style="position:absolute;inset:0;border-radius:50%;background:${L2.ringColor}33;animation:pulse-r 2s ease-out infinite;"></div>
-      <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
-        width:24px;height:24px;border-radius:50%;
-        background:${L2.bg};border:2.5px solid white;
-        box-shadow:0 2px 10px rgba(0,0,0,0.18);
-        display:flex;align-items:center;justify-content:center;
-        font-size:9px;font-weight:800;color:${L2.fg};font-family:'IBM Plex Mono',monospace;
-      ">${Math.round(s.pm25)}</div>
-    </div>`;
-    const icon = L.divIcon({className:'',html,iconSize:[34,34],iconAnchor:[17,17],popupAnchor:[0,-17]});
-    L.marker([s.lat,s.lon],{icon}).addTo(leafletMap).bindPopup(`
-      <div class="lp-name">📡 ${s.name}</div>
-      <div class="lp-row"><span>PM2.5 ปัจจุบัน</span><b style="color:${L2.ringColor}">${s.pm25} µg/m³</b></div>
-      <div class="lp-row"><span>ระดับ</span><b>${L2.label}</b></div>
-      <div class="lp-row"><span>สถานะ</span><b style="color:#16A34A">● ออนไลน์</b></div>
-    `);
-  });
+  // ไม่แสดง Station markers บนแผนที่ (แสดงเฉพาะในรายการด้านข้าง)
+  // STATIONS.forEach(s=>{
+  //   const L2 = lv(s.pm25);
+  //   const html=`<div style="position:relative;width:34px;height:34px;">
+  //     <div style="position:absolute;inset:0;border-radius:50%;background:${L2.ringColor}33;animation:pulse-r 2s ease-out infinite;"></div>
+  //     <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  //       width:24px;height:24px;border-radius:50%;
+  //       background:${L2.bg};border:2.5px solid white;
+  //       box-shadow:0 2px 10px rgba(0,0,0,0.18);
+  //       display:flex;align-items:center;justify-content:center;
+  //       font-size:9px;font-weight:800;color:${L2.fg};font-family:'IBM Plex Mono',monospace;
+  //     ">${Math.round(s.pm25)}</div>
+  //   </div>`;
+  //   const icon = L.divIcon({className:'',html,iconSize:[34,34],iconAnchor:[17,17],popupAnchor:[0,-17]});
+  //   L.marker([s.lat,s.lon],{icon}).addTo(leafletMap).bindPopup(`
+  //     <div class="lp-name">📡 ${s.name}</div>
+  //     <div class="lp-row"><span>PM2.5 ปัจจุบัน</span><b style="color:${L2.ringColor}">${s.pm25} µg/m³</b></div>
+  //     <div class="lp-row"><span>ระดับ</span><b>${L2.label}</b></div>
+  //     <div class="lp-row"><span>สถานะ</span><b style="color:#16A34A">● ออนไลน์</b></div>
+  //   `);
+  // });
 
   // Fire markers — photo-style + rich popup with image
   fireMarkersLayer = L.layerGroup().addTo(leafletMap);
@@ -1762,9 +1760,9 @@ function initMap() {
   // Try loading real fire reports
   loadFireReports();
 
-  // Label
-  const lIcon=L.divIcon({className:'',html:`<div style="background:white;border:1px solid rgba(212,175,55,0.3);border-radius:6px;padding:3px 10px;font-family:'Noto Sans Thai',sans-serif;font-size:11px;font-weight:700;color:#1C1A17;box-shadow:0 1px 5px rgba(0,0,0,0.1);white-space:nowrap;">นครพนม</div>`,iconAnchor:[35,10]});
-  L.marker([17.42,104.77],{icon:lIcon,interactive:false}).addTo(leafletMap);
+  // ลบ label "นครพนม" ออกจากแผนที่
+  // const lIcon=L.divIcon({className:'',html:`<div style="background:white;border:1px solid rgba(212,175,55,0.3);border-radius:6px;padding:3px 10px;font-family:'Noto Sans Thai',sans-serif;font-size:11px;font-weight:700;color:#1C1A17;box-shadow:0 1px 5px rgba(0,0,0,0.1);white-space:nowrap;">นครพนม</div>`,iconAnchor:[35,10]});
+  // L.marker([17.42,104.77],{icon:lIcon,interactive:false}).addTo(leafletMap);
 }
 
 async function loadFireReports() {
