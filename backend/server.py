@@ -26,7 +26,7 @@ from tensorflow import keras
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError, LineBotApiError
 from linebot.models import (
-    MessageEvent, TextMessage, ImageMessage, LocationMessage,
+    MessageEvent, PostbackEvent, TextMessage, ImageMessage, LocationMessage,
     TextSendMessage, ImageSendMessage,
     QuickReply, QuickReplyButton, MessageAction, URIAction
 )
@@ -63,7 +63,7 @@ def create_rich_menu():
         return None
     
     try:
-        from linebot.models import RichMenu, RichMenuSize, RichMenuArea, RichMenuBounds, URIAction, MessageAction
+        from linebot.models import RichMenu, RichMenuSize, RichMenuArea, RichMenuBounds, URIAction, MessageAction, PostbackAction
         
         # สร้าง Rich Menu
         rich_menu_to_create = RichMenu(
@@ -74,11 +74,13 @@ def create_rich_menu():
             areas=[
                 RichMenuArea(
                     bounds=RichMenuBounds(x=0, y=0, width=833, height=843),
-                    action=MessageAction(label='ตรวจสอบค่าฝุ่น', text='ตรวจสอบค่าฝุ่น')
+                    # เปลี่ยนเป็น Postback เพื่อให้แสดงค่าฝุ่นทันที
+                    action=PostbackAction(label='ตรวจสอบค่าฝุ่น', data='action=check_pm25')
                 ),
                 RichMenuArea(
                     bounds=RichMenuBounds(x=833, y=0, width=834, height=843),
-                    action=MessageAction(label='รายงานไฟไหม้', text='รายงานไฟไหม้')
+                    # เปลี่ยนเป็น Postback เพื่อให้แจ้งเหตุได้ทันที
+                    action=PostbackAction(label='รายงานไฟไหม้', data='action=report_fire')
                 ),
                 RichMenuArea(
                     bounds=RichMenuBounds(x=1667, y=0, width=833, height=843),
@@ -876,6 +878,105 @@ if LINE_BOT_AVAILABLE and handler:
                 event.reply_token,
                 TextSendMessage(text=reply_text)
             )
+
+    @handler.add(PostbackEvent)
+    def handle_postback(event):
+        """จัดการ Postback Event จาก Rich Menu"""
+        try:
+            data = event.postback.data
+            user_id = event.source.user_id
+            
+            if data == 'action=check_pm25':
+                # แสดงค่าฝุ่น PM2.5 ทันที
+                try:
+                    import requests
+                    waqi_token = os.getenv('WAQI_API_TOKEN', '6e19dc4d73747ab27c397b590fdbd504f1f496fc')
+                    keyword = 'nakhon phanom'
+                    
+                    # 1. ค้นหาสถานี
+                    search_url = f'https://api.waqi.info/search/?token={waqi_token}&keyword={keyword}'
+                    search_res = requests.get(search_url, timeout=10)
+                    search_data = search_res.json()
+                    
+                    if search_data.get('status') == 'ok' and search_data.get('data'):
+                        station_uid = search_data['data'][0]['uid']
+                        
+                        # 2. ดึงข้อมูลจากสถานี
+                        feed_url = f'https://api.waqi.info/feed/@{station_uid}/?token={waqi_token}'
+                        feed_res = requests.get(feed_url, timeout=10)
+                        data_feed = feed_res.json()
+                        
+                        if data_feed.get('status') == 'ok':
+                            pm25 = data_feed['data']['iaqi'].get('pm25', {}).get('v', 0)
+                            aqi = data_feed['data'].get('aqi', pm25)
+                            city = data_feed['data']['city'].get('name', 'นครพนม')
+                            time = data_feed['data']['time'].get('s', '')
+                            
+                            # กำหนดสีและระดับ
+                            if pm25 <= 25:
+                                color = "🟢"
+                                level = "ดีมาก"
+                            elif pm25 <= 37.5:
+                                color = "🟡"
+                                level = "ปานกลาง"
+                            elif pm25 <= 50:
+                                color = "🟠"
+                                level = "เริ่มมีผล"
+                            elif pm25 <= 90:
+                                color = "🔴"
+                                level = "ไม่ดี"
+                            else:
+                                color = "🟣"
+                                level = "อันตราย"
+                            
+                            reply_text = (
+                                f"💨 ค่าฝุ่น PM2.5 ณ ขณะนี้\n\n"
+                                f"━━━━━━━━━━━━━━━━\n\n"
+                                f"📍 สถานที่: {city}\n"
+                                f"📊 PM2.5: {pm25} µg/m³\n"
+                                f"📈 AQI: {aqi}\n"
+                                f"{color} ระดับ: {level}\n"
+                                f"🕐 อัปเดต: {time}\n\n"
+                                f"ดูข้อมูลเพิ่มเติม:\nhttps://pm25-nakhon-phanom.onrender.com"
+                            )
+                        else:
+                            reply_text = "❌ ไม่สามารถดึงข้อมูลได้\nกรุณาลองใหม่อีกครั้ง"
+                    else:
+                        reply_text = "❌ ไม่พบสถานีตรวจวัด\nกรุณาลองใหม่อีกครั้ง"
+                    
+                    line_bot_api.reply_message(
+                        event.reply_token,
+                        TextSendMessage(text=reply_text)
+                    )
+                except Exception as e:
+                    print(f"❌ Error fetching PM2.5: {e}")
+                    line_bot_api.reply_message(
+                        event.reply_token,
+                        TextSendMessage(text="❌ เกิดข้อผิดพลาด\nไม่สามารถดึงข้อมูลได้")
+                    )
+            
+            elif data == 'action=report_fire':
+                # แจ้งให้ส่งรูปภาพ (รูปจะมี GPS metadata ถ้าเปิดอยู่)
+                reply_text = (
+                    "🔥 แจ้งเหตุไฟไหม้\n\n"
+                    "━━━━━━━━━━━━━━━━\n\n"
+                    "📸 กรุณาส่งรูปภาพจุดเกิดเหตุ\n\n"
+                    "⚠️ หมายเหตุ:\n"
+                    "• เปิด GPS ก่อนถ่ายรูป\n"
+                    "• ถ่ายด้วยกล้องมือถือ\n"
+                    "• ระบบจะดึงพิกัดจากรูปอัตโนมัติ\n\n"
+                    "หากรูปไม่มีพิกัด:\n"
+                    "→ ส่งพิกัด (Location) เพิ่มเติม"
+                )
+                line_bot_api.reply_message(
+                    event.reply_token,
+                    TextSendMessage(text=reply_text)
+                )
+        
+        except Exception as e:
+            print(f"❌ Error handling postback: {e}")
+            import traceback
+            traceback.print_exc()
 
 
 @app.route('/api/fire-reports', methods=['GET'])
