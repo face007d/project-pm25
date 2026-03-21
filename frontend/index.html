@@ -1996,6 +1996,20 @@ async function fetchPM25Data() {
     if(feedData.status!=='ok') throw new Error('ดึงข้อมูลล้มเหลว');
 
     const data = feedData.data;
+    
+    // ดึงข้อมูลสภาพอากาศจาก WAQI API
+    if(data.iaqi) {
+      if(data.iaqi.t) currentTemp = data.iaqi.t.v;           // อุณหภูมิ
+      if(data.iaqi.h) currentHumid = data.iaqi.h.v;          // ความชื้น
+      if(data.iaqi.w) currentWind = data.iaqi.w.v;           // ลม
+      if(data.iaqi.p) currentPress = data.iaqi.p.v;          // ความกดอากาศ
+      if(data.iaqi.dew) currentVis = 10 - (data.iaqi.dew.v / 10); // ทัศนวิสัย (ประมาณการ)
+      if(data.wind && data.wind.deg) windDeg = data.wind.deg; // ทิศทางลม
+      
+      // อัปเดต UI
+      updateEnv();
+      console.log('✅ Weather data updated from WAQI API');
+    }
     let formatted = [];
     let id = 1;
     const formatDate = d => {
@@ -2230,33 +2244,6 @@ function handleDownloadCSV() {
 ────────────────────────────────── */
 const tempHistory = Array.from({length:12},()=>32+Math.random()*4);
 const visHistory  = Array.from({length:12},()=>3+Math.random()*3);
-
-function simulate() {
-  currentPM   = Math.max(5,Math.min(150,currentPM+(Math.random()-0.5)*4));
-  currentTemp = Math.max(28,Math.min(42,currentTemp+(Math.random()-0.5)*0.4));
-  currentHumid= Math.max(30,Math.min(95,currentHumid+(Math.random()-0.5)*1.5));
-  currentWind = Math.max(2,Math.min(40,currentWind+(Math.random()-0.5)*1.2));
-  currentVis  = Math.max(1,Math.min(15,currentVis+(Math.random()-0.5)*0.3));
-  currentPress= Math.max(1000,Math.min(1020,currentPress+(Math.random()-0.5)*0.5));
-  windDeg     = (windDeg+(Math.random()-0.5)*20+360)%360;
-
-  updateAQI(currentPM);
-  updateEnv();
-
-  tempHistory.shift(); tempHistory.push(currentTemp);
-  visHistory.shift();  visHistory.push(currentVis);
-  renderSparkbar('temp-spark', tempHistory, '#C9971C');
-  renderSparkbar('vis-spark',  visHistory,  '#6366F1');
-
-  updateStations();
-  simulateRealtimeUpdates();
-
-  // Update chart footer stats
-  const avg = Math.round(HIST.reduce((a,b)=>a+b,0)/HIST.length*10)/10;
-  document.getElementById('cf-avg').textContent = avg;
-  document.getElementById('cf-max').textContent = Math.max(...HIST);
-  document.getElementById('cf-min').textContent = Math.min(...HIST);
-}
 
 /* ──────────────────────────────────
    INIT
