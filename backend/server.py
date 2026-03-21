@@ -1070,6 +1070,48 @@ if LINE_BOT_AVAILABLE and handler:
                     event.reply_token,
                     flex_message
                 )
+            
+            elif data == 'action=forecast':
+                # แสดงพยากรณ์ล่วงหน้า
+                reply_text = (
+                    "📊 พยากรณ์ PM2.5 ล่วงหน้า\n\n"
+                    "━━━━━━━━━━━━━━━━\n\n"
+                    "🔮 ระบบใช้ LSTM Model พยากรณ์\n"
+                    "ค่า PM2.5 ล่วงหน้า 3 วัน\n\n"
+                    "📍 ดูกราฟพยากรณ์:\n"
+                    "https://pm25-nakhon-phanom.onrender.com\n\n"
+                    "━━━━━━━━━━━━━━━━\n\n"
+                    "💡 ข้อมูลอัพเดททุกวัน\n"
+                    "เวลา 00:00 น."
+                )
+                line_bot_api.reply_message(
+                    event.reply_token,
+                    TextSendMessage(text=reply_text)
+                )
+            
+            elif data == 'action=help':
+                # แสดงวิธีใช้งาน
+                reply_text = (
+                    "📖 คู่มือการใช้งาน NagaSkyguard\n\n"
+                    "━━━━━━━━━━━━━━━━\n\n"
+                    "💨 ตรวจสอบค่าฝุ่น PM2.5\n"
+                    "   กดปุ่ม 'สภาพอากาศ / ค่าฝุ่น'\n\n"
+                    "🔥 แจ้งเหตุไฟไหม้\n"
+                    "   1. กดปุ่ม 'แจ้งจุดเกิดไฟ'\n"
+                    "   2. ส่งรูปภาพ\n"
+                    "   3. แชร์พิกัด\n\n"
+                    "📍 ดูแผนที่จุดไฟ\n"
+                    "   กดปุ่ม 'จุดเกิดไฟ'\n\n"
+                    "📊 พยากรณ์ล่วงหน้า\n"
+                    "   กดปุ่ม 'พยากรณ์ล่วงหน้า'\n\n"
+                    "━━━━━━━━━━━━━━━━\n\n"
+                    "💡 ติดต่อสอบถาม:\n"
+                    "LINE OA: @726lnjeu"
+                )
+                line_bot_api.reply_message(
+                    event.reply_token,
+                    TextSendMessage(text=reply_text)
+                )
         
         except Exception as e:
             print(f"❌ Error handling postback: {e}")
