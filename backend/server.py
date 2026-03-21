@@ -82,7 +82,7 @@ def create_rich_menu():
                 ),
                 RichMenuArea(
                     bounds=RichMenuBounds(x=1667, y=0, width=833, height=843),
-                    action=URIAction(label='ดูแผนที่', uri='https://project-pm25-1.onrender.com')
+                    action=URIAction(label='ดูแผนที่', uri='https://pm25-nakhon-phanom.onrender.com')
                 )
             ]
         )
@@ -540,7 +540,7 @@ def save_fire_report_from_session(user_id, session, reply_token, address=None):
                 f"🕐 เวลา: {datetime.now(THAILAND_TZ).strftime('%d/%m/%Y %H:%M น.')}\n\n"
                 "━━━━━━━━━━━━━━━━\n\n"
                 "📍 ดูแผนที่:\n"
-                "https://project-pm25-1.onrender.com"
+                "https://pm25-nakhon-phanom.onrender.com"
             )
             
             line_bot_api.reply_message(
@@ -603,7 +603,7 @@ if LINE_BOT_AVAILABLE and handler:
                 quick_reply = QuickReply(items=[
                     QuickReplyButton(action=MessageAction(label="💨 ตรวจสอบค่าฝุ่น", text="ฝุ่น")),
                     QuickReplyButton(action=MessageAction(label="📋 คำสั่งทั้งหมด", text="help")),
-                    QuickReplyButton(action=URIAction(label="📍 ดูแผนที่", uri="https://project-pm25-1.onrender.com"))
+                    QuickReplyButton(action=URIAction(label="📍 ดูแผนที่", uri="https://pm25-nakhon-phanom.onrender.com"))
                 ])
                 
                 reply_text = (
@@ -617,7 +617,7 @@ if LINE_BOT_AVAILABLE and handler:
                     "🔥 แจ้งเหตุไฟไหม้\n"
                     "   → ส่งรูป + พิกัด\n\n"
                     "📍 ดูแผนที่จุดไฟไหม้\n"
-                    "   → https://project-pm25-1.onrender.com\n\n"
+                    "   → https://pm25-nakhon-phanom.onrender.com\n\n"
                     "━━━━━━━━━━━━━━━━\n\n"
                     "👇 เลือกคำสั่งด้านล่าง"
                 )
@@ -677,7 +677,7 @@ if LINE_BOT_AVAILABLE and handler:
                                 f"🎨 AQI: {aqi}\n"
                                 f"{color} ระดับ: {level}\n"
                                 f"🕐 อัปเดต: {time}\n\n"
-                                f"ดูข้อมูลเพิ่มเติม:\nhttps://project-pm25-1.onrender.com"
+                                f"ดูข้อมูลเพิ่มเติม:\nhttps://pm25-nakhon-phanom.onrender.com"
                             )
                         else:
                             reply_text = "ไม่สามารถดึงข้อมูลค่าฝุ่นได้ในขณะนี้"
@@ -702,7 +702,7 @@ if LINE_BOT_AVAILABLE and handler:
                     "   1. ส่งรูปภาพ\n"
                     "   2. ส่งพิกัด (Location)\n\n"
                     "📍 ดูแผนที่\n"
-                    "   https://project-pm25-1.onrender.com\n\n"
+                    "   https://pm25-nakhon-phanom.onrender.com\n\n"
                     "━━━━━━━━━━━━━━━━\n\n"
                     "💡 พิมพ์ 'สวัสดี' เพื่อเริ่มต้น"
                 )
