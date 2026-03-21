@@ -60,46 +60,46 @@ def get_pm25_data():
     return None
 
 def get_pm25_level(pm25):
-    """กำหนดระดับและสีตามค่า PM2.5"""
+    """กำหนดระดับและสีตามค่า PM2.5 (White Gold Theme)"""
     if pm25 <= 25:
         return {
             'level': 'ดีมาก',
-            'color': '#16A34A',
+            'color': '#C9971C',
             'emoji': '🟢',
             'advice': 'อากาศดี เหมาะสำหรับกิจกรรมกลางแจ้ง',
-            'bg_color': '#F0FDF4'
+            'bg_color': '#FDF8E6'
         }
     elif pm25 <= 37.5:
         return {
             'level': 'ปานกลาง',
-            'color': '#EAB308',
+            'color': '#D4AF37',
             'emoji': '🟡',
             'advice': 'ผู้ที่มีความไวควรระวัง',
-            'bg_color': '#FEFCE8'
+            'bg_color': '#FAF3D0'
         }
     elif pm25 <= 50:
         return {
             'level': 'เริ่มมีผล',
-            'color': '#F59E0B',
+            'color': '#B8860B',
             'emoji': '🟠',
             'advice': 'ควรสวมหน้ากากเมื่อออกนอกบ้าน',
-            'bg_color': '#FEF3C7'
+            'bg_color': '#FFF7ED'
         }
     elif pm25 <= 90:
         return {
             'level': 'ไม่ดี',
-            'color': '#DC2626',
+            'color': '#9A7210',
             'emoji': '🔴',
             'advice': 'หลีกเลี่ยงกิจกรรมกลางแจ้ง',
-            'bg_color': '#FEE2E2'
+            'bg_color': '#FEF2F2'
         }
     else:
         return {
             'level': 'อันตราย',
-            'color': '#7C3AED',
+            'color': '#6B5416',
             'emoji': '🟣',
             'advice': 'ห้ามออกนอกบ้านโดยเด็ดขาด',
-            'bg_color': '#F3E8FF'
+            'bg_color': '#FAF5FF'
         }
 
 def get_all_line_users():

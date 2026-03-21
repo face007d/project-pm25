@@ -916,34 +916,34 @@ if LINE_BOT_AVAILABLE and handler:
                             temp = data_feed['data']['iaqi'].get('t', {}).get('v', 'N/A')
                             humidity = data_feed['data']['iaqi'].get('h', {}).get('v', 'N/A')
                             
-                            # กำหนดสีและระดับ
+                            # กำหนดสีและระดับ (White Gold Theme)
                             if pm25 <= 25:
-                                color = "#22C55E"
-                                bg_color = "#F0FDF4"
+                                color = "#C9971C"  # ทองเข้ม
+                                bg_color = "#FDF8E6"  # ครีมอ่อน
                                 level = "ดีมาก"
                                 emoji = "😊"
                                 advice = "คุณภาพอากาศดีมาก เหมาะสำหรับกิจกรรมกลางแจ้ง"
                             elif pm25 <= 37.5:
-                                color = "#EAB308"
-                                bg_color = "#FEF9C3"
+                                color = "#D4AF37"  # ทองกลาง
+                                bg_color = "#FAF3D0"  # ครีมเหลือง
                                 level = "ปานกลาง"
                                 emoji = "😐"
                                 advice = "คุณภาพอากาศปานกลาง กลุ่มเสี่ยงควรระวัง"
                             elif pm25 <= 50:
-                                color = "#F97316"
-                                bg_color = "#FFF7ED"
+                                color = "#B8860B"  # ทองเข้มขึ้น
+                                bg_color = "#FFF7ED"  # ครีมส้ม
                                 level = "เริ่มมีผล"
                                 emoji = "😷"
                                 advice = "เริ่มส่งผลต่อสุขภาพ ควรสวมหน้ากาก"
                             elif pm25 <= 90:
-                                color = "#EF4444"
-                                bg_color = "#FEF2F2"
+                                color = "#9A7210"  # ทองแดง
+                                bg_color = "#FEF2F2"  # ครีมแดง
                                 level = "ไม่ดี"
                                 emoji = "😨"
                                 advice = "อากาศไม่ดี หลีกเลี่ยงกิจกรรมกลางแจ้ง"
                             else:
-                                color = "#A855F7"
-                                bg_color = "#FAF5FF"
+                                color = "#6B5416"  # น้ำตาลทอง
+                                bg_color = "#FAF5FF"  # ครีมม่วง
                                 level = "อันตราย"
                                 emoji = "☠️"
                                 advice = "อันตรายมาก! อยู่ในที่ร่มและปิดหน้าต่าง"
@@ -1315,47 +1315,355 @@ if LINE_BOT_AVAILABLE and handler:
                     flex_message
                 )
             
-            elif data == 'action=forecast':
-                # แสดงพยากรณ์ล่วงหน้า
-                reply_text = (
-                    "📊 พยากรณ์ PM2.5 ล่วงหน้า\n\n"
-                    "━━━━━━━━━━━━━━━━\n\n"
-                    "🔮 ระบบใช้ LSTM Model พยากรณ์\n"
-                    "ค่า PM2.5 ล่วงหน้า 3 วัน\n\n"
-                    "📍 ดูกราฟพยากรณ์:\n"
-                    "https://pm25-nakhon-phanom.onrender.com\n\n"
-                    "━━━━━━━━━━━━━━━━\n\n"
-                    "💡 ข้อมูลอัพเดททุกวัน\n"
-                    "เวลา 00:00 น."
-                )
-                line_bot_api.reply_message(
-                    event.reply_token,
-                    TextSendMessage(text=reply_text)
-                )
+            elif data == 'action=weather':
+                # แสดงสภาพอากาศ + พยากรณ์ PM2.5
+                try:
+                    import requests
+                    from linebot.models import FlexSendMessage, BubbleContainer, BoxComponent, TextComponent, ButtonComponent, URIAction as FlexURIAction, SeparatorComponent
+                    
+                    waqi_token = os.getenv('WAQI_API_TOKEN', '6e19dc4d73747ab27c397b590fdbd504f1f496fc')
+                    keyword = 'nakhon phanom'
+                    
+                    # ดึงข้อมูลจาก WAQI API
+                    search_url = f'https://api.waqi.info/search/?token={waqi_token}&keyword={keyword}'
+                    search_res = requests.get(search_url, timeout=10)
+                    search_data = search_res.json()
+                    
+                    if search_data.get('status') == 'ok' and search_data.get('data'):
+                        station_uid = search_data['data'][0]['uid']
+                        feed_url = f'https://api.waqi.info/feed/@{station_uid}/?token={waqi_token}'
+                        feed_res = requests.get(feed_url, timeout=10)
+                        data_feed = feed_res.json()
+                        
+                        if data_feed.get('status') == 'ok':
+                            # ข้อมูลอากาศ
+                            temp = data_feed['data']['iaqi'].get('t', {}).get('v', 'N/A')
+                            humidity = data_feed['data']['iaqi'].get('h', {}).get('v', 'N/A')
+                            wind = data_feed['data']['iaqi'].get('w', {}).get('v', 'N/A')
+                            pressure = data_feed['data']['iaqi'].get('p', {}).get('v', 'N/A')
+                            
+                            # พยากรณ์ PM2.5
+                            forecast_data = data_feed['data'].get('forecast', {}).get('daily', {}).get('pm25', [])
+                            forecasts = []
+                            if forecast_data and len(forecast_data) >= 3:
+                                for i in range(3):
+                                    forecasts.append({
+                                        'day': f'วันที่ {i+1}',
+                                        'avg': forecast_data[i].get('avg', 0),
+                                        'min': forecast_data[i].get('min', 0),
+                                        'max': forecast_data[i].get('max', 0)
+                                    })
+                            
+                            # สร้าง Flex Message
+                            forecast_boxes = []
+                            for f in forecasts:
+                                avg = f['avg']
+                                # White Gold Theme Colors
+                                if avg <= 25:
+                                    color = "#C9971C"
+                                elif avg <= 37.5:
+                                    color = "#D4AF37"
+                                elif avg <= 50:
+                                    color = "#B8860B"
+                                elif avg <= 90:
+                                    color = "#9A7210"
+                                else:
+                                    color = "#6B5416"
+                                
+                                forecast_boxes.append(
+                                    BoxComponent(
+                                        layout="vertical",
+                                        contents=[
+                                            TextComponent(
+                                                text=f['day'],
+                                                size="xs",
+                                                color="#706B60",
+                                                align="center"
+                                            ),
+                                            TextComponent(
+                                                text=f"{int(f['avg'])}",
+                                                size="xl",
+                                                weight="bold",
+                                                color=color,
+                                                align="center"
+                                            ),
+                                            TextComponent(
+                                                text=f"{int(f['min'])}-{int(f['max'])}",
+                                                size="xxs",
+                                                color="#A89E8E",
+                                                align="center"
+                                            )
+                                        ],
+                                        flex=1,
+                                        padding_all="8px",
+                                        background_color="#F9F8F4",
+                                        corner_radius="8px"
+                                    )
+                                )
+                            
+                            flex_message = FlexSendMessage(
+                                alt_text="☀️ สภาพอากาศและพยากรณ์",
+                                contents=BubbleContainer(
+                                    size="mega",
+                                    header=BoxComponent(
+                                        layout="vertical",
+                                        contents=[
+                                            TextComponent(
+                                                text="☀️ สภาพอากาศ",
+                                                weight="bold",
+                                                size="xl",
+                                                color="#C9971C"
+                                            )
+                                        ],
+                                        background_color="#FDF8E6",
+                                        padding_all="20px"
+                                    ),
+                                    body=BoxComponent(
+                                        layout="vertical",
+                                        contents=[
+                                            # ข้อมูลอากาศ
+                                            TextComponent(
+                                                text="📍 นครพนม",
+                                                size="sm",
+                                                color="#706B60",
+                                                margin="md"
+                                            ),
+                                            BoxComponent(
+                                                layout="horizontal",
+                                                contents=[
+                                                    BoxComponent(
+                                                        layout="vertical",
+                                                        contents=[
+                                                            TextComponent(text="🌡️ อุณหภูมิ", size="xs", color="#A89E8E"),
+                                                            TextComponent(text=f"{temp}°C" if temp != 'N/A' else "N/A", size="lg", weight="bold", color="#1C1A17")
+                                                        ],
+                                                        flex=1
+                                                    ),
+                                                    BoxComponent(
+                                                        layout="vertical",
+                                                        contents=[
+                                                            TextComponent(text="💧 ความชื้น", size="xs", color="#A89E8E"),
+                                                            TextComponent(text=f"{humidity}%" if humidity != 'N/A' else "N/A", size="lg", weight="bold", color="#1C1A17")
+                                                        ],
+                                                        flex=1
+                                                    )
+                                                ],
+                                                spacing="md",
+                                                margin="lg"
+                                            ),
+                                            BoxComponent(
+                                                layout="horizontal",
+                                                contents=[
+                                                    BoxComponent(
+                                                        layout="vertical",
+                                                        contents=[
+                                                            TextComponent(text="💨 ลม", size="xs", color="#A89E8E"),
+                                                            TextComponent(text=f"{wind} km/h" if wind != 'N/A' else "N/A", size="lg", weight="bold", color="#1C1A17")
+                                                        ],
+                                                        flex=1
+                                                    ),
+                                                    BoxComponent(
+                                                        layout="vertical",
+                                                        contents=[
+                                                            TextComponent(text="🌊 ความดัน", size="xs", color="#A89E8E"),
+                                                            TextComponent(text=f"{pressure} hPa" if pressure != 'N/A' else "N/A", size="lg", weight="bold", color="#1C1A17")
+                                                        ],
+                                                        flex=1
+                                                    )
+                                                ],
+                                                spacing="md",
+                                                margin="md"
+                                            ),
+                                            # Separator
+                                            SeparatorComponent(margin="xl"),
+                                            # พยากรณ์ PM2.5
+                                            TextComponent(
+                                                text="🔮 พยากรณ์ PM2.5 (LSTM Model)",
+                                                size="sm",
+                                                weight="bold",
+                                                color="#1C1A17",
+                                                margin="xl"
+                                            ),
+                                            BoxComponent(
+                                                layout="horizontal",
+                                                contents=forecast_boxes if forecast_boxes else [
+                                                    TextComponent(text="ไม่มีข้อมูลพยากรณ์", size="sm", color="#A89E8E", align="center")
+                                                ],
+                                                spacing="sm",
+                                                margin="md"
+                                            )
+                                        ],
+                                        spacing="md",
+                                        padding_all="20px"
+                                    ),
+                                    footer=BoxComponent(
+                                        layout="vertical",
+                                        contents=[
+                                            ButtonComponent(
+                                                style="primary",
+                                                color="#C9971C",
+                                                action=FlexURIAction(
+                                                    label="📊 ดูกราฟพยากรณ์",
+                                                    uri="https://pm25-nakhon-phanom.onrender.com#chart-section"
+                                                ),
+                                                height="sm"
+                                            )
+                                        ],
+                                        spacing="sm",
+                                        padding_all="20px"
+                                    )
+                                )
+                            )
+                            
+                            line_bot_api.reply_message(event.reply_token, flex_message)
+                        else:
+                            line_bot_api.reply_message(event.reply_token, TextSendMessage(text="❌ ไม่สามารถดึงข้อมูลได้"))
+                    else:
+                        line_bot_api.reply_message(event.reply_token, TextSendMessage(text="❌ ไม่พบสถานีตรวจวัด"))
+                except Exception as e:
+                    print(f"❌ Error fetching weather: {e}")
+                    line_bot_api.reply_message(event.reply_token, TextSendMessage(text="❌ เกิดข้อผิดพลาด"))
             
             elif data == 'action=help':
-                # แสดงวิธีใช้งาน
-                reply_text = (
-                    "📖 คู่มือการใช้งาน NagaSkyguard\n\n"
-                    "━━━━━━━━━━━━━━━━\n\n"
-                    "💨 ตรวจสอบค่าฝุ่น PM2.5\n"
-                    "   กดปุ่ม 'สภาพอากาศ / ค่าฝุ่น'\n\n"
-                    "🔥 แจ้งเหตุไฟไหม้\n"
-                    "   1. กดปุ่ม 'แจ้งจุดเกิดไฟ'\n"
-                    "   2. ส่งรูปภาพ\n"
-                    "   3. แชร์พิกัด\n\n"
-                    "📍 ดูแผนที่จุดไฟ\n"
-                    "   กดปุ่ม 'จุดเกิดไฟ'\n\n"
-                    "📊 พยากรณ์ล่วงหน้า\n"
-                    "   กดปุ่ม 'พยากรณ์ล่วงหน้า'\n\n"
-                    "━━━━━━━━━━━━━━━━\n\n"
-                    "💡 ติดต่อสอบถาม:\n"
-                    "LINE OA: @726lnjeu"
+                # คู่มือการใช้งาน
+                from linebot.models import FlexSendMessage, BubbleContainer, BoxComponent, TextComponent, ButtonComponent, URIAction as FlexURIAction, SeparatorComponent
+                
+                flex_message = FlexSendMessage(
+                    alt_text="📖 คู่มือการใช้งาน",
+                    contents=BubbleContainer(
+                        size="mega",
+                        header=BoxComponent(
+                            layout="vertical",
+                            contents=[
+                                TextComponent(
+                                    text="📖 คู่มือการใช้งาน",
+                                    weight="bold",
+                                    size="xl",
+                                    color="#C9971C"
+                                )
+                            ],
+                            background_color="#FDF8E6",
+                            padding_all="20px"
+                        ),
+                        body=BoxComponent(
+                            layout="vertical",
+                            contents=[
+                                # ส่วนที่ 1: เช็คค่าฝุ่น
+                                BoxComponent(
+                                    layout="vertical",
+                                    contents=[
+                                        TextComponent(
+                                            text="💨 ตรวจสอบค่าฝุ่น PM2.5",
+                                            size="md",
+                                            weight="bold",
+                                            color="#1C1A17"
+                                        ),
+                                        TextComponent(
+                                            text="กดปุ่ม 'ค่าฝุ่น PM2.5 ณ ขณะนี้'\nดูค่าฝุ่นแบบเรียลไทม์",
+                                            size="sm",
+                                            color="#706B60",
+                                            wrap=True,
+                                            margin="sm"
+                                        )
+                                    ],
+                                    margin="md"
+                                ),
+                                SeparatorComponent(margin="lg"),
+                                # ส่วนที่ 2: สภาพอากาศ
+                                BoxComponent(
+                                    layout="vertical",
+                                    contents=[
+                                        TextComponent(
+                                            text="☀️ สภาพอากาศและพยากรณ์",
+                                            size="md",
+                                            weight="bold",
+                                            color="#1C1A17"
+                                        ),
+                                        TextComponent(
+                                            text="กดปุ่ม 'สภาพอากาศ'\nดูอุณหภูมิ ความชื้น และพยากรณ์ PM2.5 ล่วงหน้า 3 วัน",
+                                            size="sm",
+                                            color="#706B60",
+                                            wrap=True,
+                                            margin="sm"
+                                        )
+                                    ],
+                                    margin="lg"
+                                ),
+                                SeparatorComponent(margin="lg"),
+                                # ส่วนที่ 3: แจ้งจุดไฟ
+                                BoxComponent(
+                                    layout="vertical",
+                                    contents=[
+                                        TextComponent(
+                                            text="🔥 แจ้งจุดเกิดไฟ",
+                                            size="md",
+                                            weight="bold",
+                                            color="#1C1A17"
+                                        ),
+                                        TextComponent(
+                                            text="1. กดปุ่ม 'แจ้งจุดเกิดไฟ'\n2. กดปุ่ม 📷 ถ่ายรูป\n3. กดปุ่ม 📍 แชร์พิกัด\n4. ข้อมูลจะแสดงบนแผนที่ทันที",
+                                            size="sm",
+                                            color="#706B60",
+                                            wrap=True,
+                                            margin="sm"
+                                        )
+                                    ],
+                                    margin="lg"
+                                ),
+                                SeparatorComponent(margin="lg"),
+                                # ส่วนที่ 4: ติดต่อ
+                                BoxComponent(
+                                    layout="vertical",
+                                    contents=[
+                                        TextComponent(
+                                            text="💡 ข้อมูลเพิ่มเติม",
+                                            size="md",
+                                            weight="bold",
+                                            color="#1C1A17"
+                                        ),
+                                        TextComponent(
+                                            text="• ข้อมูลอัพเดททุก 5 วินาที\n• พยากรณ์จาก LSTM Model\n• แผนที่แสดงจุดไฟ 48 ชม.",
+                                            size="sm",
+                                            color="#706B60",
+                                            wrap=True,
+                                            margin="sm"
+                                        )
+                                    ],
+                                    margin="lg"
+                                )
+                            ],
+                            spacing="md",
+                            padding_all="20px"
+                        ),
+                        footer=BoxComponent(
+                            layout="vertical",
+                            contents=[
+                                ButtonComponent(
+                                    style="primary",
+                                    color="#C9971C",
+                                    action=FlexURIAction(
+                                        label="🌐 เปิดเว็บไซต์",
+                                        uri="https://pm25-nakhon-phanom.onrender.com"
+                                    ),
+                                    height="sm"
+                                ),
+                                ButtonComponent(
+                                    style="link",
+                                    action=FlexURIAction(
+                                        label="📍 ดูแผนที่จุดไฟ",
+                                        uri="https://pm25-nakhon-phanom.onrender.com#map-card"
+                                    ),
+                                    height="sm",
+                                    margin="md"
+                                )
+                            ],
+                            spacing="sm",
+                            padding_all="20px"
+                        )
+                    )
                 )
-                line_bot_api.reply_message(
-                    event.reply_token,
-                    TextSendMessage(text=reply_text)
-                )
+                
+                line_bot_api.reply_message(event.reply_token, flex_message)
         
         except Exception as e:
             print(f"❌ Error handling postback: {e}")
