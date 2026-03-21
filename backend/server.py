@@ -956,21 +956,119 @@ if LINE_BOT_AVAILABLE and handler:
                     )
             
             elif data == 'action=report_fire':
-                # แจ้งให้ส่งรูปภาพ (รูปจะมี GPS metadata ถ้าเปิดอยู่)
-                reply_text = (
-                    "🔥 แจ้งเหตุไฟไหม้\n\n"
-                    "━━━━━━━━━━━━━━━━\n\n"
-                    "📸 กรุณาส่งรูปภาพจุดเกิดเหตุ\n\n"
-                    "⚠️ หมายเหตุ:\n"
-                    "• เปิด GPS ก่อนถ่ายรูป\n"
-                    "• ถ่ายด้วยกล้องมือถือ\n"
-                    "• ระบบจะดึงพิกัดจากรูปอัตโนมัติ\n\n"
-                    "หากรูปไม่มีพิกัด:\n"
-                    "→ ส่งพิกัด (Location) เพิ่มเติม"
+                # สร้าง Flex Message สวยๆ พร้อมปุ่มแชร์ location
+                from linebot.models import FlexSendMessage, BubbleContainer, BoxComponent, TextComponent, ButtonComponent, URIAction as FlexURIAction
+                
+                flex_message = FlexSendMessage(
+                    alt_text="🔥 แจ้งเหตุไฟไหม้",
+                    contents=BubbleContainer(
+                        size="mega",
+                        header=BoxComponent(
+                            layout="vertical",
+                            contents=[
+                                TextComponent(
+                                    text="🔥 แจ้งเหตุไฟไหม้",
+                                    weight="bold",
+                                    size="xl",
+                                    color="#DC2626"
+                                )
+                            ],
+                            background_color="#FEE2E2",
+                            padding_all="20px"
+                        ),
+                        body=BoxComponent(
+                            layout="vertical",
+                            contents=[
+                                TextComponent(
+                                    text="📸 ขั้นตอนที่ 1",
+                                    weight="bold",
+                                    size="md",
+                                    color="#1C1A17",
+                                    margin="md"
+                                ),
+                                TextComponent(
+                                    text="ส่งรูปภาพจุดเกิดเหตุ",
+                                    size="sm",
+                                    color="#706B60",
+                                    wrap=True,
+                                    margin="sm"
+                                ),
+                                BoxComponent(
+                                    layout="vertical",
+                                    contents=[
+                                        TextComponent(
+                                            text="📍 ขั้นตอนที่ 2",
+                                            weight="bold",
+                                            size="md",
+                                            color="#1C1A17"
+                                        ),
+                                        TextComponent(
+                                            text="กดปุ่มด้านล่างเพื่อแชร์พิกัด",
+                                            size="sm",
+                                            color="#706B60",
+                                            wrap=True,
+                                            margin="sm"
+                                        )
+                                    ],
+                                    margin="xl"
+                                ),
+                                BoxComponent(
+                                    layout="vertical",
+                                    contents=[
+                                        TextComponent(
+                                            text="⚠️ หมายเหตุ",
+                                            weight="bold",
+                                            size="sm",
+                                            color="#D97706"
+                                        ),
+                                        TextComponent(
+                                            text="• ส่งรูปก่อน แล้วค่อยแชร์พิกัด\n• ข้อมูลจะแสดงบนแผนที่ภายใน 48 ชม.",
+                                            size="xs",
+                                            color="#A89E8E",
+                                            wrap=True,
+                                            margin="sm"
+                                        )
+                                    ],
+                                    margin="xl",
+                                    padding_all="12px",
+                                    background_color="#FEF9C3",
+                                    corner_radius="8px"
+                                )
+                            ],
+                            spacing="md",
+                            padding_all="20px"
+                        ),
+                        footer=BoxComponent(
+                            layout="vertical",
+                            contents=[
+                                ButtonComponent(
+                                    style="primary",
+                                    color="#DC2626",
+                                    action=FlexURIAction(
+                                        label="📍 แชร์พิกัดของฉัน",
+                                        uri="https://line.me/R/nv/location"
+                                    ),
+                                    height="sm"
+                                ),
+                                ButtonComponent(
+                                    style="link",
+                                    action=FlexURIAction(
+                                        label="📍 ดูแผนที่จุดไฟ",
+                                        uri="https://pm25-nakhon-phanom.onrender.com"
+                                    ),
+                                    height="sm",
+                                    margin="md"
+                                )
+                            ],
+                            spacing="sm",
+                            padding_all="20px"
+                        )
+                    )
                 )
+                
                 line_bot_api.reply_message(
                     event.reply_token,
-                    TextSendMessage(text=reply_text)
+                    flex_message
                 )
         
         except Exception as e:
