@@ -302,7 +302,7 @@ def create_flex_message(pm25_data):
                     "action": {
                         "type": "uri",
                         "label": "📍 ดูแผนที่",
-                        "uri": "https://pm25-nakhon-phanom.onrender.com"
+                        "uri": "https://pm25-nakhon-phanom.onrender.com#map-card"
                     },
                     "style": "primary",
                     "color": level_info['color'],

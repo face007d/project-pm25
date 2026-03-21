@@ -2,7 +2,10 @@
 <html lang="th">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>NagaSkyguard — PM2.5 Air Quality & Fire Monitoring · นครพนม</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700;800&family=Cinzel:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
@@ -14,7 +17,7 @@
    RESET & BASE
 ═══════════════════════════════════════ */
 *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
-html { scroll-behavior:smooth; font-size:14px; }
+html { scroll-behavior:smooth; font-size:14px; -webkit-text-size-adjust:100%; }
 body {
   font-family:'Noto Sans Thai', sans-serif;
   background: #F9F8F4;
@@ -22,6 +25,9 @@ body {
   line-height: 1.6;
   min-height: 100vh;
   overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  touch-action: manipulation;
 }
 
 /* ═══════════════════════════════════════
@@ -162,8 +168,11 @@ body::after {
   padding:6px 14px; border-radius:8px; font-size:13px; font-weight:500;
   color:var(--stone-3); cursor:pointer; border:none; background:none;
   font-family:inherit; transition:all 0.15s;
+  min-height:36px; /* Touch-friendly */
+  -webkit-tap-highlight-color: transparent;
 }
 .nav-btn:hover { background:var(--cream2); color:var(--stone); }
+.nav-btn:active { transform:scale(0.98); }
 .nav-btn.act {
   background:var(--gold-pale); color:var(--gold-dk);
   font-weight:700; border:1px solid rgba(201,151,28,0.2);
@@ -718,16 +727,42 @@ tbody td.num { text-align:center; }
 @media(max-width:1200px) {
   .bottom-row { grid-template-columns:1fr 260px; }
   .bottom-row > .glass-card:last-child { grid-column:1/-1; }
+  .top-row { grid-template-columns:1fr 380px; }
 }
 @media(max-width:900px) {
+  html { font-size:13px; }
   .top-row { grid-template-columns:1fr; }
+  #rpanel { display:none; } /* Hide right panel on mobile */
   .env-strip { grid-template-columns:repeat(2,1fr); }
   .bottom-row { grid-template-columns:1fr; }
   .realtime-row { grid-template-columns:1fr; }
+  .topbar-inner { padding:0 16px; }
+  .topbar-nav { display:none; } /* Hide nav on mobile */
+  #page { padding:16px 12px 24px; }
+  #hero { padding:16px 16px 12px; }
+  .hero-search { display:none; } /* Hide search on mobile */
+  .wstrip-inner { padding:0 12px; }
+  .wchip { padding:8px 12px; font-size:11px; }
+  #map { min-height:320px; }
+  .glass-card { border-radius:12px; }
+}
+@media(max-width:640px) {
+  html { font-size:12px; }
+  .brand-name { font-size:14px; }
+  .brand-province { font-size:9px; padding:2px 6px; }
+  .hero-title { font-size:18px; }
+  .hero-sub { font-size:11px; }
+  .topbar-right .clock-tag { display:none; }
+  .wchip { font-size:10px; padding:6px 10px; }
+  #map { min-height:280px; }
+  .card-header { padding:10px 14px; }
+  .card-title { font-size:12px; }
+  .glass-card { padding:14px !important; }
 }
 /* LINE section responsive */
 @media(max-width:780px) {
   [style*="grid-template-columns:1fr 1fr"] { grid-template-columns:1fr !important; }
+}
 }
 </style>
 </head>
@@ -853,7 +888,7 @@ tbody td.num { text-align:center; }
 
   <div class="realtime-row fade-in-up" id="chart-section">
     <!-- Realtime AQI from API -->
-    <div class="glass-card" style="padding:20px;">
+    <div class="glass-card" id="forecast-section" style="padding:20px;">
       <div class="card-gold-top"></div>
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
         <div>
@@ -1139,7 +1174,7 @@ tbody td.num { text-align:center; }
   <!-- ─────── BOTTOM ROW: Table + Fire + Stations ─────── -->
   <div class="section-label"><span>ข้อมูลอ.เมืองนครพนม และจุดความร้อน</span></div>
 
-  <div class="bottom-row fade-in-up">
+  <div class="bottom-row fade-in-up" id="fire-section">
 
     <!-- TABLE -->
     <div class="glass-card">
