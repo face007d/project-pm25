@@ -105,8 +105,8 @@ CORS(app, resources={r"/*": {"origins": "*"}})
 
 # หา path ของไฟล์ปัจจุบัน
 base_dir = os.path.dirname(os.path.abspath(__file__))
-model_path = os.path.join(base_dir, 'lstm_pm25_model (2).h5')
-scaler_path = os.path.join(base_dir, 'scaler (2).pkl')
+model_path = os.path.join(base_dir, 'lstm_pm25_model.h5')
+scaler_path = os.path.join(base_dir, 'scaler.pkl')
 
 model = None
 scaler = None
