@@ -1371,7 +1371,7 @@ if LINE_BOT_AVAILABLE and handler:
                 )
             
             elif data == 'action=weather':
-                # แสดงสภาพอากาศ + พยากรณ์ PM2.5
+                # แสดงสภาพอากาศ + ความแม่นยำ Model
                 try:
                     import requests
                     from linebot.models import FlexSendMessage, BubbleContainer, BoxComponent, TextComponent, ButtonComponent, URIAction as FlexURIAction, SeparatorComponent
@@ -1397,67 +1397,105 @@ if LINE_BOT_AVAILABLE and handler:
                             wind = data_feed['data']['iaqi'].get('w', {}).get('v', 'N/A')
                             pressure = data_feed['data']['iaqi'].get('p', {}).get('v', 'N/A')
                             
-                            # พยากรณ์ PM2.5
-                            forecast_data = data_feed['data'].get('forecast', {}).get('daily', {}).get('pm25', [])
-                            forecasts = []
-                            if forecast_data and len(forecast_data) >= 3:
-                                for i in range(3):
-                                    forecasts.append({
-                                        'day': f'วันที่ {i+1}',
-                                        'avg': forecast_data[i].get('avg', 0),
-                                        'min': forecast_data[i].get('min', 0),
-                                        'max': forecast_data[i].get('max', 0)
-                                    })
-                            
-                            # สร้าง Flex Message
-                            forecast_boxes = []
-                            for f in forecasts:
-                                avg = f['avg']
-                                # White Gold Theme Colors
-                                if avg <= 25:
-                                    color = "#C9971C"
-                                elif avg <= 37.5:
-                                    color = "#D4AF37"
-                                elif avg <= 50:
-                                    color = "#B8860B"
-                                elif avg <= 90:
-                                    color = "#9A7210"
-                                else:
-                                    color = "#6B5416"
-                                
-                                forecast_boxes.append(
-                                    BoxComponent(
-                                        layout="vertical",
-                                        contents=[
-                                            TextComponent(
-                                                text=f['day'],
-                                                size="xs",
-                                                color="#706B60",
-                                                align="center"
-                                            ),
-                                            TextComponent(
-                                                text=f"{int(f['avg'])}",
-                                                size="xl",
-                                                weight="bold",
-                                                color=color,
-                                                align="center"
-                                            ),
-                                            TextComponent(
-                                                text=f"{int(f['min'])}-{int(f['max'])}",
-                                                size="xxs",
-                                                color="#A89E8E",
-                                                align="center"
+                            # ดึงข้อมูลความแม่นยำ Model (5 วันล่าสุด)
+                            accuracy_boxes = []
+                            try:
+                                if DB_AVAILABLE:
+                                    result = db.client.table('pm25_predictions')\
+                                        .select('*')\
+                                        .eq('location', 'Nakhon Phanom')\
+                                        .not_.is_('actual_value', 'null')\
+                                        .order('target_date', desc=True)\
+                                        .limit(5)\
+                                        .execute()
+                                    
+                                    if result.data:
+                                        for row in reversed(result.data):  # แสดงจากเก่าไปใหม่
+                                            predicted = row.get('predicted_value', 0)
+                                            actual = row.get('actual_value', 0)
+                                            error = abs(predicted - actual)
+                                            
+                                            # กำหนดสีตามความแม่นยำ
+                                            if error <= 10:
+                                                color = "#16A34A"  # เขียว - แม่นมาก
+                                                status = "✅"
+                                            elif error <= 20:
+                                                color = "#C9971C"  # ทอง - แม่นดี
+                                                status = "⚠️"
+                                            elif error <= 30:
+                                                color = "#D4AF37"  # ทองอ่อน - พอใช้
+                                                status = "🔶"
+                                            else:
+                                                color = "#DC2626"  # แดง - ต้องปรับปรุง
+                                                status = "❌"
+                                            
+                                            date_str = row['target_date'].split('-')[2] + '/' + row['target_date'].split('-')[1]
+                                            
+                                            accuracy_boxes.append(
+                                                BoxComponent(
+                                                    layout="vertical",
+                                                    contents=[
+                                                        TextComponent(
+                                                            text=date_str,
+                                                            size="xxs",
+                                                            color="#706B60",
+                                                            align="center"
+                                                        ),
+                                                        TextComponent(
+                                                            text=status,
+                                                            size="md",
+                                                            align="center"
+                                                        ),
+                                                        TextComponent(
+                                                            text=f"±{int(error)}",
+                                                            size="xs",
+                                                            weight="bold",
+                                                            color=color,
+                                                            align="center"
+                                                        ),
+                                                        TextComponent(
+                                                            text=f"{int(predicted)}→{int(actual)}",
+                                                            size="xxs",
+                                                            color="#A89E8E",
+                                                            align="center"
+                                                        )
+                                                    ],
+                                                    flex=1,
+                                                    padding_all="6px",
+                                                    background_color="#F9F8F4",
+                                                    corner_radius="8px"
+                                                )
                                             )
-                                        ],
-                                        flex=1,
-                                        padding_all="8px",
-                                        background_color="#F9F8F4",
-                                        corner_radius="8px"
-                                    )
-                                )
+                            except Exception as e:
+                                print(f"❌ Error fetching model accuracy: {e}")
+                            
+                            # คำนวณสถิติรวม
+                            stats_text = "ไม่มีข้อมูล"
+                            if accuracy_boxes:
+                                try:
+                                    result = db.client.table('pm25_predictions')\
+                                        .select('*')\
+                                        .eq('location', 'Nakhon Phanom')\
+                                        .not_.is_('actual_value', 'null')\
+                                        .order('target_date', desc=True)\
+                                        .limit(14)\
+                                        .execute()
+                                    
+                                    total_error = 0
+                                    count = 0
+                                    for row in result.data:
+                                        predicted = row.get('predicted_value', 0)
+                                        actual = row.get('actual_value', 0)
+                                        total_error += abs(predicted - actual)
+                                        count += 1
+                                    
+                                    mae = total_error / count if count > 0 else 0
+                                    stats_text = f"MAE (14 วัน): {mae:.1f} µg/m³"
+                                except:
+                                    pass
                             
                             flex_message = FlexSendMessage(
-                                alt_text="☀️ สภาพอากาศและพยากรณ์",
+                                alt_text="☀️ สภาพอากาศและความแม่นยำ Model",
                                 contents=BubbleContainer(
                                     size="mega",
                                     header=BoxComponent(
@@ -1531,21 +1569,43 @@ if LINE_BOT_AVAILABLE and handler:
                                             ),
                                             # Separator
                                             SeparatorComponent(margin="xl"),
-                                            # พยากรณ์ PM2.5
+                                            # ความแม่นยำ Model
                                             TextComponent(
-                                                text="🔮 พยากรณ์ PM2.5 (LSTM Model)",
+                                                text="🎯 ความแม่นยำ Model (5 วันล่าสุด)",
                                                 size="sm",
                                                 weight="bold",
                                                 color="#1C1A17",
                                                 margin="xl"
                                             ),
+                                            TextComponent(
+                                                text="เปรียบเทียบค่าทำนาย vs ค่าจริง",
+                                                size="xxs",
+                                                color="#A89E8E",
+                                                margin="xs"
+                                            ),
                                             BoxComponent(
                                                 layout="horizontal",
-                                                contents=forecast_boxes if forecast_boxes else [
-                                                    TextComponent(text="ไม่มีข้อมูลพยากรณ์", size="sm", color="#A89E8E", align="center")
+                                                contents=accuracy_boxes if accuracy_boxes else [
+                                                    TextComponent(text="ไม่มีข้อมูลเปรียบเทียบ", size="sm", color="#A89E8E", align="center")
                                                 ],
-                                                spacing="sm",
+                                                spacing="xs",
                                                 margin="md"
+                                            ),
+                                            # สถิติรวม
+                                            BoxComponent(
+                                                layout="vertical",
+                                                contents=[
+                                                    TextComponent(
+                                                        text=stats_text,
+                                                        size="xs",
+                                                        color="#706B60",
+                                                        align="center"
+                                                    )
+                                                ],
+                                                margin="md",
+                                                padding_all="8px",
+                                                background_color="#FDF8E6",
+                                                corner_radius="8px"
                                             )
                                         ],
                                         spacing="md",
@@ -1558,7 +1618,7 @@ if LINE_BOT_AVAILABLE and handler:
                                                 style="primary",
                                                 color="#C9971C",
                                                 action=FlexURIAction(
-                                                    label="📊 ดูกราฟพยากรณ์",
+                                                    label="📊 ดูกราฟความแม่นยำ",
                                                     uri="https://pm25-nakhon-phanom.onrender.com#chart-section"
                                                 ),
                                                 height="sm"
