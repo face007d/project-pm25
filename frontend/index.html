@@ -2063,13 +2063,13 @@ function renderAccuracyCards(accuracyData) {
     return `${d.getDate()}/${d.getMonth()+1}`;
   };
   
-  // Create cards (max 4)
+  // Create cards (max 2)
   container.innerHTML = '';
-  data.slice(0, 4).forEach((item, index) => {
+  data.slice(0, 2).forEach((item, index) => {
     const card = document.createElement('div');
     card.style.cssText = 'background:#FFFEF9;border:1.5px solid rgba(201,151,28,0.25);border-radius:8px;padding:10px;';
     
-    const rankEmojis = ['🥇', '🥈', '🥉', '4️⃣'];
+    const rankEmojis = ['🥇', '🥈'];
     
     card.innerHTML = `
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
