@@ -2045,10 +2045,17 @@ function renderAccuracyCards(accuracyData) {
   
   if(!accuracyData || !accuracyData.data || accuracyData.data.length === 0) {
     container.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--stone-4);">ไม่มีข้อมูลเปรียบเทียบ</div>';
+    document.getElementById('accuracy-overall-percent').textContent = '—';
+    document.getElementById('accuracy-overall-text').innerHTML = '⚠️ รอข้อมูล';
     return;
   }
   
   const data = accuracyData.data;
+  const stats = accuracyData.stats;
+  
+  // Update overall stats
+  document.getElementById('accuracy-overall-percent').textContent = stats.accuracy.toFixed(1) + '%';
+  document.getElementById('accuracy-overall-text').innerHTML = `MAE: ${stats.mae} µg/m³ (${stats.count} ครั้ง)`;
   
   // Format date
   const formatDate = (dateStr) => {
@@ -2091,40 +2098,6 @@ function renderAccuracyCards(accuracyData) {
     
     container.appendChild(card);
   });
-  
-  // Update fire reports summary
-  updateFireSummary();
-}
-
-async function updateFireSummary() {
-  try {
-    const response = await fetch(`${BACKEND_URL}/api/fire-reports?hours=48`);
-    const data = await response.json();
-    
-    const fireCount = data.data ? data.data.length : 0;
-    document.getElementById('fire-count-badge').textContent = `${fireCount} จุด`;
-    
-    if(fireCount === 0) {
-      document.getElementById('fire-summary-text').innerHTML = '✅ ไม่มีรายงานจุดไฟไหม้ใน 48 ชม.ล่าสุด';
-    } else {
-      const latestReport = data.data[0];
-      const timeAgo = getTimeAgo(new Date(latestReport.created_at));
-      document.getElementById('fire-summary-text').innerHTML = `📍 <strong>อ.เมืองนครพนม</strong> · รายงานล่าสุด ${timeAgo}`;
-    }
-  } catch(e) {
-    document.getElementById('fire-count-badge').textContent = '—';
-    document.getElementById('fire-summary-text').innerHTML = 'ไม่สามารถโหลดข้อมูล';
-  }
-}
-
-function getTimeAgo(date) {
-  const now = new Date();
-  const diff = Math.floor((now - date) / 1000); // seconds
-  
-  if(diff < 60) return 'เมื่อสักครู่';
-  if(diff < 3600) return `${Math.floor(diff/60)} นาทีที่แล้ว`;
-  if(diff < 86400) return `${Math.floor(diff/3600)} ชม.ที่แล้ว`;
-  return `${Math.floor(diff/86400)} วันที่แล้ว`;
 }
 
 function renderAPIChart(data) {
