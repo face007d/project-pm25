@@ -38,20 +38,20 @@ def setup_rich_menu():
                 bounds=RichMenuBounds(x=0, y=0, width=833, height=843),
                 action=PostbackAction(label='ค่าฝุ่น PM2.5', data='action=check_pm25')
             ),
-            # ปุ่ม 2: ดูข้อมูลเพิ่มเติมบนเว็บไซต์ (บนกลาง)
-            RichMenuArea(
-                bounds=RichMenuBounds(x=833, y=0, width=834, height=843),
-                action=URIAction(label='ดูข้อมูลเพิ่มเติม', uri='https://pm25-nakhon-phanom.onrender.com')
-            ),
-            # ปุ่ม 3: สภาพอากาศ (บนขวา)
+            # ปุ่ม 2: สภาพอากาศ (บนขวา)
             RichMenuArea(
                 bounds=RichMenuBounds(x=1667, y=0, width=833, height=843),
                 action=PostbackAction(label='สภาพอากาศ', data='action=weather')
             ),
-            # ปุ่ม 4: แจ้งจุดเกิดไฟ (ล่างซ้าย)
+            # ปุ่ม 3: แจ้งจุดเกิดไฟ (ล่างซ้าย)
             RichMenuArea(
                 bounds=RichMenuBounds(x=0, y=843, width=833, height=843),
                 action=PostbackAction(label='แจ้งจุดเกิดไฟ', data='action=report_fire')
+            ),
+            # ปุ่ม 4: ดูข้อมูลเพิ่มเติมบนเว็บไซต์ (ล่างกลาง)
+            RichMenuArea(
+                bounds=RichMenuBounds(x=833, y=843, width=834, height=843),
+                action=URIAction(label='ดูข้อมูลเพิ่มเติม', uri='https://pm25-nakhon-phanom.onrender.com')
             ),
             # ปุ่ม 5: วิธีแจ้งเหตุ (ล่างขวา)
             RichMenuArea(
