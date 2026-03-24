@@ -949,7 +949,7 @@ if LINE_BOT_AVAILABLE and handler:
                                     style="link",
                                     action=FlexURIAction(
                                         label="ดูข้อมูลเพิ่มเติม",
-                                        uri="https://pm25-nakhon-phanom.onrender.com#fire-section"
+                                        uri="https://pm25-nakhon-phanom.onrender.com"
                                     ),
                                     height="sm"
                                 )
