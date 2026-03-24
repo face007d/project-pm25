@@ -362,6 +362,61 @@ def save_reading():
     except Exception as e:
         return jsonify({'error': str(e)}), 400
 
+@app.route('/api/model-accuracy', methods=['GET'])
+def get_model_accuracy():
+    """ดึงข้อมูลเปรียบเทียบค่าทำนาย vs ค่าจริง"""
+    if not DB_AVAILABLE:
+        return jsonify({'error': 'Database not available'}), 503
+    
+    try:
+        days = request.args.get('days', 14, type=int)
+        location = request.args.get('location', 'Nakhon Phanom')
+        
+        # ดึงข้อมูลการพยากรณ์ที่มีค่าจริงแล้ว
+        result = db.client.table('pm25_predictions')\
+            .select('*')\
+            .eq('location', location)\
+            .not_.is_('actual_value', 'null')\
+            .order('target_date', desc=False)\
+            .limit(days)\
+            .execute()
+        
+        data = []
+        total_error = 0
+        count = 0
+        
+        for row in result.data:
+            predicted = row.get('predicted_value', 0)
+            actual = row.get('actual_value', 0)
+            error = abs(predicted - actual)
+            
+            data.append({
+                'date': row['target_date'],
+                'predicted': round(predicted, 1),
+                'actual': round(actual, 1),
+                'error': round(error, 1),
+                'accuracy': round(100 - (error / actual * 100), 1) if actual > 0 else 0
+            })
+            
+            total_error += error
+            count += 1
+        
+        # คำนวณสถิติ
+        mae = round(total_error / count, 1) if count > 0 else 0
+        avg_accuracy = round(sum(d['accuracy'] for d in data) / count, 1) if count > 0 else 0
+        
+        return jsonify({
+            'data': data,
+            'stats': {
+                'mae': mae,
+                'accuracy': avg_accuracy,
+                'count': count
+            }
+        })
+    except Exception as e:
+        print(f"❌ Error in model-accuracy: {e}")
+        return jsonify({'error': str(e)}), 500
+
 # ============================================
 # Phase 2: LINE Webhook Endpoints
 # ============================================
