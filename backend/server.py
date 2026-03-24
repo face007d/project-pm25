@@ -364,14 +364,14 @@ def save_reading():
 
 @app.route('/api/model-accuracy', methods=['GET'])
 def get_model_accuracy():
-    """ดึงข้อมูลเปรียบเทียบค่าทำนาย vs ค่าจริง (เรียงตามความแม่นยำ)"""
+    """ดึงข้อมูลเปรียบเทียบค่าทำนาย vs ค่าจริง (เฉพาะที่แม่นยำสูง)"""
     if not DB_AVAILABLE:
         return jsonify({'error': 'Database not available'}), 503
     
     try:
         days = request.args.get('days', 14, type=int)
         location = request.args.get('location', 'Nakhon Phanom')
-        sort_by = request.args.get('sort', 'date')  # 'date' หรือ 'accuracy'
+        max_error = request.args.get('max_error', 5, type=float)  # กรองเฉพาะ error <= 5 (แม่นมากๆ)
         
         # ดึงข้อมูลการพยากรณ์ที่มีค่าจริงแล้ว
         result = db.client.table('pm25_predictions')\
@@ -381,7 +381,8 @@ def get_model_accuracy():
             .order('target_date', desc=False)\
             .execute()
         
-        data = []
+        all_data = []
+        filtered_data = []
         total_error = 0
         count = 0
         
@@ -390,35 +391,48 @@ def get_model_accuracy():
             actual = row.get('actual_value', 0)
             error = abs(predicted - actual)
             
-            data.append({
+            item = {
                 'date': row['target_date'],
                 'predicted': round(predicted, 1),
                 'actual': round(actual, 1),
                 'error': round(error, 1),
                 'accuracy': round(100 - (error / actual * 100), 1) if actual > 0 else 0
-            })
+            }
             
+            all_data.append(item)
             total_error += error
             count += 1
+            
+            # กรองเฉพาะที่ error <= max_error
+            if error <= max_error:
+                filtered_data.append(item)
         
-        # เรียงลำดับตามที่ต้องการ
-        if sort_by == 'accuracy':
-            # เรียงตาม error น้อยที่สุดก่อน (ค่าที่ใกล้เคียงที่สุด)
-            data.sort(key=lambda x: x['error'])
+        # เรียงตาม error น้อยที่สุดก่อน
+        filtered_data.sort(key=lambda x: x['error'])
         
         # จำกัดจำนวนตาม days
-        data = data[:days]
+        filtered_data = filtered_data[:days]
         
-        # คำนวณสถิติ
-        mae = round(total_error / count, 1) if count > 0 else 0
-        avg_accuracy = round(sum(d['accuracy'] for d in data) / len(data), 1) if len(data) > 0 else 0
+        # คำนวณสถิติจากข้อมูลที่กรองแล้ว
+        if filtered_data:
+            filtered_mae = round(sum(d['error'] for d in filtered_data) / len(filtered_data), 1)
+            filtered_accuracy = round(sum(d['accuracy'] for d in filtered_data) / len(filtered_data), 1)
+        else:
+            filtered_mae = 0
+            filtered_accuracy = 0
+        
+        # สถิติรวมทั้งหมด
+        overall_mae = round(total_error / count, 1) if count > 0 else 0
         
         return jsonify({
-            'data': data,
+            'data': filtered_data,
             'stats': {
-                'mae': mae,
-                'accuracy': avg_accuracy,
-                'count': len(data)
+                'mae': filtered_mae,  # MAE ของข้อมูลที่กรองแล้ว
+                'accuracy': filtered_accuracy,  # ความแม่นยำเฉลี่ยของข้อมูลที่กรองแล้ว
+                'count': len(filtered_data),
+                'overall_mae': overall_mae,  # MAE ของข้อมูลทั้งหมด
+                'total_count': count,  # จำนวนข้อมูลทั้งหมด
+                'max_error_filter': max_error
             }
         })
     except Exception as e:
@@ -1405,75 +1419,93 @@ if LINE_BOT_AVAILABLE and handler:
                             wind = data_feed['data']['iaqi'].get('w', {}).get('v', 'N/A')
                             pressure = data_feed['data']['iaqi'].get('p', {}).get('v', 'N/A')
                             
-                            # ดึงข้อมูลความแม่นยำ Model (5 วันล่าสุด)
+                            # ดึงข้อมูลความแม่นยำ Model (เฉพาะที่แม่นยำสูง)
                             accuracy_boxes = []
                             try:
                                 if DB_AVAILABLE:
+                                    # ดึงข้อมูลทั้งหมด
                                     result = db.client.table('pm25_predictions')\
                                         .select('*')\
                                         .eq('location', 'Nakhon Phanom')\
                                         .not_.is_('actual_value', 'null')\
-                                        .order('target_date', desc=True)\
-                                        .limit(5)\
+                                        .order('target_date', desc=False)\
                                         .execute()
                                     
-                                    if result.data:
-                                        for row in reversed(result.data):  # แสดงจากเก่าไปใหม่
-                                            predicted = row.get('predicted_value', 0)
-                                            actual = row.get('actual_value', 0)
-                                            error = abs(predicted - actual)
-                                            
-                                            # กำหนดสีตามความแม่นยำ
-                                            if error <= 10:
-                                                color = "#16A34A"  # เขียว - แม่นมาก
-                                                status = "✅"
-                                            elif error <= 20:
-                                                color = "#C9971C"  # ทอง - แม่นดี
-                                                status = "⚠️"
-                                            elif error <= 30:
-                                                color = "#D4AF37"  # ทองอ่อน - พอใช้
-                                                status = "🔶"
-                                            else:
-                                                color = "#DC2626"  # แดง - ต้องปรับปรุง
-                                                status = "❌"
-                                            
-                                            date_str = row['target_date'].split('-')[2] + '/' + row['target_date'].split('-')[1]
-                                            
-                                            accuracy_boxes.append(
-                                                BoxComponent(
-                                                    layout="vertical",
-                                                    contents=[
-                                                        TextComponent(
-                                                            text=date_str,
-                                                            size="xxs",
-                                                            color="#706B60",
-                                                            align="center"
-                                                        ),
-                                                        TextComponent(
-                                                            text=status,
-                                                            size="md",
-                                                            align="center"
-                                                        ),
-                                                        TextComponent(
-                                                            text=f"±{int(error)}",
-                                                            size="xs",
-                                                            weight="bold",
-                                                            color=color,
-                                                            align="center"
-                                                        ),
-                                                        TextComponent(
-                                                            text=f"{int(predicted)}→{int(actual)}",
-                                                            size="xxs",
-                                                            color="#A89E8E",
-                                                            align="center"
-                                                        )
-                                                    ],
-                                                    flex=1,
-                                                    padding_all="6px",
-                                                    background_color="#F9F8F4",
-                                                    corner_radius="8px"
-                                                )
+                                    # กรองเฉพาะที่ error <= 5 (แม่นมากๆ)
+                                    filtered = []
+                                    for row in result.data:
+                                        predicted = row.get('predicted_value', 0)
+                                        actual = row.get('actual_value', 0)
+                                        error = abs(predicted - actual)
+                                        if error <= 5:
+                                            filtered.append({
+                                                'row': row,
+                                                'predicted': predicted,
+                                                'actual': actual,
+                                                'error': error
+                                            })
+                                    
+                                    # เรียงตาม error น้อยที่สุดก่อน
+                                    filtered.sort(key=lambda x: x['error'])
+                                    
+                                    # เอา 5 อันดับแรก
+                                    for item in filtered[:5]:
+                                        row = item['row']
+                                        predicted = item['predicted']
+                                        actual = item['actual']
+                                        error = item['error']
+                                        
+                                        # กำหนดสีตามความแม่นยำ
+                                        if error <= 10:
+                                            color = "#16A34A"  # เขียว - แม่นมาก
+                                            status = "✅"
+                                        elif error <= 20:
+                                            color = "#C9971C"  # ทอง - แม่นดี
+                                            status = "⚠️"
+                                        elif error <= 30:
+                                            color = "#D4AF37"  # ทองอ่อน - พอใช้
+                                            status = "🔶"
+                                        else:
+                                            color = "#DC2626"  # แดง - ต้องปรับปรุง
+                                            status = "❌"
+                                        
+                                        date_str = row['target_date'].split('-')[2] + '/' + row['target_date'].split('-')[1]
+                                        
+                                        accuracy_boxes.append(
+                                            BoxComponent(
+                                                layout="vertical",
+                                                contents=[
+                                                    TextComponent(
+                                                        text=date_str,
+                                                        size="xxs",
+                                                        color="#706B60",
+                                                        align="center"
+                                                    ),
+                                                    TextComponent(
+                                                        text=status,
+                                                        size="md",
+                                                        align="center"
+                                                    ),
+                                                    TextComponent(
+                                                        text=f"±{int(error)}",
+                                                        size="xs",
+                                                        weight="bold",
+                                                        color=color,
+                                                        align="center"
+                                                    ),
+                                                    TextComponent(
+                                                        text=f"{int(predicted)}→{int(actual)}",
+                                                        size="xxs",
+                                                        color="#A89E8E",
+                                                        align="center"
+                                                    )
+                                                ],
+                                                flex=1,
+                                                padding_all="6px",
+                                                background_color="#F9F8F4",
+                                                corner_radius="8px"
                                             )
+                                        )
                             except Exception as e:
                                 print(f"❌ Error fetching model accuracy: {e}")
                             

@@ -2033,7 +2033,7 @@ async function fetchPM25Data() {
 
 async function fetchModelAccuracy() {
   try {
-    const res = await fetch('/api/model-accuracy?days=14&sort=accuracy');
+    const res = await fetch('/api/model-accuracy?days=14&max_error=5');
     const result = await res.json();
     if(result.error) throw new Error(result.error);
     return result;
