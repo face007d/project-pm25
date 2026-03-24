@@ -1010,23 +1010,18 @@ tbody td.num { text-align:center; }
         </div>
       </div>
       
-      <!-- Overall Statistics -->
-      <div style="margin-top:8px;padding:12px;background:linear-gradient(135deg,rgba(253,248,230,0.8),rgba(249,248,244,0.6));border:1px solid rgba(212,175,55,0.2);border-radius:10px;">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-          <div style="display:flex;align-items:center;gap:8px;">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#16A34A" stroke-width="2" width="16" height="16"><polyline points="20 6 9 17 4 12"/></svg>
-            <span style="font-size:12px;font-weight:700;color:var(--gold-dk);">สรุปความแม่นยำ</span>
-          </div>
-          <div id="accuracy-overall-percent" style="font-size:18px;font-weight:800;color:#16A34A;font-family:'IBM Plex Mono',monospace;">—</div>
+      <!-- Fire Reports Summary -->
+      <div style="margin-top:10px;padding:10px 12px;background:rgba(254,243,199,0.5);border:1px solid rgba(251,191,36,0.3);border-radius:8px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+          <div style="font-size:11px;font-weight:700;color:#92400E;">🔥 จุดไฟไหม้ที่รายงาน</div>
+          <div id="fire-count-badge" style="background:#F59E0B;color:white;padding:2px 8px;border-radius:12px;font-size:10px;font-weight:800;">—</div>
         </div>
-        <div id="accuracy-overall-text" style="font-size:11px;color:var(--stone-3);line-height:1.6;">
-          กำลังโหลดข้อมูล...
+        <div style="font-size:10px;color:#78716C;line-height:1.5;">
+          <span id="fire-summary-text">กำลังโหลด...</span>
         </div>
-      </div>
-
-      <div style="padding-top:8px;border-top:1px solid rgba(212,175,55,0.1);font-size:11px;color:var(--stone-4);display:flex;align-items:center;gap:6px;margin-top:8px;">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="11" height="11"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
-        ข้อมูลจาก WAQI API (World Air Quality Index)
+        <button onclick="document.getElementById('map-section').scrollIntoView({behavior:'smooth'})" style="margin-top:8px;width:100%;padding:6px;background:linear-gradient(135deg,#F59E0B,#D97706);color:white;border:none;border-radius:6px;font-size:10px;font-weight:600;cursor:pointer;">
+          📍 ดูแผนที่จุดไฟ
+        </button>
       </div>
     </div>
   </div>
@@ -2045,17 +2040,10 @@ function renderAccuracyCards(accuracyData) {
   
   if(!accuracyData || !accuracyData.data || accuracyData.data.length === 0) {
     container.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--stone-4);">ไม่มีข้อมูลเปรียบเทียบ</div>';
-    document.getElementById('accuracy-overall-percent').textContent = '—';
-    document.getElementById('accuracy-overall-text').innerHTML = '⚠️ รอข้อมูล';
     return;
   }
   
   const data = accuracyData.data;
-  const stats = accuracyData.stats;
-  
-  // Update overall stats
-  document.getElementById('accuracy-overall-percent').textContent = stats.accuracy.toFixed(1) + '%';
-  document.getElementById('accuracy-overall-text').innerHTML = `MAE: ${stats.mae} µg/m³ (${stats.count} ครั้ง)`;
   
   // Format date
   const formatDate = (dateStr) => {
@@ -2098,6 +2086,40 @@ function renderAccuracyCards(accuracyData) {
     
     container.appendChild(card);
   });
+  
+  // Update fire reports summary
+  updateFireSummary();
+}
+
+async function updateFireSummary() {
+  try {
+    const response = await fetch(`${BACKEND_URL}/api/fire-reports?hours=48`);
+    const data = await response.json();
+    
+    const fireCount = data.data ? data.data.length : 0;
+    document.getElementById('fire-count-badge').textContent = `${fireCount} จุด`;
+    
+    if(fireCount === 0) {
+      document.getElementById('fire-summary-text').innerHTML = '✅ ไม่มีรายงานจุดไฟไหม้ใน 48 ชม.ล่าสุด';
+    } else {
+      const latestReport = data.data[0];
+      const timeAgo = getTimeAgo(new Date(latestReport.created_at));
+      document.getElementById('fire-summary-text').innerHTML = `📍 <strong>อ.เมืองนครพนม</strong> · รายงานล่าสุด ${timeAgo}`;
+    }
+  } catch(e) {
+    document.getElementById('fire-count-badge').textContent = '—';
+    document.getElementById('fire-summary-text').innerHTML = 'ไม่สามารถโหลดข้อมูล';
+  }
+}
+
+function getTimeAgo(date) {
+  const now = new Date();
+  const diff = Math.floor((now - date) / 1000); // seconds
+  
+  if(diff < 60) return 'เมื่อสักครู่';
+  if(diff < 3600) return `${Math.floor(diff/60)} นาทีที่แล้ว`;
+  if(diff < 86400) return `${Math.floor(diff/3600)} ชม.ที่แล้ว`;
+  return `${Math.floor(diff/86400)} วันที่แล้ว`;
 }
 
 function renderAPIChart(data) {
