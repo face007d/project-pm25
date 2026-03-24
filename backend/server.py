@@ -364,13 +364,14 @@ def save_reading():
 
 @app.route('/api/model-accuracy', methods=['GET'])
 def get_model_accuracy():
-    """ดึงข้อมูลเปรียบเทียบค่าทำนาย vs ค่าจริง"""
+    """ดึงข้อมูลเปรียบเทียบค่าทำนาย vs ค่าจริง (เรียงตามความแม่นยำ)"""
     if not DB_AVAILABLE:
         return jsonify({'error': 'Database not available'}), 503
     
     try:
         days = request.args.get('days', 14, type=int)
         location = request.args.get('location', 'Nakhon Phanom')
+        sort_by = request.args.get('sort', 'date')  # 'date' หรือ 'accuracy'
         
         # ดึงข้อมูลการพยากรณ์ที่มีค่าจริงแล้ว
         result = db.client.table('pm25_predictions')\
@@ -378,7 +379,6 @@ def get_model_accuracy():
             .eq('location', location)\
             .not_.is_('actual_value', 'null')\
             .order('target_date', desc=False)\
-            .limit(days)\
             .execute()
         
         data = []
@@ -401,16 +401,24 @@ def get_model_accuracy():
             total_error += error
             count += 1
         
+        # เรียงลำดับตามที่ต้องการ
+        if sort_by == 'accuracy':
+            # เรียงตาม error น้อยที่สุดก่อน (ค่าที่ใกล้เคียงที่สุด)
+            data.sort(key=lambda x: x['error'])
+        
+        # จำกัดจำนวนตาม days
+        data = data[:days]
+        
         # คำนวณสถิติ
         mae = round(total_error / count, 1) if count > 0 else 0
-        avg_accuracy = round(sum(d['accuracy'] for d in data) / count, 1) if count > 0 else 0
+        avg_accuracy = round(sum(d['accuracy'] for d in data) / len(data), 1) if len(data) > 0 else 0
         
         return jsonify({
             'data': data,
             'stats': {
                 'mae': mae,
                 'accuracy': avg_accuracy,
-                'count': count
+                'count': len(data)
             }
         })
     except Exception as e:
