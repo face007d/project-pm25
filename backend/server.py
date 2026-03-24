@@ -26,7 +26,7 @@ from tensorflow import keras
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError, LineBotApiError
 from linebot.models import (
-    MessageEvent, PostbackEvent, TextMessage, ImageMessage, LocationMessage,
+    MessageEvent, PostbackEvent, FollowEvent, TextMessage, ImageMessage, LocationMessage,
     TextSendMessage, ImageSendMessage,
     QuickReply, QuickReplyButton, MessageAction, URIAction
 )
@@ -1911,6 +1911,206 @@ if LINE_BOT_AVAILABLE and handler:
             print(f"❌ Error handling postback: {e}")
             import traceback
             traceback.print_exc()
+
+    @handler.add(FollowEvent)
+    def handle_follow(event):
+        """จัดการเมื่อมีคนแอด Bot เป็นเพื่อน"""
+        user_id = event.source.user_id
+        
+        try:
+            # ดึงข้อมูลโปรไฟล์
+            profile = line_bot_api.get_profile(user_id)
+            display_name = profile.display_name
+            
+            # บันทึกข้อมูลผู้ใช้
+            db.upsert_line_user(
+                line_user_id=user_id,
+                display_name=display_name,
+                picture_url=profile.picture_url,
+                status_message=profile.status_message
+            )
+            
+            # ดึงค่า PM2.5 ปัจจุบัน
+            pm25_value = 0
+            aqi_level = "ดีมาก"
+            level_color = "#C9971C"
+            level_emoji = "🟢"
+            
+            try:
+                import requests
+                waqi_token = os.getenv('WAQI_API_TOKEN', '6e19dc4d73747ab27c397b590fdbd504f1f496fc')
+                search_url = f'https://api.waqi.info/search/?token={waqi_token}&keyword=nakhon phanom'
+                search_res = requests.get(search_url, timeout=10)
+                search_data = search_res.json()
+                
+                if search_data.get('status') == 'ok' and search_data.get('data'):
+                    station_uid = search_data['data'][0]['uid']
+                    feed_url = f'https://api.waqi.info/feed/@{station_uid}/?token={waqi_token}'
+                    feed_res = requests.get(feed_url, timeout=10)
+                    feed_data = feed_res.json()
+                    
+                    if feed_data.get('status') == 'ok':
+                        pm25_value = feed_data['data']['iaqi'].get('pm25', {}).get('v', 0)
+                        
+                        # กำหนดระดับ
+                        if pm25_value <= 25:
+                            aqi_level = "ดีมาก"
+                            level_color = "#16A34A"
+                            level_emoji = "🟢"
+                        elif pm25_value <= 37.5:
+                            aqi_level = "ปานกลาง"
+                            level_color = "#D4AF37"
+                            level_emoji = "🟡"
+                        elif pm25_value <= 50:
+                            aqi_level = "เริ่มมีผล"
+                            level_color = "#F59E0B"
+                            level_emoji = "🟠"
+                        elif pm25_value <= 90:
+                            aqi_level = "ไม่ดี"
+                            level_color = "#EF4444"
+                            level_emoji = "🔴"
+                        else:
+                            aqi_level = "อันตราย"
+                            level_color = "#991B1B"
+                            level_emoji = "🟣"
+            except:
+                pass
+            
+            # สร้าง Flex Message ต้อนรับ
+            from linebot.models import FlexSendMessage, BubbleContainer, BoxComponent, TextComponent, ButtonComponent, SeparatorComponent, FillerComponent, URIAction
+            
+            flex_message = FlexSendMessage(
+                alt_text=f"ยินดีต้อนรับ {display_name}!",
+                contents=BubbleContainer(
+                    size="mega",
+                    header=BoxComponent(
+                        layout="vertical",
+                        contents=[
+                            TextComponent(
+                                text=f"สวัสดี {display_name}! 👋",
+                                weight="bold",
+                                size="xl",
+                                color="#FFFFFF"
+                            ),
+                            TextComponent(
+                                text="ยินดีต้อนรับสู่ Naka_monitoring",
+                                size="sm",
+                                color="#FFFFFF",
+                                margin="sm"
+                            )
+                        ],
+                        background_color="#C9971C",
+                        padding_all="20px"
+                    ),
+                    body=BoxComponent(
+                        layout="vertical",
+                        contents=[
+                            # ค่าฝุ่นปัจจุบัน
+                            BoxComponent(
+                                layout="vertical",
+                                contents=[
+                                    TextComponent(
+                                        text="📊 ค่าฝุ่น PM2.5 ตอนนี้",
+                                        size="sm",
+                                        color="#706B60",
+                                        weight="bold"
+                                    ),
+                                    BoxComponent(
+                                        layout="horizontal",
+                                        contents=[
+                                            TextComponent(
+                                                text=f"{pm25_value}",
+                                                size="4xl",
+                                                weight="bold",
+                                                color=level_color,
+                                                flex=0
+                                            ),
+                                            TextComponent(
+                                                text="µg/m³",
+                                                size="sm",
+                                                color="#A89E8E",
+                                                margin="md",
+                                                gravity="bottom"
+                                            ),
+                                            FillerComponent(),
+                                            TextComponent(
+                                                text=f"{level_emoji} {aqi_level}",
+                                                size="md",
+                                                weight="bold",
+                                                color=level_color,
+                                                align="end"
+                                            )
+                                        ],
+                                        spacing="sm",
+                                        margin="md"
+                                    )
+                                ],
+                                padding_all="12px",
+                                background_color="#FDF8E6",
+                                corner_radius="8px"
+                            ),
+                            SeparatorComponent(margin="xl"),
+                            # คู่มือการใช้งาน
+                            BoxComponent(
+                                layout="vertical",
+                                contents=[
+                                    TextComponent(
+                                        text="📖 คู่มือการใช้งาน",
+                                        size="md",
+                                        weight="bold",
+                                        color="#1C1A17"
+                                    ),
+                                    TextComponent(
+                                        text="• ตรวจสอบค่าฝุ่น - กดปุ่มด้านล่าง\n• ดูพยากรณ์อากาศ - LSTM Model ทำนาย 1 วัน\n• แจ้งจุดไฟไหม้ - ถ่ายรูป + แชร์ตำแหน่ง\n• รับแจ้งเตือนทุกเช้า 07:00 น. อัตโนมัติ",
+                                        size="sm",
+                                        color="#706B60",
+                                        wrap=True,
+                                        margin="md",
+                                        line_spacing="lg"
+                                    )
+                                ],
+                                margin="xl"
+                            )
+                        ],
+                        spacing="md",
+                        padding_all="20px"
+                    ),
+                    footer=BoxComponent(
+                        layout="vertical",
+                        contents=[
+                            ButtonComponent(
+                                action=URIAction(
+                                    label="🚀 เริ่มใช้งาน",
+                                    uri="https://line.me/R/ti/p/@099yfqxd"
+                                ),
+                                style="primary",
+                                color="#C9971C",
+                                height="sm"
+                            ),
+                            ButtonComponent(
+                                action=URIAction(
+                                    label="🌐 ดูเว็บไซต์",
+                                    uri="https://pm25-nakhon-phanom.onrender.com"
+                                ),
+                                style="link",
+                                height="sm",
+                                margin="sm"
+                            )
+                        ],
+                        spacing="sm",
+                        padding_all="20px"
+                    )
+                )
+            )
+            
+            line_bot_api.reply_message(event.reply_token, flex_message)
+            print(f"✅ Sent welcome message to {display_name}")
+            
+        except Exception as e:
+            print(f"❌ Error handling follow event: {e}")
+            import traceback
+            traceback.print_exc()
+
 
 
 @app.route('/api/fire-reports', methods=['GET'])
