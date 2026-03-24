@@ -301,8 +301,8 @@ def create_flex_message(pm25_data):
                     "type": "button",
                     "action": {
                         "type": "uri",
-                        "label": "📍 ดูแผนที่",
-                        "uri": "https://pm25-nakhon-phanom.onrender.com#map-card"
+                        "label": "ดูข้อมูลเพิ่มเติม",
+                        "uri": "https://pm25-nakhon-phanom.onrender.com"
                     },
                     "style": "primary",
                     "color": level_info['color'],
