@@ -859,21 +859,108 @@ if LINE_BOT_AVAILABLE and handler:
                 # มีครบแล้ว! บันทึกรายงาน
                 save_fire_report_from_session(user_id, session, event.reply_token)
             else:
-                # ยังไม่มีพิกัด
-                reply_text = (
-                    "✅ ได้รับรูปภาพแล้ว\n\n"
-                    "━━━━━━━━━━━━━━━━\n\n"
-                    "📍 ขั้นตอนต่อไป:\n"
-                    "ส่งพิกัดสถานที่ของจุดไฟไหม้\n\n"
-                    "วิธีส่งพิกัด:\n"
-                    "1. กดปุ่ม + ด้านล่าง\n"
-                    "2. เลือก Location\n"
-                    "3. แชร์ตำแหน่งปัจจุบัน"
+                # ยังไม่มีพิกัด - แสดง Flex Message บอกให้แชร์ location
+                from linebot.models import FlexSendMessage, BubbleContainer, BoxComponent, TextComponent, ButtonComponent, URIAction as FlexURIAction
+                
+                flex_message = FlexSendMessage(
+                    alt_text="✅ ได้รับรูปภาพแล้ว - กรุณาแชร์ตำแหน่ง",
+                    contents=BubbleContainer(
+                        size="mega",
+                        header=BoxComponent(
+                            layout="vertical",
+                            contents=[
+                                TextComponent(
+                                    text="✅ ได้รับรูปภาพแล้ว",
+                                    weight="bold",
+                                    size="xl",
+                                    color="#16A34A"
+                                )
+                            ],
+                            background_color="#F0FDF4",
+                            padding_all="20px"
+                        ),
+                        body=BoxComponent(
+                            layout="vertical",
+                            contents=[
+                                TextComponent(
+                                    text="📍 ขั้นตอนต่อไป",
+                                    size="md",
+                                    weight="bold",
+                                    color="#1C1A17",
+                                    margin="md"
+                                ),
+                                TextComponent(
+                                    text="กรุณาแชร์ตำแหน่งที่เกิดเหตุไฟไหม้",
+                                    size="sm",
+                                    color="#706B60",
+                                    margin="sm",
+                                    wrap=True
+                                ),
+                                BoxComponent(
+                                    layout="vertical",
+                                    contents=[
+                                        TextComponent(
+                                            text="📌 วิธีแชร์ตำแหน่ง:",
+                                            size="xs",
+                                            color="#A89E8E",
+                                            weight="bold"
+                                        ),
+                                        TextComponent(
+                                            text="1. กดปุ่ม + ด้านล่าง",
+                                            size="xs",
+                                            color="#706B60",
+                                            margin="sm"
+                                        ),
+                                        TextComponent(
+                                            text="2. เลือก Location",
+                                            size="xs",
+                                            color="#706B60",
+                                            margin="xs"
+                                        ),
+                                        TextComponent(
+                                            text="3. แชร์ตำแหน่งปัจจุบัน",
+                                            size="xs",
+                                            color="#706B60",
+                                            margin="xs"
+                                        )
+                                    ],
+                                    margin="lg",
+                                    padding_all="12px",
+                                    background_color="#FDF8E6",
+                                    corner_radius="8px"
+                                )
+                            ],
+                            spacing="md",
+                            padding_all="20px"
+                        ),
+                        footer=BoxComponent(
+                            layout="vertical",
+                            contents=[
+                                ButtonComponent(
+                                    style="primary",
+                                    color="#C9971C",
+                                    action=FlexURIAction(
+                                        label="📍 แชร์ตำแหน่ง",
+                                        uri="https://line.me/R/nv/location"
+                                    ),
+                                    height="sm"
+                                ),
+                                ButtonComponent(
+                                    style="link",
+                                    action=FlexURIAction(
+                                        label="ดูข้อมูลเพิ่มเติม",
+                                        uri="https://pm25-nakhon-phanom.onrender.com#fire-section"
+                                    ),
+                                    height="sm"
+                                )
+                            ],
+                            spacing="sm",
+                            padding_all="20px"
+                        )
+                    )
                 )
-                line_bot_api.reply_message(
-                    event.reply_token,
-                    TextSendMessage(text=reply_text)
-                )
+                
+                line_bot_api.reply_message(event.reply_token, flex_message)
         
         except Exception as e:
             print(f"❌ Error handling image: {e}")
