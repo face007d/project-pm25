@@ -1822,7 +1822,7 @@ if LINE_BOT_AVAILABLE and handler:
                                             color="#1C1A17"
                                         ),
                                         TextComponent(
-                                            text="กดปุ่ม 'สภาพอากาศ'\nดูอุณหภูมิ ความชื้น และพยากรณ์ PM2.5 ล่วงหน้า 3 วัน",
+                                            text="กดปุ่ม 'สภาพอากาศ'\nดูอุณหภูมิ ความชื้น และพยากรณ์ PM2.5 ล่วงหน้า 1 วัน",
                                             size="sm",
                                             color="#706B60",
                                             wrap=True,
