@@ -607,13 +607,16 @@ def save_fire_report_from_session(user_id, session, reply_token, address=None):
             # ทำเครื่องหมาย session ว่าเสร็จแล้ว
             db.complete_session(session['id'])
             
-            # ส่งข้อความตอบกลับ
+            # สร้างข้อความตอบกลับพร้อมค่า PM2.5
+            pm25_text = f"💨 PM2.5: {pm25_value} µg/m³\n\n" if pm25_value else ""
+            
             reply_text = (
                 "✅ บันทึกสำเร็จ!\n\n"
                 "━━━━━━━━━━━━━━━━\n\n"
                 "ขอบคุณสำหรับข้อมูล\n"
                 "ระบบได้บันทึกจุดไฟไหม้\n"
                 "ลงแผนที่เรียบร้อยแล้ว\n\n"
+                f"{pm25_text}"
                 f"📍 พิกัด:\n"
                 f"{session['latitude']:.6f}, {session['longitude']:.6f}\n\n"
                 f"🕐 เวลา: {datetime.now(THAILAND_TZ).strftime('%d/%m/%Y %H:%M น.')}\n\n"

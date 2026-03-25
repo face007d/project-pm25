@@ -1410,7 +1410,7 @@ function lv(v) {
   if(v<=50)  return { bg:'#F5A623', fg:'#7A3E00', dot:'#F59E0B', label:'เริ่มมีผล',         adv:'ควรลดเวลาอยู่กลางแจ้ง โดยเฉพาะเด็กและผู้ป่วย',                           emoji:'😷', ringColor:'#F59E0B' };
   if(v<=90)  return { bg:'#E05A2B', fg:'#FFFFFF', dot:'#EF4444', label:'ไม่ดีต่อสุขภาพ',   adv:'ทุกคนควรลดกิจกรรมกลางแจ้ง สวมหน้ากาก N95 เมื่อออกนอกบ้าน',             emoji:'🤧', ringColor:'#EF4444' };
   if(v<=150) return { bg:'#C0392B', fg:'#FFFFFF', dot:'#B91C1C', label:'อันตราย',           adv:'อันตราย! หลีกเลี่ยงการออกนอกอาคาร ปิดประตูหน้าต่าง',                     emoji:'🚫', ringColor:'#DC2626' };
-  return             { bg:'#7F1D1D', fg:'#FFFFFF', dot:'#7F1D1D', label:'วิกฤต',            adv:'วิกฤต! ห้ามออกนอกอาคาร ปิดอุปกรณ์ฟอกอากาศ',                             emoji:'☣️', ringColor:'#7F1D1D' };
+  return             { bg:'#7F1D1D', fg:'#FFFFFF', dot:'#7F1D1D', label:'วิกฤต',            adv:'วิกฤต! ห้ามออกนอกอาคาร เปิดเครื่องฟอกอากาศ',                             emoji:'☣️', ringColor:'#7F1D1D' };
 }
 
 function getPM25Level(v) {
