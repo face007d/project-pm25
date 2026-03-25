@@ -2114,7 +2114,8 @@ async function fetchNearbyProvinces() {
   const container = document.getElementById('nearby-provinces-container');
   container.innerHTML = '';
   
-  for(const province of provinces) {
+  // เรียก API ทั้งหมดพร้อมกัน (parallel)
+  const promises = provinces.map(async (province) => {
     try {
       const searchUrl = `https://api.waqi.info/search/?token=${WAQI_API_TOKEN}&keyword=${province.keyword}`;
       const searchRes = await fetch(searchUrl);
@@ -2130,20 +2131,33 @@ async function fetchNearbyProvinces() {
           const pm25 = feedData.data.iaqi?.pm25?.v || feedData.data.aqi || 0;
           const level = lv(pm25);
           
-          const card = document.createElement('div');
-          card.style.cssText = 'min-width:110px;flex-shrink:0;text-align:center;padding:10px;background:rgba(255,255,255,0.7);border:1px solid rgba(212,175,55,0.2);border-radius:8px;';
-          card.innerHTML = `
-            <div style="font-size:10px;color:#706B60;font-weight:600;margin-bottom:6px;">${province.name}</div>
-            <div style="font-size:24px;font-weight:800;color:${level.ringColor};font-family:'IBM Plex Mono',monospace;margin-bottom:4px;">${pm25}</div>
-            <div style="font-size:9px;padding:3px 8px;background:${level.ringColor}15;color:${level.ringColor};border-radius:12px;font-weight:600;">${level.label}</div>
-          `;
-          container.appendChild(card);
+          return {
+            name: province.name,
+            pm25: pm25,
+            level: level
+          };
         }
       }
     } catch(e) {
       console.warn(`Error fetching ${province.name}:`, e);
     }
-  }
+    return null;
+  });
+  
+  const results = await Promise.all(promises);
+  
+  results.forEach(result => {
+    if(result) {
+      const card = document.createElement('div');
+      card.style.cssText = 'min-width:110px;flex-shrink:0;text-align:center;padding:10px;background:rgba(255,255,255,0.7);border:1px solid rgba(212,175,55,0.2);border-radius:8px;';
+      card.innerHTML = `
+        <div style="font-size:10px;color:#706B60;font-weight:600;margin-bottom:6px;">${result.name}</div>
+        <div style="font-size:24px;font-weight:800;color:${result.level.ringColor};font-family:'IBM Plex Mono',monospace;margin-bottom:4px;">${result.pm25}</div>
+        <div style="font-size:9px;padding:3px 8px;background:${result.level.ringColor}15;color:${result.level.ringColor};border-radius:12px;font-weight:600;">${result.level.label}</div>
+      `;
+      container.appendChild(card);
+    }
+  });
   
   if(container.children.length === 0) {
     container.innerHTML = '<div style="min-width:120px;text-align:center;padding:10px;color:#A89E8E;font-size:10px;">ไม่สามารถโหลดข้อมูลได้</div>';
