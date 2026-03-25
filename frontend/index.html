@@ -1801,13 +1801,25 @@ function initMap() {
 
 async function loadFireReports() {
   try {
+    console.log('🔥 Loading fire reports...');
     const BACKEND_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
       ? '' // same origin when running locally
       : 'https://project-pm25.onrender.com'; // production backend
 
     const response = await fetch(`${BACKEND_URL}/api/fire-reports?hours=48`);
+    console.log('📡 Fire reports response:', response.status);
+    
+    if (!response.ok) {
+      console.error('❌ Fire reports API error:', response.status);
+      return;
+    }
+    
     const data = await response.json();
+    console.log('📊 Fire reports data:', data);
+    
     if(data.data && Array.isArray(data.data) && data.data.length > 0) {
+      console.log(`✅ Found ${data.data.length} fire reports`);
+      
       // อัปเดต FIRES array
       FIRES = data.data.map(report => ({
         name: report.location_address || `พิกัด ${report.latitude.toFixed(4)}, ${report.longitude.toFixed(4)}`,
@@ -1824,6 +1836,11 @@ async function loadFireReports() {
       renderFireList();
       
       // อัปเดตแผนที่
+      if (!fireMarkersLayer) {
+        console.error('❌ fireMarkersLayer not initialized');
+        return;
+      }
+      
       fireMarkersLayer.clearLayers();
       data.data.forEach(report=>{
         const lat = report.latitude, lon = report.longitude;
@@ -1908,8 +1925,17 @@ async function loadFireReports() {
           });
       });
       document.getElementById('fire-count-badge').textContent = `${data.data.length} จุด`;
+    } else {
+      console.log('⚠️ No fire reports found or empty data');
     }
-  } catch(e) { /* API not available, use static data */ }
+  } catch(e) { 
+    console.error('❌ Error loading fire reports:', e);
+    // Show error message to user
+    const fireList = document.getElementById('fire-list');
+    if (fireList) {
+      fireList.innerHTML = '<div style="padding:20px;text-align:center;color:#EF4444;font-size:12px;">⚠️ ไม่สามารถโหลดรายงานจุดไฟได้<br><span style="font-size:10px;color:#A89E8E;">กรุณาลองใหม่อีกครั้ง</span></div>';
+    }
+  }
 }
 
 /* ──────────────────────────────────
