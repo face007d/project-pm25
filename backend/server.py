@@ -2150,6 +2150,77 @@ def get_fire_reports_today_api():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+# Cache for nearby provinces (5 minutes)
+nearby_provinces_cache = {
+    'data': None,
+    'timestamp': None
+}
+
+@app.route('/api/nearby-provinces', methods=['GET'])
+def get_nearby_provinces():
+    """API: ดึงข้อมูล PM2.5 จังหวัดใกล้เคียง (with 5-minute cache)"""
+    import requests
+    from time import time
+    
+    # Check cache (5 minutes = 300 seconds)
+    if nearby_provinces_cache['data'] and nearby_provinces_cache['timestamp']:
+        age = time() - nearby_provinces_cache['timestamp']
+        if age < 300:  # Cache valid for 5 minutes
+            return jsonify({
+                'data': nearby_provinces_cache['data'],
+                'cached': True,
+                'age': int(age)
+            })
+    
+    # Fetch fresh data
+    try:
+        waqi_token = os.getenv('WAQI_API_TOKEN', '6e19dc4d73747ab27c397b590fdbd504f1f496fc')
+        provinces = [
+            {'name': 'อุดรธานี', 'keyword': 'udon thani'},
+            {'name': 'สกลนคร', 'keyword': 'sakon nakhon'},
+            {'name': 'มุกดาหาร', 'keyword': 'mukdahan'},
+            {'name': 'หนองคาย', 'keyword': 'nong khai'}
+        ]
+        
+        results = []
+        for province in provinces:
+            try:
+                # Search for station
+                search_url = f"https://api.waqi.info/search/?token={waqi_token}&keyword={province['keyword']}"
+                search_res = requests.get(search_url, timeout=5)
+                search_data = search_res.json()
+                
+                if search_data.get('status') == 'ok' and search_data.get('data'):
+                    station = search_data['data'][0]
+                    
+                    # Get feed data
+                    feed_url = f"https://api.waqi.info/feed/@{station['uid']}/?token={waqi_token}"
+                    feed_res = requests.get(feed_url, timeout=5)
+                    feed_data = feed_res.json()
+                    
+                    if feed_data.get('status') == 'ok':
+                        pm25 = feed_data['data']['iaqi'].get('pm25', {}).get('v') or feed_data['data'].get('aqi', 0)
+                        results.append({
+                            'name': province['name'],
+                            'pm25': pm25
+                        })
+            except Exception as e:
+                print(f"Error fetching {province['name']}: {e}")
+                continue
+        
+        # Update cache
+        nearby_provinces_cache['data'] = results
+        nearby_provinces_cache['timestamp'] = time()
+        
+        return jsonify({
+            'data': results,
+            'cached': False,
+            'count': len(results)
+        })
+    
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 if __name__ == '__main__':
     port = int(os.getenv('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=False)

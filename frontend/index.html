@@ -2124,69 +2124,50 @@ function renderAccuracyCards(accuracyData) {
 }
 
 async function fetchNearbyProvinces() {
-  const TOKEN = '6e19dc4d73747ab27c397b590fdbd504f1f496fc';
-  const provinces = [
-    { name: 'อุดรธานี', keyword: 'udon thani' },
-    { name: 'สกลนคร', keyword: 'sakon nakhon' },
-    { name: 'ขอนแก่น', keyword: 'khon kaen' },
-    { name: 'มุกดาหาร', keyword: 'mukdahan' },
-    { name: 'หนองคาย', keyword: 'nong khai' },
-    { name: 'เลย', keyword: 'loei' },
-    { name: 'กาฬสินธุ์', keyword: 'kalasin' },
-    { name: 'หนองบัวลำภู', keyword: 'nong bua lamphu' }
-  ];
-  
   const container = document.getElementById('nearby-provinces-container');
-  container.innerHTML = '';
   
-  // เรียก API ทั้งหมดพร้อมกัน (parallel)
-  const promises = provinces.map(async (province) => {
-    try {
-      const searchUrl = `https://api.waqi.info/search/?token=${TOKEN}&keyword=${province.keyword}`;
-      const searchRes = await fetch(searchUrl);
-      const searchData = await searchRes.json();
-      
-      if(searchData.status === 'ok' && searchData.data && searchData.data.length > 0) {
-        const station = searchData.data[0];
-        const feedUrl = `https://api.waqi.info/feed/@${station.uid}/?token=${TOKEN}`;
-        const feedRes = await fetch(feedUrl);
-        const feedData = await feedRes.json();
-        
-        if(feedData.status === 'ok') {
-          const pm25 = feedData.data.iaqi?.pm25?.v || feedData.data.aqi || 0;
-          const level = lv(pm25);
-          
-          return {
-            name: province.name,
-            pm25: pm25,
-            level: level
-          };
-        }
-      }
-    } catch(e) {
-      console.warn(`Error fetching ${province.name}:`, e);
+  // แสดง loading state
+  container.innerHTML = `
+    <div style="grid-column:1/-1;text-align:center;padding:20px;">
+      <div style="font-size:14px;color:#C9971C;margin-bottom:8px;">⏳ กำลังโหลดข้อมูล...</div>
+      <div style="font-size:10px;color:#A89E8E;">จังหวัดใกล้เคียง</div>
+    </div>
+  `;
+  
+  try {
+    const BACKEND_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+      ? '' // same origin when running locally
+      : 'https://project-pm25.onrender.com'; // production backend
+    
+    const response = await fetch(`${BACKEND_URL}/api/nearby-provinces`);
+    const data = await response.json();
+    
+    console.log('📍 Nearby provinces:', data);
+    
+    if (!data.data || data.data.length === 0) {
+      container.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:20px;color:#A89E8E;font-size:11px;">ไม่สามารถโหลดข้อมูลได้</div>';
+      return;
     }
-    return null;
-  });
-  
-  const results = await Promise.all(promises);
-  
-  results.forEach(result => {
-    if(result) {
+    
+    // Clear container
+    container.innerHTML = '';
+    
+    data.data.forEach(province => {
+      const level = lv(province.pm25);
       const card = document.createElement('div');
       card.style.cssText = 'text-align:center;padding:10px;background:rgba(255,255,255,0.7);border:1px solid rgba(212,175,55,0.2);border-radius:8px;';
       card.innerHTML = `
-        <div style="font-size:10px;color:#706B60;font-weight:600;margin-bottom:6px;">${result.name}</div>
-        <div style="font-size:24px;font-weight:800;color:${result.level.ringColor};font-family:'IBM Plex Mono',monospace;margin-bottom:2px;">${result.pm25}</div>
+        <div style="font-size:10px;color:#706B60;font-weight:600;margin-bottom:6px;">${province.name}</div>
+        <div style="font-size:24px;font-weight:800;color:${level.ringColor};font-family:'IBM Plex Mono',monospace;margin-bottom:2px;">${province.pm25}</div>
         <div style="font-size:8px;color:#A89E8E;margin-bottom:4px;">µg/m³ PM2.5</div>
-        <div style="font-size:9px;padding:3px 8px;background:${result.level.ringColor}15;color:${result.level.ringColor};border-radius:12px;font-weight:600;">${result.level.label}</div>
+        <div style="font-size:9px;padding:3px 8px;background:${level.ringColor}15;color:${level.ringColor};border-radius:12px;font-weight:600;">${level.label}</div>
       `;
       container.appendChild(card);
-    }
-  });
-  
-  if(container.children.length === 0) {
-    container.innerHTML = '<div style="min-width:120px;text-align:center;padding:10px;color:#A89E8E;font-size:10px;">ไม่สามารถโหลดข้อมูลได้</div>';
+    });
+    
+  } catch(e) {
+    console.error('❌ Error fetching nearby provinces:', e);
+    container.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:20px;color:#EF4444;font-size:11px;">⚠️ ไม่สามารถโหลดข้อมูลได้</div>';
   }
 }
 
