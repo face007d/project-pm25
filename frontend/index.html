@@ -1814,8 +1814,8 @@ async function loadFireReports() {
         lat: report.latitude,
         lon: report.longitude,
         time: new Date(report.created_at).toLocaleTimeString('th-TH', {hour: '2-digit', minute: '2-digit'}),
-        pm25: report.pm25_value || 0,
-        sev: report.pm25_value > 75 ? 'สูง' : report.pm25_value > 37.5 ? 'กลาง' : 'ต่ำ',
+        pm25: report.pm25_value || 'N/A',
+        sev: report.pm25_value > 75 ? 'สูง' : report.pm25_value > 37.5 ? 'กลาง' : report.pm25_value ? 'ต่ำ' : 'ไม่ทราบ',
         reporter: report.user_display_name || 'ไม่ระบุชื่อ',
         image_url: report.image_url
       }));
