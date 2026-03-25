@@ -1012,14 +1012,15 @@ tbody td.num { text-align:center; }
       
       <!-- Nearby Provinces PM2.5 -->
       <div style="margin-top:8px;padding:12px;background:linear-gradient(135deg,rgba(253,248,230,0.8),rgba(249,248,244,0.6));border:1px solid rgba(212,175,55,0.2);border-radius:10px;">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
           <div style="display:flex;align-items:center;gap:8px;">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#C9971C" stroke-width="2" width="16" height="16"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
             <span style="font-size:12px;font-weight:700;color:var(--gold-dk);">จังหวัดใกล้เคียง</span>
           </div>
         </div>
-        <div id="nearby-provinces-container" style="display:flex;gap:8px;overflow-x:auto;padding-bottom:8px;">
-          <div style="min-width:120px;text-align:center;padding:10px;background:rgba(255,255,255,0.5);border-radius:8px;">
+        <div style="font-size:10px;color:#706B60;margin-bottom:10px;">ค่า AQI PM2.5 แบบเรียลไทม์จากสถานีวัดคุณภาพอากาศ</div>
+        <div id="nearby-provinces-container" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">
+          <div style="text-align:center;padding:10px;background:rgba(255,255,255,0.5);border-radius:8px;">
             <div style="font-size:10px;color:#A89E8E;margin-bottom:4px;">กำลังโหลด...</div>
           </div>
         </div>
@@ -2101,8 +2102,11 @@ async function fetchNearbyProvinces() {
   const provinces = [
     { name: 'อุดรธานี', keyword: 'udon thani' },
     { name: 'สกลนคร', keyword: 'sakon nakhon' },
+    { name: 'ขอนแก่น', keyword: 'khon kaen' },
     { name: 'มุกดาหาร', keyword: 'mukdahan' },
-    { name: 'ขอนแก่น', keyword: 'khon kaen' }
+    { name: 'หนองคาย', keyword: 'nong khai' },
+    { name: 'เลย', keyword: 'loei' },
+    { name: 'กาฬสินธุ์', keyword: 'kalasin' }
   ];
   
   const container = document.getElementById('nearby-provinces-container');
@@ -2143,7 +2147,7 @@ async function fetchNearbyProvinces() {
   results.forEach(result => {
     if(result) {
       const card = document.createElement('div');
-      card.style.cssText = 'min-width:110px;flex-shrink:0;text-align:center;padding:10px;background:rgba(255,255,255,0.7);border:1px solid rgba(212,175,55,0.2);border-radius:8px;';
+      card.style.cssText = 'text-align:center;padding:10px;background:rgba(255,255,255,0.7);border:1px solid rgba(212,175,55,0.2);border-radius:8px;';
       card.innerHTML = `
         <div style="font-size:10px;color:#706B60;font-weight:600;margin-bottom:6px;">${result.name}</div>
         <div style="font-size:24px;font-weight:800;color:${result.level.ringColor};font-family:'IBM Plex Mono',monospace;margin-bottom:4px;">${result.pm25}</div>
