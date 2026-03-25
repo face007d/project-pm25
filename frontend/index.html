@@ -1010,17 +1010,18 @@ tbody td.num { text-align:center; }
         </div>
       </div>
       
-      <!-- Overall Statistics -->
+      <!-- Nearby Provinces PM2.5 -->
       <div style="margin-top:8px;padding:12px;background:linear-gradient(135deg,rgba(253,248,230,0.8),rgba(249,248,244,0.6));border:1px solid rgba(212,175,55,0.2);border-radius:10px;">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
           <div style="display:flex;align-items:center;gap:8px;">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#16A34A" stroke-width="2" width="16" height="16"><polyline points="20 6 9 17 4 12"/></svg>
-            <span style="font-size:12px;font-weight:700;color:var(--gold-dk);">สรุปความแม่นยำ</span>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#C9971C" stroke-width="2" width="16" height="16"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            <span style="font-size:12px;font-weight:700;color:var(--gold-dk);">จังหวัดใกล้เคียง</span>
           </div>
-          <div id="accuracy-overall-percent" style="font-size:18px;font-weight:800;color:#16A34A;font-family:'IBM Plex Mono',monospace;">—</div>
         </div>
-        <div id="accuracy-overall-text" style="font-size:11px;color:var(--stone-3);line-height:1.6;">
-          กำลังโหลดข้อมูล...
+        <div id="nearby-provinces-container" style="display:flex;gap:8px;overflow-x:auto;padding-bottom:8px;">
+          <div style="min-width:120px;text-align:center;padding:10px;background:rgba(255,255,255,0.5);border-radius:8px;">
+            <div style="font-size:10px;color:#A89E8E;margin-bottom:4px;">กำลังโหลด...</div>
+          </div>
         </div>
       </div>
 
@@ -2097,6 +2098,56 @@ function renderAccuracyCards(accuracyData) {
     
     container.appendChild(card);
   });
+  
+  // Load nearby provinces data
+  fetchNearbyProvinces();
+}
+
+async function fetchNearbyProvinces() {
+  const provinces = [
+    { name: 'อุดรธานี', keyword: 'udon thani' },
+    { name: 'สกลนคร', keyword: 'sakon nakhon' },
+    { name: 'มุกดาหาร', keyword: 'mukdahan' },
+    { name: 'ขอนแก่น', keyword: 'khon kaen' }
+  ];
+  
+  const container = document.getElementById('nearby-provinces-container');
+  container.innerHTML = '';
+  
+  for(const province of provinces) {
+    try {
+      const searchUrl = `https://api.waqi.info/search/?token=${WAQI_API_TOKEN}&keyword=${province.keyword}`;
+      const searchRes = await fetch(searchUrl);
+      const searchData = await searchRes.json();
+      
+      if(searchData.status === 'ok' && searchData.data && searchData.data.length > 0) {
+        const station = searchData.data[0];
+        const feedUrl = `https://api.waqi.info/feed/@${station.uid}/?token=${WAQI_API_TOKEN}`;
+        const feedRes = await fetch(feedUrl);
+        const feedData = await feedRes.json();
+        
+        if(feedData.status === 'ok') {
+          const pm25 = feedData.data.iaqi?.pm25?.v || feedData.data.aqi || 0;
+          const level = lv(pm25);
+          
+          const card = document.createElement('div');
+          card.style.cssText = 'min-width:110px;flex-shrink:0;text-align:center;padding:10px;background:rgba(255,255,255,0.7);border:1px solid rgba(212,175,55,0.2);border-radius:8px;';
+          card.innerHTML = `
+            <div style="font-size:10px;color:#706B60;font-weight:600;margin-bottom:6px;">${province.name}</div>
+            <div style="font-size:24px;font-weight:800;color:${level.ringColor};font-family:'IBM Plex Mono',monospace;margin-bottom:4px;">${pm25}</div>
+            <div style="font-size:9px;padding:3px 8px;background:${level.ringColor}15;color:${level.ringColor};border-radius:12px;font-weight:600;">${level.label}</div>
+          `;
+          container.appendChild(card);
+        }
+      }
+    } catch(e) {
+      console.warn(`Error fetching ${province.name}:`, e);
+    }
+  }
+  
+  if(container.children.length === 0) {
+    container.innerHTML = '<div style="min-width:120px;text-align:center;padding:10px;color:#A89E8E;font-size:10px;">ไม่สามารถโหลดข้อมูลได้</div>';
+  }
 }
 
 function renderAPIChart(data) {
