@@ -2045,17 +2045,10 @@ function renderAccuracyCards(accuracyData) {
   
   if(!accuracyData || !accuracyData.data || accuracyData.data.length === 0) {
     container.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--stone-4);">ไม่มีข้อมูลเปรียบเทียบ</div>';
-    document.getElementById('accuracy-overall-percent').textContent = '—';
-    document.getElementById('accuracy-overall-text').innerHTML = '⚠️ รอข้อมูล';
     return;
   }
   
   const data = accuracyData.data;
-  const stats = accuracyData.stats;
-  
-  // Update overall stats
-  document.getElementById('accuracy-overall-percent').textContent = stats.accuracy.toFixed(1) + '%';
-  document.getElementById('accuracy-overall-text').innerHTML = `MAE: ${stats.mae} µg/m³ (${stats.count} ครั้ง)`;
   
   // Format date
   const formatDate = (dateStr) => {
@@ -2180,35 +2173,43 @@ function renderAPIChart(data) {
   const secondHalfAvg = pm25Values.slice(halfPoint).reduce((a,b) => a+b, 0) / (pm25Values.length - halfPoint);
   const trendPercent = ((secondHalfAvg - firstHalfAvg) / firstHalfAvg * 100);
   
-  // Update statistics display
-  document.getElementById('chart-stat-avg').textContent = avgValue.toFixed(1);
-  document.getElementById('chart-stat-max').textContent = maxValue.toFixed(1);
-  document.getElementById('chart-stat-min').textContent = minValue.toFixed(1);
-  
+  // Update statistics display (with null checks)
+  const avgEl = document.getElementById('chart-stat-avg');
+  const maxEl = document.getElementById('chart-stat-max');
+  const minEl = document.getElementById('chart-stat-min');
   const trendEl = document.getElementById('chart-stat-trend');
-  if(trendPercent > 5) {
-    trendEl.innerHTML = '📈 +' + trendPercent.toFixed(0) + '%';
-    trendEl.style.color = '#DC2626';
-  } else if(trendPercent < -5) {
-    trendEl.innerHTML = '📉 ' + trendPercent.toFixed(0) + '%';
-    trendEl.style.color = '#16A34A';
-  } else {
-    trendEl.innerHTML = '➡️ ' + trendPercent.toFixed(0) + '%';
-    trendEl.style.color = '#64748B';
+  const healthAdviceEl = document.getElementById('chart-health-advice');
+  
+  if(avgEl) avgEl.textContent = avgValue.toFixed(1);
+  if(maxEl) maxEl.textContent = maxValue.toFixed(1);
+  if(minEl) minEl.textContent = minValue.toFixed(1);
+  
+  if(trendEl) {
+    if(trendPercent > 5) {
+      trendEl.innerHTML = '� +' + trendPercent.toFixed(0) + '%';
+      trendEl.style.color = '#DC2626';
+    } else if(trendPercent < -5) {
+      trendEl.innerHTML = '📉 ' + trendPercent.toFixed(0) + '%';
+      trendEl.style.color = '#16A34A';
+    } else {
+      trendEl.innerHTML = '➡️ ' + trendPercent.toFixed(0) + '%';
+      trendEl.style.color = '#64748B';
+    }
   }
   
   // Update health advice based on average
-  const healthAdviceEl = document.getElementById('chart-health-advice');
-  if(avgValue <= 25) {
-    healthAdviceEl.innerHTML = '✅ คุณภาพอากาศดีมาก เหมาะสำหรับกิจกรรมกลางแจ้งทุกประเภท ไม่มีผลกระทบต่อสุขภาพ';
-  } else if(avgValue <= 37.5) {
-    healthAdviceEl.innerHTML = '⚠️ คุณภาพอากาศปานกลาง ผู้ที่มีความไวต่อมลพิษควรลดกิจกรรมกลางแจ้งที่ใช้แรงมาก';
-  } else if(avgValue <= 50) {
-    healthAdviceEl.innerHTML = '🔶 เริ่มมีผลกระทบต่อสุขภาพ ควรสวมหน้ากากอนามัยเมื่อออกนอกบ้าน และลดกิจกรรมกลางแจ้ง';
-  } else if(avgValue <= 90) {
-    healthAdviceEl.innerHTML = '🔴 คุณภาพอากาศไม่ดี ควรหลีกเลี่ยงกิจกรรมกลางแจ้ง สวมหน้ากาก N95 และปิดหน้าต่างบ้าน';
-  } else {
-    healthAdviceEl.innerHTML = '⛔ คุณภาพอากาศอันตราย ห้ามออกนอกบ้านโดยเด็ดขาด ใช้เครื่องฟอกอากาศภายในบ้าน';
+  if(healthAdviceEl) {
+    if(avgValue <= 25) {
+      healthAdviceEl.innerHTML = '✅ คุณภาพอากาศดีมาก เหมาะสำหรับกิจกรรมกลางแจ้งทุกประเภท ไม่มีผลกระทบต่อสุขภาพ';
+    } else if(avgValue <= 37.5) {
+      healthAdviceEl.innerHTML = '⚠️ คุณภาพอากาศปานกลาง ผู้ที่มีความไวต่อมลพิษควรลดกิจกรรมกลางแจ้งที่ใช้แรงมาก';
+    } else if(avgValue <= 50) {
+      healthAdviceEl.innerHTML = '🔶 เริ่มมีผลกระทบต่อสุขภาพ ควรสวมหน้ากากอนามัยเมื่อออกนอกบ้าน และลดกิจกรรมกลางแจ้ง';
+    } else if(avgValue <= 90) {
+      healthAdviceEl.innerHTML = '🔴 คุณภาพอากาศไม่ดี ควรหลีกเลี่ยงกิจกรรมกลางแจ้ง สวมหน้ากาก N95 และปิดหน้าต่างบ้าน';
+    } else {
+      healthAdviceEl.innerHTML = '⛔ คุณภาพอากาศอันตราย ห้ามออกนอกบ้านโดยเด็ดขาด ใช้เครื่องฟอกอากาศภายในบ้าน';
+    }
   }
   
   const opts = {
