@@ -2097,6 +2097,7 @@ function renderAccuracyCards(accuracyData) {
 }
 
 async function fetchNearbyProvinces() {
+  const TOKEN = '6e19dc4d73747ab27c397b590fdbd504f1f496fc';
   const provinces = [
     { name: 'อุดรธานี', keyword: 'udon thani' },
     { name: 'สกลนคร', keyword: 'sakon nakhon' },
@@ -2110,13 +2111,13 @@ async function fetchNearbyProvinces() {
   // เรียก API ทั้งหมดพร้อมกัน (parallel)
   const promises = provinces.map(async (province) => {
     try {
-      const searchUrl = `https://api.waqi.info/search/?token=${WAQI_API_TOKEN}&keyword=${province.keyword}`;
+      const searchUrl = `https://api.waqi.info/search/?token=${TOKEN}&keyword=${province.keyword}`;
       const searchRes = await fetch(searchUrl);
       const searchData = await searchRes.json();
       
       if(searchData.status === 'ok' && searchData.data && searchData.data.length > 0) {
         const station = searchData.data[0];
-        const feedUrl = `https://api.waqi.info/feed/@${station.uid}/?token=${WAQI_API_TOKEN}`;
+        const feedUrl = `https://api.waqi.info/feed/@${station.uid}/?token=${TOKEN}`;
         const feedRes = await fetch(feedUrl);
         const feedData = await feedRes.json();
         
