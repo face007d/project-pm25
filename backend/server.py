@@ -859,8 +859,8 @@ if LINE_BOT_AVAILABLE and handler:
                 # มีครบแล้ว! บันทึกรายงาน
                 save_fire_report_from_session(user_id, session, event.reply_token)
             else:
-                # ยังไม่มีพิกัด - แสดง Flex Message บอกให้แชร์ location
-                from linebot.models import FlexSendMessage, BubbleContainer, BoxComponent, TextComponent, ButtonComponent, URIAction as FlexURIAction
+                # ยังไม่มีพิกัด - แสดง Flex Message พร้อม Quick Reply ให้แชร์ location
+                from linebot.models import FlexSendMessage, BubbleContainer, BoxComponent, TextComponent, ButtonComponent, URIAction as FlexURIAction, LocationAction
                 
                 flex_message = FlexSendMessage(
                     alt_text="✅ ได้รับรูปภาพแล้ว - กรุณาแชร์ตำแหน่ง",
@@ -906,19 +906,19 @@ if LINE_BOT_AVAILABLE and handler:
                                             weight="bold"
                                         ),
                                         TextComponent(
-                                            text="1. กดปุ่ม + ด้านล่าง",
+                                            text="1. กดปุ่ม 📍 แชร์ตำแหน่ง ด้านล่าง",
                                             size="xs",
                                             color="#706B60",
                                             margin="sm"
                                         ),
                                         TextComponent(
-                                            text="2. เลือก Location",
+                                            text="2. เลือกตำแหน่งที่เกิดเหตุ",
                                             size="xs",
                                             color="#706B60",
                                             margin="xs"
                                         ),
                                         TextComponent(
-                                            text="3. แชร์ตำแหน่งปัจจุบัน",
+                                            text="3. กดส่งเพื่อยืนยัน",
                                             size="xs",
                                             color="#706B60",
                                             margin="xs"
@@ -937,15 +937,6 @@ if LINE_BOT_AVAILABLE and handler:
                             layout="vertical",
                             contents=[
                                 ButtonComponent(
-                                    style="primary",
-                                    color="#C9971C",
-                                    action=FlexURIAction(
-                                        label="📍 แชร์ตำแหน่ง",
-                                        uri="https://line.me/R/nv/location"
-                                    ),
-                                    height="sm"
-                                ),
-                                ButtonComponent(
                                     style="link",
                                     action=FlexURIAction(
                                         label="ดูข้อมูลเพิ่มเติม",
@@ -957,6 +948,13 @@ if LINE_BOT_AVAILABLE and handler:
                             spacing="sm",
                             padding_all="20px"
                         )
+                    ),
+                    quick_reply=QuickReply(
+                        items=[
+                            QuickReplyButton(
+                                action=LocationAction(label="📍 แชร์ตำแหน่ง")
+                            )
+                        ]
                     )
                 )
                 
