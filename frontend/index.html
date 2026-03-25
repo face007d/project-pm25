@@ -2111,31 +2111,19 @@ async function fetchNearbyProvinces() {
   ];
   
   const container = document.getElementById('nearby-provinces-container');
+  container.innerHTML = '';
   
-  // แสดง loading state
-  container.innerHTML = provinces.map(p => `
-    <div style="text-align:center;padding:10px;background:rgba(255,255,255,0.5);border:1px solid rgba(212,175,55,0.1);border-radius:8px;">
-      <div style="font-size:10px;color:#A89E8E;margin-bottom:4px;">${p.name}</div>
-      <div style="font-size:12px;color:#D4CDBF;">⏳</div>
-    </div>
-  `).join('');
-  
-  // เรียก API ทั้งหมดพร้อมกัน (parallel) พร้อม timeout
+  // เรียก API ทั้งหมดพร้อมกัน (parallel)
   const promises = provinces.map(async (province) => {
     try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 sec timeout
-      
       const searchUrl = `https://api.waqi.info/search/?token=${TOKEN}&keyword=${province.keyword}`;
-      const searchRes = await fetch(searchUrl, { signal: controller.signal });
+      const searchRes = await fetch(searchUrl);
       const searchData = await searchRes.json();
-      
-      clearTimeout(timeoutId);
       
       if(searchData.status === 'ok' && searchData.data && searchData.data.length > 0) {
         const station = searchData.data[0];
         const feedUrl = `https://api.waqi.info/feed/@${station.uid}/?token=${TOKEN}`;
-        const feedRes = await fetch(feedUrl, { signal: controller.signal });
+        const feedRes = await fetch(feedUrl);
         const feedData = await feedRes.json();
         
         if(feedData.status === 'ok') {
@@ -2150,17 +2138,12 @@ async function fetchNearbyProvinces() {
         }
       }
     } catch(e) {
-      if (e.name !== 'AbortError') {
-        console.warn(`Error fetching ${province.name}:`, e);
-      }
+      console.warn(`Error fetching ${province.name}:`, e);
     }
     return null;
   });
   
   const results = await Promise.all(promises);
-  
-  // Clear container
-  container.innerHTML = '';
   
   results.forEach(result => {
     if(result) {
@@ -2177,7 +2160,7 @@ async function fetchNearbyProvinces() {
   });
   
   if(container.children.length === 0) {
-    container.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:20px;color:#A89E8E;font-size:11px;">ไม่สามารถโหลดข้อมูลได้</div>';
+    container.innerHTML = '<div style="min-width:120px;text-align:center;padding:10px;color:#A89E8E;font-size:10px;">ไม่สามารถโหลดข้อมูลได้</div>';
   }
 }
 
@@ -2446,6 +2429,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     renderStations();
     renderFireList();
     renderTable();
+    setTimeout(initMap, 300);
 
     // Load API data
     document.getElementById('loader').classList.add('fade-out');
@@ -2456,19 +2440,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     renderAPITable(data);
     setTimeout(()=>renderAPIChart(data), 600);
     
-    // Load and render model accuracy cards (with nearby provinces)
-    const accuracyData = await fetchModelAccuracy();
-    renderAccuracyCards(accuracyData);
-    
-    // อัปเดตตารางและสถานีหลังจากดึงข้อมูล WAQI API
-    renderTable();
-    renderStations();
-    renderAPITable(data);
-    
-    // Lazy load map after main content is ready (reduce initial load time)
-    setTimeout(() => {
-      initMap();
-    }, 1000);
+    // Load and render model accuracy cards
     const accuracyData = await fetchModelAccuracy();
     renderAccuracyCards(accuracyData);
     
