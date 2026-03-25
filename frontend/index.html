@@ -2106,7 +2106,8 @@ async function fetchNearbyProvinces() {
     { name: 'มุกดาหาร', keyword: 'mukdahan' },
     { name: 'หนองคาย', keyword: 'nong khai' },
     { name: 'เลย', keyword: 'loei' },
-    { name: 'กาฬสินธุ์', keyword: 'kalasin' }
+    { name: 'กาฬสินธุ์', keyword: 'kalasin' },
+    { name: 'บึงกาฬ', keyword: 'bueng kan' }
   ];
   
   const container = document.getElementById('nearby-provinces-container');
@@ -2150,7 +2151,8 @@ async function fetchNearbyProvinces() {
       card.style.cssText = 'text-align:center;padding:10px;background:rgba(255,255,255,0.7);border:1px solid rgba(212,175,55,0.2);border-radius:8px;';
       card.innerHTML = `
         <div style="font-size:10px;color:#706B60;font-weight:600;margin-bottom:6px;">${result.name}</div>
-        <div style="font-size:24px;font-weight:800;color:${result.level.ringColor};font-family:'IBM Plex Mono',monospace;margin-bottom:4px;">${result.pm25}</div>
+        <div style="font-size:24px;font-weight:800;color:${result.level.ringColor};font-family:'IBM Plex Mono',monospace;margin-bottom:2px;">${result.pm25}</div>
+        <div style="font-size:8px;color:#A89E8E;margin-bottom:4px;">µg/m³ PM2.5</div>
         <div style="font-size:9px;padding:3px 8px;background:${result.level.ringColor}15;color:${result.level.ringColor};border-radius:12px;font-weight:600;">${result.level.label}</div>
       `;
       container.appendChild(card);
