@@ -1,0 +1,11 @@
+{
+  "enabled": true,
+  "source": "NASA FIRMS Area API",
+  "sources": [
+    "VIIRS_SNPP_SP",
+    "VIIRS_NOAA20_SP"
+  ],
+  "status": "enabled",
+  "hotspot_rows": 2444014,
+  "note": "Features use current/past hotspot detections only, then roll over 24-168 hours."
+}

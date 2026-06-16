@@ -1,0 +1,6 @@
+model,seconds,artifact
+Persistence_current_pm25,0.0006415843963623047,
+Ridge_lag_rolling_spatial,1.8361070156097412,/content/pm25_nextday_clean_outputs/models/Ridge_lag_rolling_spatial.pkl
+HistGradientBoosting_lag_rolling_spatial,25.371220350265503,/content/pm25_nextday_clean_outputs/models/HistGradientBoosting_lag_rolling_spatial.pkl
+ExtraTrees_lag_rolling_spatial,356.63769030570984,/content/pm25_nextday_clean_outputs/models/ExtraTrees_lag_rolling_spatial.pkl
+WeightedEnsemble_top3,0.0,"ensemble from ExtraTrees_lag_rolling_spatial, HistGradientBoosting_lag_rolling_spatial, Ridge_lag_rolling_spatial"

@@ -1,0 +1,116 @@
+{
+  "task": "Next-day PM2.5 numeric forecasting",
+  "horizon_hours": 24,
+  "stations": [
+    {
+      "station_id": "88t",
+      "province": "นครพนม",
+      "latitude": 17.412345,
+      "longitude": 104.7786123
+    },
+    {
+      "station_id": "106t",
+      "province": "บึงกาฬ",
+      "latitude": 18.362008,
+      "longitude": 103.65977
+    },
+    {
+      "station_id": "82t",
+      "province": "หนองคาย",
+      "latitude": 17.87748,
+      "longitude": 102.728925
+    },
+    {
+      "station_id": "83t",
+      "province": "อุบลราชธานี",
+      "latitude": 15.245413,
+      "longitude": 104.846219
+    },
+    {
+      "station_id": "102t",
+      "province": "มุกดาหาร",
+      "latitude": 16.54257,
+      "longitude": 104.7192
+    }
+  ],
+  "feature_groups": {
+    "lags_hours": [
+      0,
+      1,
+      3,
+      6,
+      12,
+      24,
+      48,
+      72,
+      168
+    ],
+    "rolling_windows_hours": [
+      24,
+      48,
+      72,
+      168
+    ],
+    "spatial_features": [
+      "spatial_pm25_mean",
+      "spatial_pm25_max",
+      "other_station_pm25_mean",
+      "pm25_vs_spatial_mean"
+    ],
+    "meteorology": [
+      "wind_speed",
+      "temperature",
+      "relative_humidity",
+      "pressure",
+      "precipitation"
+    ],
+    "nasa_firms_hotspot": [
+      "hotspot_count_24h",
+      "hotspot_count_48h",
+      "hotspot_count_72h",
+      "hotspot_count_168h",
+      "hotspot_frp_sum_24h",
+      "hotspot_frp_sum_72h",
+      "hotspot_frp_sum_168h",
+      "nearest_hotspot_distance_km",
+      "upwind_hotspot_count_24h",
+      "upwind_hotspot_count_72h",
+      "upwind_frp_weighted_24h",
+      "upwind_frp_weighted_72h"
+    ]
+  },
+  "nasa_fire_feature_status": {
+    "enabled": true,
+    "source": "NASA FIRMS Area API",
+    "sources": [
+      "VIIRS_SNPP_SP",
+      "VIIRS_NOAA20_SP"
+    ],
+    "status": "enabled",
+    "hotspot_rows": 2444014,
+    "note": "Features use current/past hotspot detections only, then roll over 24-168 hours."
+  },
+  "models": [
+    "Persistence_current_pm25",
+    "Ridge_lag_rolling_spatial",
+    "HistGradientBoosting_lag_rolling_spatial",
+    "ExtraTrees_lag_rolling_spatial",
+    "WeightedEnsemble_top3"
+  ],
+  "best_model": "Ridge_lag_rolling_spatial",
+  "outputs": [
+    "model_comparison_overall.csv",
+    "model_comparison_by_station.csv",
+    "forecast_accuracy_by_tolerance.csv",
+    "test_predictions_long.csv",
+    "tomorrow_predictions.csv",
+    "best_model_summary.json",
+    "figures/model_comparison_rmse.png",
+    "figures/forecast_accuracy_by_tolerance.png",
+    "figures/best_model_true_vs_predicted.png",
+    "nasa_fire_feature_status.json",
+    "nasa_firms_hotspots_prepared.csv",
+    "nasa_fire_features_by_station_hour.csv",
+    "figures/nasa_firms_hotspot_map.png"
+  ]
+}

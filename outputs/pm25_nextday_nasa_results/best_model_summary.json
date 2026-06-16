@@ -1,0 +1,26 @@
+{
+  "target": "next-day PM2.5 numeric forecasting",
+  "horizon_hours": 24,
+  "best_model": "Ridge_lag_rolling_spatial",
+  "selection_metric": "lowest RMSE on chronological test set",
+  "metrics": {
+    "model": "Ridge_lag_rolling_spatial",
+    "rows_total": 25340,
+    "rows_evaluated": 25340,
+    "mae": 7.593887535099825,
+    "rmse": 11.846482183361811,
+    "r2": 0.7453114085431453,
+    "bias_mean_error": 0.75999157817089,
+    "median_abs_error": 5.223483085632324,
+    "p90_abs_error": 15.913337898254396,
+    "p95_abs_error": 22.59533977508545,
+    "within_5ug_pct": 48.19258089976322,
+    "within_10ug_pct": 77.4782951854775,
+    "within_15ug_pct": 88.8121546961326,
+    "within_20ug_pct": 93.61089187056038,
+    "within_25ug_pct": 96.07734806629834,
+    "within_30ug_pct": 97.33228097868982,
+    "rank_by_rmse": 1
+  },
+  "accuracy_note": "Percent accuracy is reported only as within an absolute error tolerance."
+}

@@ -1,0 +1,4 @@
+figure
+/content/pm25_nextday_clean_outputs/figures/best_model_true_vs_predicted.png
+/content/pm25_nextday_clean_outputs/figures/forecast_accuracy_by_tolerance.png
+/content/pm25_nextday_clean_outputs/figures/model_comparison_rmse.png

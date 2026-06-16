@@ -42,3 +42,19 @@ Thumbs.db
 # Environment variables
 .env
 .env.local
+
+# Project data and large training artifacts
+data/processed/*.xlsx
+data/processed/*.csv
+models/
+*.h5
+*.pkl
+*.joblib
+*_outputs*.zip
+notebook_sync_package_*.zip
+outputs/**/*.zip
+outputs/**/nasa_firms_hotspots_raw.csv
+outputs/**/nasa_firms_hotspots_prepared.csv
+outputs/**/nasa_fire_features_by_station_hour.csv
+test_predictions_long.csv
+sample_data/

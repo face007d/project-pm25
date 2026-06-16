@@ -1,0 +1,4 @@
+model,weight
+ExtraTrees_lag_rolling_spatial,0.33700796174578623
+Ridge_lag_rolling_spatial,0.3331424331835106
+HistGradientBoosting_lag_rolling_spatial,0.32984960507070304
