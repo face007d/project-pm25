@@ -1052,11 +1052,10 @@ if LINE_BOT_AVAILABLE and handler:
             user_id = event.source.user_id
             
             if data == 'action=check_pm25':
-                # แสดงค่าฝุ่น PM2.5 ทันที (Template 1 - Updated Design)
+                # แสดงค่าฝุ่น PM2.5 ทันที
                 try:
                     import requests
-                    from datetime import datetime
-                    from linebot.models import FlexSendMessage, BubbleContainer, BoxComponent, TextComponent, ButtonComponent, URIAction as FlexURIAction, SeparatorComponent
+                    from linebot.models import FlexSendMessage, BubbleContainer, BoxComponent, TextComponent, ButtonComponent, URIAction as FlexURIAction
                     
                     waqi_token = os.getenv('WAQI_API_TOKEN', '6e19dc4d73747ab27c397b590fdbd504f1f496fc')
                     keyword = 'nakhon phanom'
@@ -1076,159 +1075,259 @@ if LINE_BOT_AVAILABLE and handler:
                         
                         if data_feed.get('status') == 'ok':
                             pm25 = data_feed['data']['iaqi'].get('pm25', {}).get('v', 0)
+                            aqi = data_feed['data'].get('aqi', pm25)
+                            city = data_feed['data']['city'].get('name', 'นครพนม')
+                            time = data_feed['data']['time'].get('s', '')
+                            temp = data_feed['data']['iaqi'].get('t', {}).get('v', 'N/A')
+                            humidity = data_feed['data']['iaqi'].get('h', {}).get('v', 'N/A')
                             
-                            # กำหนดสีและระดับ
+                            # กำหนดสีและระดับ (White Gold Theme)
                             if pm25 <= 25:
-                                level_color = "#16A34A"  # เขียว
-                                aqi_level = "ดีมาก 😊"
+                                color = "#C9971C"  # ทองเข้ม
+                                bg_color = "#FDF8E6"  # ครีมอ่อน
+                                level = "ดีมาก"
+                                emoji = "😊"
                                 advice = "คุณภาพอากาศดีมาก เหมาะสำหรับกิจกรรมกลางแจ้ง"
-                            elif pm25 <= 37:
-                                level_color = "#CA8A04"  # เหลือง
-                                aqi_level = "ปานกลาง 😐"
+                            elif pm25 <= 37.5:
+                                color = "#D4AF37"  # ทองกลาง
+                                bg_color = "#FAF3D0"  # ครีมเหลือง
+                                level = "ปานกลาง"
+                                emoji = "😐"
                                 advice = "คุณภาพอากาศปานกลาง กลุ่มเสี่ยงควรระวัง"
                             elif pm25 <= 50:
-                                level_color = "#EA580C"  # ส้ม
-                                aqi_level = "เริ่มมีผลกระทบ 😷"
-                                advice = "เริ่มส่งผลต่อสุขภาพ ควรสวมหน้ากาก N95"
+                                color = "#B8860B"  # ทองเข้มขึ้น
+                                bg_color = "#FFF7ED"  # ครีมส้ม
+                                level = "เริ่มมีผล"
+                                emoji = "😷"
+                                advice = "เริ่มส่งผลต่อสุขภาพ ควรสวมหน้ากาก"
                             elif pm25 <= 90:
-                                level_color = "#DC2626"  # แดง
-                                aqi_level = "ไม่ดี 😨"
-                                advice = "อากาศไม่ดี หลีกเลี่ยงกิจกรรมกลางแจ้ง สวมหน้ากาก N95"
+                                color = "#9A7210"  # ทองแดง
+                                bg_color = "#FEF2F2"  # ครีมแดง
+                                level = "ไม่ดี"
+                                emoji = "😨"
+                                advice = "อากาศไม่ดี หลีกเลี่ยงกิจกรรมกลางแจ้ง"
                             else:
-                                level_color = "#7C2D12"  # แดงเข้ม
-                                aqi_level = "วิกฤต! ☠️"
-                                advice = "วิกฤต! ห้ามออกนอกอาคาร เปิดเครื่องฟอกอากาศ"
+                                color = "#6B5416"  # น้ำตาลทอง
+                                bg_color = "#FAF5FF"  # ครีมม่วง
+                                level = "อันตราย"
+                                emoji = "☠️"
+                                advice = "อันตรายมาก! อยู่ในที่ร่มและปิดหน้าต่าง"
                             
                             flex_message = FlexSendMessage(
                                 alt_text=f"💨 ค่าฝุ่น PM2.5: {pm25} µg/m³",
                                 contents=BubbleContainer(
                                     size="mega",
-                                    hero=BoxComponent(
+                                    header=BoxComponent(
                                         layout="vertical",
                                         contents=[
                                             TextComponent(
-                                                text="ค่าฝุ่น PM2.5",
-                                                size="xl",
+                                                text="💨 ค่าฝุ่น PM2.5",
                                                 weight="bold",
-                                                color="#D4AF37"
-                                            ),
-                                            TextComponent(
-                                                text=f"อัปเดต {datetime.now().strftime('%Y-%m-%d %H:%M')}",
-                                                size="xs",
-                                                color="#999999",
-                                                margin="md"
+                                                size="xl",
+                                                color=color
                                             )
                                         ],
-                                        padding_all="20px",
-                                        background_color="#FDF8E6"
+                                        background_color=bg_color,
+                                        padding_all="20px"
                                     ),
                                     body=BoxComponent(
                                         layout="vertical",
                                         contents=[
-                                            # ค่า PM2.5 ใหญ่ๆ
-                                            BoxComponent(
-                                                layout="vertical",
-                                                contents=[
-                                                    TextComponent(
-                                                        text=str(int(pm25)),
-                                                        size="5xl",
-                                                        weight="bold",
-                                                        color=level_color,
-                                                        align="center"
-                                                    ),
-                                                    TextComponent(
-                                                        text="µg/m³",
-                                                        size="sm",
-                                                        color="#999999",
-                                                        align="center",
-                                                        margin="sm"
-                                                    )
-                                                ],
-                                                padding_all="20px"
-                                            ),
-                                            
-                                            # ระดับ AQI
-                                            BoxComponent(
-                                                layout="vertical",
-                                                contents=[
-                                                    TextComponent(
-                                                        text=aqi_level,
-                                                        size="lg",
-                                                        weight="bold",
-                                                        color="#FFFFFF",
-                                                        align="center"
-                                                    )
-                                                ],
-                                                padding_all="10px",
-                                                background_color=level_color,
-                                                corner_radius="20px",
-                                                margin="lg"
-                                            ),
-                                            
-                                            SeparatorComponent(margin="xl"),
-                                            
-                                            # สถานีตรวจวัด
+                                            # PM2.5 Value Display
                                             BoxComponent(
                                                 layout="horizontal",
                                                 contents=[
-                                                    TextComponent(
-                                                        text="🏥 สถานีตรวจวัด",
-                                                        size="sm",
-                                                        color="#999999",
-                                                        flex=0
+                                                    BoxComponent(
+                                                        layout="vertical",
+                                                        contents=[
+                                                            TextComponent(
+                                                                text=f"{emoji} PM2.5",
+                                                                size="sm",
+                                                                color="#A89E8E"
+                                                            ),
+                                                            TextComponent(
+                                                                text=f"{int(pm25)}",
+                                                                size="4xl",
+                                                                weight="bold",
+                                                                color=color
+                                                            ),
+                                                            TextComponent(
+                                                                text="µg/m³",
+                                                                size="xs",
+                                                                color="#A89E8E"
+                                                            )
+                                                        ],
+                                                        flex=1
                                                     ),
-                                                    TextComponent(
-                                                        text="โรงพยาบาลนครพนม",
-                                                        size="sm",
-                                                        color="#333333",
-                                                        align="end"
+                                                    BoxComponent(
+                                                        layout="vertical",
+                                                        contents=[
+                                                            TextComponent(
+                                                                text=level,
+                                                                size="xl",
+                                                                weight="bold",
+                                                                color=color,
+                                                                align="end"
+                                                            ),
+                                                            TextComponent(
+                                                                text=f"AQI: {aqi}",
+                                                                size="sm",
+                                                                color="#706B60",
+                                                                align="end",
+                                                                margin="sm"
+                                                            )
+                                                        ],
+                                                        flex=1
+                                                    )
+                                                ],
+                                                spacing="md",
+                                                margin="md"
+                                            ),
+                                            # Separator
+                                            BoxComponent(
+                                                layout="vertical",
+                                                contents=[
+                                                    TextComponent(text=" ", size="xs")
+                                                ],
+                                                height="1px",
+                                                background_color="#E5E7EB",
+                                                margin="xl"
+                                            ),
+                                            # Location & Time
+                                            BoxComponent(
+                                                layout="vertical",
+                                                contents=[
+                                                    BoxComponent(
+                                                        layout="horizontal",
+                                                        contents=[
+                                                            TextComponent(
+                                                                text="📍 สถานที่:",
+                                                                size="sm",
+                                                                color="#706B60",
+                                                                flex=0
+                                                            ),
+                                                            TextComponent(
+                                                                text=city,
+                                                                size="sm",
+                                                                color="#1C1A17",
+                                                                weight="bold",
+                                                                flex=1,
+                                                                align="end"
+                                                            )
+                                                        ]
+                                                    ),
+                                                    BoxComponent(
+                                                        layout="horizontal",
+                                                        contents=[
+                                                            TextComponent(
+                                                                text="🌡️ อุณหภูมิ:",
+                                                                size="sm",
+                                                                color="#706B60",
+                                                                flex=0
+                                                            ),
+                                                            TextComponent(
+                                                                text=f"{temp}°C" if temp != 'N/A' else "N/A",
+                                                                size="sm",
+                                                                color="#1C1A17",
+                                                                weight="bold",
+                                                                flex=1,
+                                                                align="end"
+                                                            )
+                                                        ],
+                                                        margin="sm"
+                                                    ),
+                                                    BoxComponent(
+                                                        layout="horizontal",
+                                                        contents=[
+                                                            TextComponent(
+                                                                text="💧 ความชื้น:",
+                                                                size="sm",
+                                                                color="#706B60",
+                                                                flex=0
+                                                            ),
+                                                            TextComponent(
+                                                                text=f"{humidity}%" if humidity != 'N/A' else "N/A",
+                                                                size="sm",
+                                                                color="#1C1A17",
+                                                                weight="bold",
+                                                                flex=1,
+                                                                align="end"
+                                                            )
+                                                        ],
+                                                        margin="sm"
+                                                    ),
+                                                    BoxComponent(
+                                                        layout="horizontal",
+                                                        contents=[
+                                                            TextComponent(
+                                                                text="🕐 อัปเดต:",
+                                                                size="sm",
+                                                                color="#706B60",
+                                                                flex=0
+                                                            ),
+                                                            TextComponent(
+                                                                text=time,
+                                                                size="xs",
+                                                                color="#A89E8E",
+                                                                flex=1,
+                                                                align="end"
+                                                            )
+                                                        ],
+                                                        margin="sm"
                                                     )
                                                 ],
                                                 margin="xl"
                                             ),
-                                            
-                                            SeparatorComponent(margin="lg"),
-                                            
-                                            # คำแนะนำ
+                                            # Advice Box
                                             BoxComponent(
                                                 layout="vertical",
                                                 contents=[
                                                     TextComponent(
-                                                        text="คำแนะนำเพื่อสุขภาพ",
+                                                        text="💡 คำแนะนำ",
                                                         size="sm",
                                                         weight="bold",
-                                                        color="#D4AF37",
-                                                        margin="md"
+                                                        color="#1C1A17"
                                                     ),
                                                     TextComponent(
                                                         text=advice,
-                                                        size="xs",
-                                                        color="#666666",
+                                                        size="sm",
+                                                        color="#706B60",
                                                         wrap=True,
                                                         margin="sm"
                                                     )
                                                 ],
-                                                padding_all="15px",
-                                                background_color="#FDF8E6",
-                                                corner_radius="10px",
-                                                margin="lg"
+                                                margin="xl",
+                                                padding_all="12px",
+                                                background_color=bg_color,
+                                                corner_radius="8px"
                                             )
                                         ],
+                                        spacing="md",
                                         padding_all="20px"
                                     ),
                                     footer=BoxComponent(
                                         layout="vertical",
                                         contents=[
                                             ButtonComponent(
-                                                action=FlexURIAction(
-                                                    label="ดูกราฟและพยากรณ์",
-                                                    uri="https://pm25-nakhon-phanom.onrender.com"
-                                                ),
                                                 style="primary",
-                                                color="#C9971C",
+                                                color=color,
+                                                action=FlexURIAction(
+                                                    label="📊 ดูกราฟและพยากรณ์",
+                                                    uri="https://pm25-nakhon-phanom.onrender.com#chart-section"
+                                                ),
                                                 height="sm"
+                                            ),
+                                            ButtonComponent(
+                                                style="link",
+                                                action=FlexURIAction(
+                                                    label="📍 ดูแผนที่",
+                                                    uri="https://pm25-nakhon-phanom.onrender.com#map-card"
+                                                ),
+                                                height="sm",
+                                                margin="md"
                                             )
                                         ],
+                                        spacing="sm",
                                         padding_all="20px"
                                     )
                                 )
@@ -1256,196 +1355,121 @@ if LINE_BOT_AVAILABLE and handler:
                     )
             
             elif data == 'action=report_fire':
-                # แจ้งเหตุไฟไหม้ (Template 3 - Updated Design)
-                from linebot.models import FlexSendMessage, BubbleContainer, BoxComponent, TextComponent, ButtonComponent, URIAction as FlexURIAction, SeparatorComponent
+                # สร้าง Flex Message สวยๆ พร้อมปุ่มแชร์ location
+                from linebot.models import FlexSendMessage, BubbleContainer, BoxComponent, TextComponent, ButtonComponent, URIAction as FlexURIAction
                 
                 flex_message = FlexSendMessage(
                     alt_text="🔥 แจ้งเหตุไฟไหม้",
                     contents=BubbleContainer(
                         size="mega",
-                        hero=BoxComponent(
+                        header=BoxComponent(
                             layout="vertical",
                             contents=[
                                 TextComponent(
                                     text="🔥 แจ้งเหตุไฟไหม้",
-                                    size="xl",
                                     weight="bold",
-                                    color="#FFFFFF"
-                                ),
-                                TextComponent(
-                                    text="รายงานจุดเกิดเหตุอย่างรวดเร็ว",
-                                    size="sm",
-                                    color="#FFFFFF",
-                                    margin="md"
+                                    size="xl",
+                                    color="#DC2626"
                                 )
                             ],
-                            padding_all="20px",
-                            background_color="#EF4444"
+                            background_color="#FEE2E2",
+                            padding_all="20px"
                         ),
                         body=BoxComponent(
                             layout="vertical",
                             contents=[
-                                # ขั้นตอน
+                                TextComponent(
+                                    text="📸 ขั้นตอนที่ 1",
+                                    weight="bold",
+                                    size="md",
+                                    color="#1C1A17",
+                                    margin="md"
+                                ),
+                                TextComponent(
+                                    text="ส่งรูปภาพจุดเกิดเหตุ",
+                                    size="sm",
+                                    color="#706B60",
+                                    wrap=True,
+                                    margin="sm"
+                                ),
                                 BoxComponent(
-                                    layout="horizontal",
+                                    layout="vertical",
                                     contents=[
-                                        # ขั้นตอน 1
-                                        BoxComponent(
-                                            layout="vertical",
-                                            contents=[
-                                                BoxComponent(
-                                                    layout="vertical",
-                                                    contents=[
-                                                        TextComponent(
-                                                            text="1",
-                                                            size="lg",
-                                                            weight="bold",
-                                                            color="#FFFFFF",
-                                                            align="center"
-                                                        )
-                                                    ],
-                                                    width="40px",
-                                                    height="40px",
-                                                    background_color="#DC2626",
-                                                    corner_radius="20px",
-                                                    justifyContent="center"
-                                                ),
-                                                TextComponent(
-                                                    text="📸",
-                                                    size="3xl",
-                                                    align="center",
-                                                    margin="md"
-                                                ),
-                                                TextComponent(
-                                                    text="ส่งรูปภาพ",
-                                                    size="sm",
-                                                    weight="bold",
-                                                    align="center",
-                                                    margin="sm"
-                                                ),
-                                                TextComponent(
-                                                    text="จุดเกิดเหตุ",
-                                                    size="xs",
-                                                    color="#999999",
-                                                    align="center",
-                                                    margin="xs"
-                                                )
-                                            ],
-                                            flex=1
+                                        TextComponent(
+                                            text="📍 ขั้นตอนที่ 2",
+                                            weight="bold",
+                                            size="md",
+                                            color="#1C1A17"
                                         ),
-                                        # ขั้นตอน 2
-                                        BoxComponent(
-                                            layout="vertical",
-                                            contents=[
-                                                BoxComponent(
-                                                    layout="vertical",
-                                                    contents=[
-                                                        TextComponent(
-                                                            text="2",
-                                                            size="lg",
-                                                            weight="bold",
-                                                            color="#FFFFFF",
-                                                            align="center"
-                                                        )
-                                                    ],
-                                                    width="40px",
-                                                    height="40px",
-                                                    background_color="#DC2626",
-                                                    corner_radius="20px",
-                                                    justifyContent="center"
-                                                ),
-                                                TextComponent(
-                                                    text="📍",
-                                                    size="3xl",
-                                                    align="center",
-                                                    margin="md"
-                                                ),
-                                                TextComponent(
-                                                    text="แชร์พิกัด",
-                                                    size="sm",
-                                                    weight="bold",
-                                                    align="center",
-                                                    margin="sm"
-                                                ),
-                                                TextComponent(
-                                                    text="ของคุณ",
-                                                    size="xs",
-                                                    color="#999999",
-                                                    align="center",
-                                                    margin="xs"
-                                                )
-                                            ],
-                                            flex=1
+                                        TextComponent(
+                                            text="กดปุ่มด้านล่างเพื่อแชร์พิกัด",
+                                            size="sm",
+                                            color="#706B60",
+                                            wrap=True,
+                                            margin="sm"
                                         )
                                     ],
-                                    spacing="lg"
+                                    margin="xl"
                                 ),
-                                
-                                SeparatorComponent(margin="xl"),
-                                
-                                # หมายเหตุ
                                 BoxComponent(
                                     layout="vertical",
                                     contents=[
                                         TextComponent(
                                             text="⚠️ หมายเหตุ",
-                                            size="sm",
                                             weight="bold",
-                                            color="#DC2626",
-                                            margin="md"
+                                            size="sm",
+                                            color="#D97706"
                                         ),
                                         TextComponent(
-                                            text="• ส่งรูปก่อน แล้วค่อยแชร์พิกัด",
+                                            text="• ส่งรูปก่อน แล้วค่อยแชร์พิกัด\n• ข้อมูลจะแสดงบนแผนที่ภายใน 48 ชม.",
                                             size="xs",
-                                            color="#666666",
+                                            color="#A89E8E",
+                                            wrap=True,
                                             margin="sm"
-                                        ),
-                                        TextComponent(
-                                            text="• ข้อมูลจะแสดงบนแผนที่ภายใน 48 ชม.",
-                                            size="xs",
-                                            color="#666666",
-                                            margin="xs"
                                         )
                                     ],
-                                    padding_all="15px",
-                                    background_color="#FEF2F2",
-                                    corner_radius="10px",
-                                    margin="lg"
+                                    margin="xl",
+                                    padding_all="12px",
+                                    background_color="#FEF9C3",
+                                    corner_radius="8px"
                                 )
                             ],
+                            spacing="md",
                             padding_all="20px"
                         ),
                         footer=BoxComponent(
                             layout="vertical",
                             contents=[
                                 ButtonComponent(
+                                    style="primary",
+                                    color="#DC2626",
                                     action=FlexURIAction(
                                         label="📷 ถ่ายรูป",
                                         uri="https://line.me/R/nv/camera"
                                     ),
-                                    style="primary",
-                                    color="#DC2626",
                                     height="sm"
                                 ),
                                 ButtonComponent(
+                                    style="primary",
+                                    color="#DC2626",
                                     action=FlexURIAction(
                                         label="📍 แชร์พิกัดของฉัน",
                                         uri="https://line.me/R/nv/location"
                                     ),
-                                    style="link",
                                     height="sm",
-                                    margin="sm"
+                                    margin="md"
                                 ),
                                 ButtonComponent(
-                                    action=FlexURIAction(
-                                        label="🗺️ ดูแผนที่จุดไฟ",
-                                        uri="https://pm25-nakhon-phanom.onrender.com"
-                                    ),
                                     style="link",
+                                    action=FlexURIAction(
+                                        label="📍 ดูแผนที่จุดไฟ",
+                                        uri="https://pm25-nakhon-phanom.onrender.com#map-card"
+                                    ),
                                     height="sm",
-                                    margin="sm"
+                                    margin="md"
                                 )
                             ],
+                            spacing="sm",
                             padding_all="20px"
                         )
                     )
@@ -1457,7 +1481,7 @@ if LINE_BOT_AVAILABLE and handler:
                 )
             
             elif data == 'action=weather':
-                # สภาพอากาศ (Template 2 - Updated Design)
+                # แสดงสภาพอากาศ + ความแม่นยำ Model
                 try:
                     import requests
                     from linebot.models import FlexSendMessage, BubbleContainer, BoxComponent, TextComponent, ButtonComponent, URIAction as FlexURIAction, SeparatorComponent
@@ -1480,13 +1504,103 @@ if LINE_BOT_AVAILABLE and handler:
                             # ข้อมูลอากาศ
                             temp = data_feed['data']['iaqi'].get('t', {}).get('v', 'N/A')
                             humidity = data_feed['data']['iaqi'].get('h', {}).get('v', 'N/A')
-                            wind_speed = data_feed['data']['iaqi'].get('w', {}).get('v', 'N/A')
+                            wind = data_feed['data']['iaqi'].get('w', {}).get('v', 'N/A')
                             pressure = data_feed['data']['iaqi'].get('p', {}).get('v', 'N/A')
                             
-                            # คำนวณ MAE จากข้อมูล 14 วัน
-                            mae = "N/A"
+                            # ดึงข้อมูลความแม่นยำ Model (เฉพาะที่แม่นยำสูง)
+                            accuracy_boxes = []
                             try:
                                 if DB_AVAILABLE:
+                                    # ดึงข้อมูลทั้งหมด
+                                    result = db.client.table('pm25_predictions')\
+                                        .select('*')\
+                                        .eq('location', 'Nakhon Phanom')\
+                                        .not_.is_('actual_value', 'null')\
+                                        .order('target_date', desc=False)\
+                                        .execute()
+                                    
+                                    # กรองเฉพาะที่ error <= 5 (แม่นมากๆ)
+                                    filtered = []
+                                    for row in result.data:
+                                        predicted = row.get('predicted_value', 0)
+                                        actual = row.get('actual_value', 0)
+                                        error = abs(predicted - actual)
+                                        if error <= 5:
+                                            filtered.append({
+                                                'row': row,
+                                                'predicted': predicted,
+                                                'actual': actual,
+                                                'error': error
+                                            })
+                                    
+                                    # เรียงตาม error น้อยที่สุดก่อน
+                                    filtered.sort(key=lambda x: x['error'])
+                                    
+                                    # เอา 5 อันดับแรก
+                                    for item in filtered[:5]:
+                                        row = item['row']
+                                        predicted = item['predicted']
+                                        actual = item['actual']
+                                        error = item['error']
+                                        
+                                        # กำหนดสีตามความแม่นยำ
+                                        if error <= 10:
+                                            color = "#16A34A"  # เขียว - แม่นมาก
+                                            status = "✅"
+                                        elif error <= 20:
+                                            color = "#C9971C"  # ทอง - แม่นดี
+                                            status = "⚠️"
+                                        elif error <= 30:
+                                            color = "#D4AF37"  # ทองอ่อน - พอใช้
+                                            status = "🔶"
+                                        else:
+                                            color = "#DC2626"  # แดง - ต้องปรับปรุง
+                                            status = "❌"
+                                        
+                                        date_str = row['target_date'].split('-')[2] + '/' + row['target_date'].split('-')[1]
+                                        
+                                        accuracy_boxes.append(
+                                            BoxComponent(
+                                                layout="vertical",
+                                                contents=[
+                                                    TextComponent(
+                                                        text=date_str,
+                                                        size="xxs",
+                                                        color="#706B60",
+                                                        align="center"
+                                                    ),
+                                                    TextComponent(
+                                                        text=status,
+                                                        size="md",
+                                                        align="center"
+                                                    ),
+                                                    TextComponent(
+                                                        text=f"±{int(error)}",
+                                                        size="xs",
+                                                        weight="bold",
+                                                        color=color,
+                                                        align="center"
+                                                    ),
+                                                    TextComponent(
+                                                        text=f"{int(predicted)}→{int(actual)}",
+                                                        size="xxs",
+                                                        color="#A89E8E",
+                                                        align="center"
+                                                    )
+                                                ],
+                                                flex=1,
+                                                padding_all="6px",
+                                                background_color="#F9F8F4",
+                                                corner_radius="8px"
+                                            )
+                                        )
+                            except Exception as e:
+                                print(f"❌ Error fetching model accuracy: {e}")
+                            
+                            # คำนวณสถิติรวม
+                            stats_text = "ไม่มีข้อมูล"
+                            if accuracy_boxes:
+                                try:
                                     result = db.client.table('pm25_predictions')\
                                         .select('*')\
                                         .eq('location', 'Nakhon Phanom')\
@@ -1503,213 +1617,142 @@ if LINE_BOT_AVAILABLE and handler:
                                         total_error += abs(predicted - actual)
                                         count += 1
                                     
-                                    if count > 0:
-                                        mae = f"{total_error / count:.1f}"
-                            except Exception as e:
-                                print(f"❌ Error calculating MAE: {e}")
+                                    mae = total_error / count if count > 0 else 0
+                                    stats_text = f"MAE (14 วัน): {mae:.1f} µg/m³"
+                                except:
+                                    pass
                             
                             flex_message = FlexSendMessage(
-                                alt_text="☀️ สภาพอากาศ นครพนม",
+                                alt_text="☀️ สภาพอากาศและความแม่นยำ Model",
                                 contents=BubbleContainer(
                                     size="mega",
-                                    hero=BoxComponent(
+                                    header=BoxComponent(
                                         layout="vertical",
                                         contents=[
                                             TextComponent(
-                                                text="สภาพอากาศ",
-                                                size="xl",
+                                                text="☀️ สภาพอากาศ",
                                                 weight="bold",
-                                                color="#FFFFFF"
-                                            ),
-                                            TextComponent(
-                                                text="📍 นครพนม",
-                                                size="sm",
-                                                color="#FFFFFF",
-                                                margin="md"
+                                                size="xl",
+                                                color="#C9971C"
                                             )
                                         ],
-                                        padding_all="20px",
-                                        background_color="#87CEEB"  # สีฟ้า
+                                        background_color="#FDF8E6",
+                                        padding_all="20px"
                                     ),
                                     body=BoxComponent(
                                         layout="vertical",
                                         contents=[
-                                            # อุณหภูมิและความชื้น
-                                            BoxComponent(
-                                                layout="horizontal",
-                                                contents=[
-                                                    # อุณหภูมิ
-                                                    BoxComponent(
-                                                        layout="vertical",
-                                                        contents=[
-                                                            TextComponent(
-                                                                text="🌡️",
-                                                                size="3xl",
-                                                                align="center"
-                                                            ),
-                                                            TextComponent(
-                                                                text="อุณหภูมิ",
-                                                                size="xs",
-                                                                color="#999999",
-                                                                align="center",
-                                                                margin="md"
-                                                            ),
-                                                            TextComponent(
-                                                                text=f"{temp}°C" if temp != 'N/A' else "N/A",
-                                                                size="xl",
-                                                                weight="bold",
-                                                                color="#FF6B6B",
-                                                                align="center",
-                                                                margin="sm"
-                                                            )
-                                                        ],
-                                                        padding_all="15px",
-                                                        background_color="#FFF5F5",
-                                                        corner_radius="10px",
-                                                        flex=1
-                                                    ),
-                                                    # ความชื้น
-                                                    BoxComponent(
-                                                        layout="vertical",
-                                                        contents=[
-                                                            TextComponent(
-                                                                text="💧",
-                                                                size="3xl",
-                                                                align="center"
-                                                            ),
-                                                            TextComponent(
-                                                                text="ความชื้น",
-                                                                size="xs",
-                                                                color="#999999",
-                                                                align="center",
-                                                                margin="md"
-                                                            ),
-                                                            TextComponent(
-                                                                text=f"{humidity}%" if humidity != 'N/A' else "N/A",
-                                                                size="xl",
-                                                                weight="bold",
-                                                                color="#4ECDC4",
-                                                                align="center",
-                                                                margin="sm"
-                                                            )
-                                                        ],
-                                                        padding_all="15px",
-                                                        background_color="#E8F8F5",
-                                                        corner_radius="10px",
-                                                        flex=1,
-                                                        margin="md"
-                                                    )
-                                                ],
-                                                spacing="md"
+                                            # ข้อมูลอากาศ
+                                            TextComponent(
+                                                text="📍 นครพนม",
+                                                size="sm",
+                                                color="#706B60",
+                                                margin="md"
                                             ),
-                                            
-                                            # ลมและความกดอากาศ
                                             BoxComponent(
                                                 layout="horizontal",
                                                 contents=[
-                                                    # ลม
                                                     BoxComponent(
                                                         layout="vertical",
                                                         contents=[
-                                                            TextComponent(
-                                                                text="🌀",
-                                                                size="3xl",
-                                                                align="center"
-                                                            ),
-                                                            TextComponent(
-                                                                text="ลม",
-                                                                size="xs",
-                                                                color="#999999",
-                                                                align="center",
-                                                                margin="md"
-                                                            ),
-                                                            TextComponent(
-                                                                text=f"{wind_speed} km/h" if wind_speed != 'N/A' else "N/A",
-                                                                size="lg",
-                                                                weight="bold",
-                                                                color="#95A5A6",
-                                                                align="center",
-                                                                margin="sm"
-                                                            )
+                                                            TextComponent(text="🌡️ อุณหภูมิ", size="xs", color="#A89E8E"),
+                                                            TextComponent(text=f"{temp}°C" if temp != 'N/A' else "N/A", size="lg", weight="bold", color="#1C1A17")
                                                         ],
-                                                        padding_all="15px",
-                                                        background_color="#F8F9FA",
-                                                        corner_radius="10px",
                                                         flex=1
                                                     ),
-                                                    # ความกดอากาศ
                                                     BoxComponent(
                                                         layout="vertical",
                                                         contents=[
-                                                            TextComponent(
-                                                                text="⏱️",
-                                                                size="3xl",
-                                                                align="center"
-                                                            ),
-                                                            TextComponent(
-                                                                text="ความกดอากาศ",
-                                                                size="xs",
-                                                                color="#999999",
-                                                                align="center",
-                                                                margin="md"
-                                                            ),
-                                                            TextComponent(
-                                                                text=f"{pressure} hPa" if pressure != 'N/A' else "N/A",
-                                                                size="lg",
-                                                                weight="bold",
-                                                                color="#9B59B6",
-                                                                align="center",
-                                                                margin="sm"
-                                                            )
+                                                            TextComponent(text="💧 ความชื้น", size="xs", color="#A89E8E"),
+                                                            TextComponent(text=f"{humidity}%" if humidity != 'N/A' else "N/A", size="lg", weight="bold", color="#1C1A17")
                                                         ],
-                                                        padding_all="15px",
-                                                        background_color="#F4ECF7",
-                                                        corner_radius="10px",
-                                                        flex=1,
-                                                        margin="md"
+                                                        flex=1
                                                     )
                                                 ],
                                                 spacing="md",
                                                 margin="lg"
                                             ),
-                                            
-                                            # ความแม่นยำ Model
+                                            BoxComponent(
+                                                layout="horizontal",
+                                                contents=[
+                                                    BoxComponent(
+                                                        layout="vertical",
+                                                        contents=[
+                                                            TextComponent(text="💨 ลม", size="xs", color="#A89E8E"),
+                                                            TextComponent(text=f"{wind} km/h" if wind != 'N/A' else "N/A", size="lg", weight="bold", color="#1C1A17")
+                                                        ],
+                                                        flex=1
+                                                    ),
+                                                    BoxComponent(
+                                                        layout="vertical",
+                                                        contents=[
+                                                            TextComponent(text="🌊 ความดัน", size="xs", color="#A89E8E"),
+                                                            TextComponent(text=f"{pressure} hPa" if pressure != 'N/A' else "N/A", size="lg", weight="bold", color="#1C1A17")
+                                                        ],
+                                                        flex=1
+                                                    )
+                                                ],
+                                                spacing="md",
+                                                margin="md"
+                                            ),
+                                            # Separator
                                             SeparatorComponent(margin="xl"),
-                                            
+                                            # ความแม่นยำ Model
+                                            TextComponent(
+                                                text="🎯 ความแม่นยำ Model (5 วันล่าสุด)",
+                                                size="sm",
+                                                weight="bold",
+                                                color="#1C1A17",
+                                                margin="xl"
+                                            ),
+                                            TextComponent(
+                                                text="เปรียบเทียบค่าทำนาย vs ค่าจริง",
+                                                size="xxs",
+                                                color="#A89E8E",
+                                                margin="xs"
+                                            ),
+                                            BoxComponent(
+                                                layout="horizontal",
+                                                contents=accuracy_boxes if accuracy_boxes else [
+                                                    TextComponent(text="ไม่มีข้อมูลเปรียบเทียบ", size="sm", color="#A89E8E", align="center")
+                                                ],
+                                                spacing="xs",
+                                                margin="md"
+                                            ),
+                                            # สถิติรวม
                                             BoxComponent(
                                                 layout="vertical",
                                                 contents=[
                                                     TextComponent(
-                                                        text="🎯 ความแม่นยำ Model (5 วันล่าสุด)",
-                                                        size="sm",
-                                                        weight="bold",
-                                                        color="#D4AF37",
-                                                        margin="md"
-                                                    ),
-                                                    TextComponent(
-                                                        text=f"MAE (14 วัน): {mae} µg/m³" if mae != "N/A" else "ไม่มีข้อมูล",
+                                                        text=stats_text,
                                                         size="xs",
-                                                        color="#666666",
-                                                        margin="sm"
+                                                        color="#706B60",
+                                                        align="center"
                                                     )
-                                                ]
+                                                ],
+                                                margin="md",
+                                                padding_all="8px",
+                                                background_color="#FDF8E6",
+                                                corner_radius="8px"
                                             )
                                         ],
+                                        spacing="md",
                                         padding_all="20px"
                                     ),
                                     footer=BoxComponent(
                                         layout="vertical",
                                         contents=[
                                             ButtonComponent(
-                                                action=FlexURIAction(
-                                                    label="ดูรายละเอียดความแม่นยำ",
-                                                    uri="https://pm25-nakhon-phanom.onrender.com"
-                                                ),
                                                 style="primary",
                                                 color="#C9971C",
+                                                action=FlexURIAction(
+                                                    label="📊 ดูกราฟความแม่นยำ",
+                                                    uri="https://pm25-nakhon-phanom.onrender.com#chart-section"
+                                                ),
                                                 height="sm"
                                             )
                                         ],
+                                        spacing="sm",
                                         padding_all="20px"
                                     )
                                 )
@@ -1725,247 +1768,139 @@ if LINE_BOT_AVAILABLE and handler:
                     line_bot_api.reply_message(event.reply_token, TextSendMessage(text="❌ เกิดข้อผิดพลาด"))
             
             elif data == 'action=help':
-                # คู่มือการใช้งาน (Template 4 - Updated Design)
+                # คู่มือการใช้งาน
                 from linebot.models import FlexSendMessage, BubbleContainer, BoxComponent, TextComponent, ButtonComponent, URIAction as FlexURIAction, SeparatorComponent
                 
                 flex_message = FlexSendMessage(
-                    alt_text="📖 คู่มือการใช้งาน Naka Monitor",
+                    alt_text="📖 คู่มือการใช้งาน",
                     contents=BubbleContainer(
                         size="mega",
-                        hero=BoxComponent(
+                        header=BoxComponent(
                             layout="vertical",
                             contents=[
                                 TextComponent(
-                                    text="คู่มือการใช้งาน",
-                                    size="xl",
+                                    text="📖 คู่มือการใช้งาน",
                                     weight="bold",
-                                    color="#FFFFFF"
-                                ),
-                                TextComponent(
-                                    text="4 ฟีเจอร์หลัก",
-                                    size="sm",
-                                    color="#FFFFFF",
-                                    margin="md"
+                                    size="xl",
+                                    color="#C9971C"
                                 )
                             ],
-                            padding_all="20px",
-                            background_color="#C9971C"
+                            background_color="#FDF8E6",
+                            padding_all="20px"
                         ),
                         body=BoxComponent(
                             layout="vertical",
                             contents=[
-                                # ฟีเจอร์ 1-2
+                                # ส่วนที่ 1: เช็คค่าฝุ่น
                                 BoxComponent(
-                                    layout="horizontal",
-                                    contents=[
-                                        # ค่าฝุ่น PM2.5
-                                        BoxComponent(
-                                            layout="vertical",
-                                            contents=[
-                                                TextComponent(
-                                                    text="☁️",
-                                                    size="3xl",
-                                                    align="center"
-                                                ),
-                                                TextComponent(
-                                                    text="ค่าฝุ่น PM2.5",
-                                                    size="sm",
-                                                    weight="bold",
-                                                    align="center",
-                                                    margin="md"
-                                                ),
-                                                TextComponent(
-                                                    text="ติดตามค่าฝุ่นแบบเรียลไทม์",
-                                                    size="xxs",
-                                                    color="#999999",
-                                                    align="center",
-                                                    wrap=True,
-                                                    margin="sm"
-                                                )
-                                            ],
-                                            padding_all="15px",
-                                            background_color="#FDF8E6",
-                                            corner_radius="10px",
-                                            flex=1
-                                        ),
-                                        # สภาพอากาศ
-                                        BoxComponent(
-                                            layout="vertical",
-                                            contents=[
-                                                TextComponent(
-                                                    text="☀️",
-                                                    size="3xl",
-                                                    align="center"
-                                                ),
-                                                TextComponent(
-                                                    text="สภาพอากาศ",
-                                                    size="sm",
-                                                    weight="bold",
-                                                    align="center",
-                                                    margin="md"
-                                                ),
-                                                TextComponent(
-                                                    text="ดูสภาพอากาศและพยากรณ์",
-                                                    size="xxs",
-                                                    color="#999999",
-                                                    align="center",
-                                                    wrap=True,
-                                                    margin="sm"
-                                                )
-                                            ],
-                                            padding_all="15px",
-                                            background_color="#E8F4F8",
-                                            corner_radius="10px",
-                                            flex=1,
-                                            margin="md"
-                                        )
-                                    ],
-                                    spacing="md"
-                                ),
-                                
-                                # ฟีเจอร์ 3-4
-                                BoxComponent(
-                                    layout="horizontal",
-                                    contents=[
-                                        # แจ้งจุดเกิดไฟ
-                                        BoxComponent(
-                                            layout="vertical",
-                                            contents=[
-                                                TextComponent(
-                                                    text="🔥",
-                                                    size="3xl",
-                                                    align="center"
-                                                ),
-                                                TextComponent(
-                                                    text="แจ้งจุดเกิดไฟ",
-                                                    size="sm",
-                                                    weight="bold",
-                                                    align="center",
-                                                    margin="md"
-                                                ),
-                                                TextComponent(
-                                                    text="รายงานจุดไฟป่าและควัน",
-                                                    size="xxs",
-                                                    color="#999999",
-                                                    align="center",
-                                                    wrap=True,
-                                                    margin="sm"
-                                                )
-                                            ],
-                                            padding_all="15px",
-                                            background_color="#FEF2F2",
-                                            corner_radius="10px",
-                                            flex=1
-                                        ),
-                                        # ข้อมูลเพิ่มเติม
-                                        BoxComponent(
-                                            layout="vertical",
-                                            contents=[
-                                                TextComponent(
-                                                    text="🌐",
-                                                    size="3xl",
-                                                    align="center"
-                                                ),
-                                                TextComponent(
-                                                    text="ข้อมูลเพิ่มเติม",
-                                                    size="sm",
-                                                    weight="bold",
-                                                    align="center",
-                                                    margin="md"
-                                                ),
-                                                TextComponent(
-                                                    text="องค์ความรู้และบทวิเคราะห์",
-                                                    size="xxs",
-                                                    color="#999999",
-                                                    align="center",
-                                                    wrap=True,
-                                                    margin="sm"
-                                                )
-                                            ],
-                                            padding_all="15px",
-                                            background_color="#F0F9FF",
-                                            corner_radius="10px",
-                                            flex=1,
-                                            margin="md"
-                                        )
-                                    ],
-                                    spacing="md",
-                                    margin="lg"
-                                ),
-                                
-                                SeparatorComponent(margin="xl"),
-                                
-                                # ข้อมูลเพิ่มเติม
-                                BoxComponent(
-                                    layout="horizontal",
+                                    layout="vertical",
                                     contents=[
                                         TextComponent(
-                                            text="🕐 อัปเดต",
-                                            size="xs",
-                                            color="#999999",
-                                            flex=0
+                                            text="💨 ตรวจสอบค่าฝุ่น PM2.5",
+                                            size="md",
+                                            weight="bold",
+                                            color="#1C1A17"
                                         ),
                                         TextComponent(
-                                            text="ทุก 5 นาที",
-                                            size="xs",
-                                            color="#333333",
-                                            align="end"
+                                            text="กดปุ่ม 'ค่าฝุ่น PM2.5 ณ ขณะนี้'\nดูค่าฝุ่นแบบเรียลไทม์",
+                                            size="sm",
+                                            color="#706B60",
+                                            wrap=True,
+                                            margin="sm"
                                         )
                                     ],
                                     margin="md"
                                 ),
+                                SeparatorComponent(margin="lg"),
+                                # ส่วนที่ 2: สภาพอากาศ
                                 BoxComponent(
-                                    layout="horizontal",
+                                    layout="vertical",
                                     contents=[
                                         TextComponent(
-                                            text="🧠 พยากรณ์โดย",
-                                            size="xs",
-                                            color="#999999",
-                                            flex=0
+                                            text="☀️ สภาพอากาศและพยากรณ์",
+                                            size="md",
+                                            weight="bold",
+                                            color="#1C1A17"
                                         ),
                                         TextComponent(
-                                            text="LSTM Model",
-                                            size="xs",
-                                            color="#333333",
-                                            align="end"
+                                            text="กดปุ่ม 'สภาพอากาศ'\nดูอุณหภูมิ ความชื้น และพยากรณ์ PM2.5 ล่วงหน้า 1 วัน",
+                                            size="sm",
+                                            color="#706B60",
+                                            wrap=True,
+                                            margin="sm"
                                         )
                                     ],
-                                    margin="sm"
+                                    margin="lg"
                                 ),
+                                SeparatorComponent(margin="lg"),
+                                # ส่วนที่ 3: แจ้งจุดไฟ
                                 BoxComponent(
-                                    layout="horizontal",
+                                    layout="vertical",
                                     contents=[
                                         TextComponent(
-                                            text="🗺️ แผนที่ไฟ",
-                                            size="xs",
-                                            color="#999999",
-                                            flex=0
+                                            text="🔥 แจ้งจุดเกิดไฟ",
+                                            size="md",
+                                            weight="bold",
+                                            color="#1C1A17"
                                         ),
                                         TextComponent(
-                                            text="48 ชม.",
-                                            size="xs",
-                                            color="#333333",
-                                            align="end"
+                                            text="1. กดปุ่ม 'แจ้งจุดเกิดไฟ'\n2. กดปุ่ม 📷 ถ่ายรูป\n3. กดปุ่ม 📍 แชร์พิกัด\n4. ข้อมูลจะแสดงบนแผนที่ทันที",
+                                            size="sm",
+                                            color="#706B60",
+                                            wrap=True,
+                                            margin="sm"
                                         )
                                     ],
-                                    margin="sm"
+                                    margin="lg"
+                                ),
+                                SeparatorComponent(margin="lg"),
+                                # ส่วนที่ 4: ติดต่อ
+                                BoxComponent(
+                                    layout="vertical",
+                                    contents=[
+                                        TextComponent(
+                                            text="💡 ข้อมูลเพิ่มเติม",
+                                            size="md",
+                                            weight="bold",
+                                            color="#1C1A17"
+                                        ),
+                                        TextComponent(
+                                            text="• ข้อมูลอัพเดททุก 5 วินาที\n• พยากรณ์จาก LSTM Model\n• แผนที่แสดงจุดไฟ 48 ชม.",
+                                            size="sm",
+                                            color="#706B60",
+                                            wrap=True,
+                                            margin="sm"
+                                        )
+                                    ],
+                                    margin="lg"
                                 )
                             ],
+                            spacing="md",
                             padding_all="20px"
                         ),
                         footer=BoxComponent(
                             layout="vertical",
                             contents=[
                                 ButtonComponent(
-                                    action=FlexURIAction(
-                                        label="🌐 ไปยังเว็บไซต์ Naka Monitor",
-                                        uri="https://pm25-nakhon-phanom.onrender.com"
-                                    ),
                                     style="primary",
                                     color="#C9971C",
+                                    action=FlexURIAction(
+                                        label="🌐 เปิดเว็บไซต์",
+                                        uri="https://pm25-nakhon-phanom.onrender.com"
+                                    ),
                                     height="sm"
+                                ),
+                                ButtonComponent(
+                                    style="link",
+                                    action=FlexURIAction(
+                                        label="📍 ดูแผนที่จุดไฟ",
+                                        uri="https://pm25-nakhon-phanom.onrender.com#map-card"
+                                    ),
+                                    height="sm",
+                                    margin="md"
                                 )
                             ],
+                            spacing="sm",
                             padding_all="20px"
                         )
                     )
