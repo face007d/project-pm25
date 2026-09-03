@@ -471,6 +471,75 @@ def line_webhook():
     return 'OK', 200
 
 
+def extract_gps_from_image(image_content):
+    """
+    อ่าน GPS metadata จากรูปภาพ (EXIF data)
+    Returns: {'latitude': float, 'longitude': float} หรือ None ถ้าไม่มี GPS
+    """
+    try:
+        from PIL import Image
+        from PIL.ExifTags import TAGS, GPSTAGS
+        import io
+        
+        # อ่านข้อมูลรูปภาพ
+        image_data = b''
+        for chunk in image_content.iter_content():
+            image_data += chunk
+        
+        # เปิดรูปด้วย PIL
+        image = Image.open(io.BytesIO(image_data))
+        
+        # ดึง EXIF data
+        exif_data = image._getexif()
+        
+        if not exif_data:
+            print("📍 No EXIF data found in image")
+            return None
+        
+        # ค้นหา GPS info
+        gps_info = {}
+        for tag_id, value in exif_data.items():
+            tag = TAGS.get(tag_id, tag_id)
+            if tag == 'GPSInfo':
+                for key in value:
+                    gps_tag = GPSTAGS.get(key, key)
+                    gps_info[gps_tag] = value[key]
+        
+        if not gps_info:
+            print("📍 No GPS data found in EXIF")
+            return None
+        
+        # แปลง GPS data เป็น latitude, longitude
+        def convert_to_degrees(value):
+            """แปลงจาก DMS (Degrees, Minutes, Seconds) เป็น Decimal Degrees"""
+            d, m, s = value
+            return d + (m / 60.0) + (s / 3600.0)
+        
+        lat = None
+        lon = None
+        
+        if 'GPSLatitude' in gps_info and 'GPSLatitudeRef' in gps_info:
+            lat = convert_to_degrees(gps_info['GPSLatitude'])
+            if gps_info['GPSLatitudeRef'] == 'S':
+                lat = -lat
+        
+        if 'GPSLongitude' in gps_info and 'GPSLongitudeRef' in gps_info:
+            lon = convert_to_degrees(gps_info['GPSLongitude'])
+            if gps_info['GPSLongitudeRef'] == 'W':
+                lon = -lon
+        
+        if lat and lon:
+            print(f"✅ GPS found: {lat}, {lon}")
+            return {'latitude': lat, 'longitude': lon}
+        else:
+            print("📍 GPS data incomplete")
+            return None
+            
+    except Exception as e:
+        print(f"❌ Error extracting GPS: {e}")
+        return None
+
+
 def upload_image_to_supabase(image_content, user_id, message_id):
     """
     ดาวน์โหลดรูปจาก LINE, resize เป็น 768px, และอัพโหลดไปยัง Supabase Storage
@@ -816,13 +885,16 @@ if LINE_BOT_AVAILABLE and handler:
 
     @handler.add(MessageEvent, message=ImageMessage)
     def handle_image_message(event):
-        """จัดการรูปภาพ - ดาวน์โหลดและอัพโหลดไปยัง Supabase"""
+        """จัดการรูปภาพ - ดาวน์โหลดและอัพโหลดไปยัง Supabase + อ่าน GPS"""
         user_id = event.source.user_id
         message_id = event.message.id
         
         try:
             # ดาวน์โหลดรูปภาพจาก LINE
             message_content = line_bot_api.get_message_content(message_id)
+            
+            # ลองอ่าน GPS จากรูป
+            gps_data = extract_gps_from_image(message_content)
             
             # อัพโหลดไปยัง Supabase Storage (resize เป็น 768px)
             image_url = upload_image_to_supabase(message_content, user_id, message_id)
@@ -853,6 +925,15 @@ if LINE_BOT_AVAILABLE and handler:
                 image_url=image_url,
                 image_message_id=message_id
             )
+            
+            # ถ้ามี GPS ใน EXIF ให้อัปเดต session ด้วยพิกัด
+            if gps_data:
+                print(f"📍 Found GPS in image: {gps_data['latitude']}, {gps_data['longitude']}")
+                db.update_session_location(
+                    session_id=session['id'],
+                    latitude=gps_data['latitude'],
+                    longitude=gps_data['longitude']
+                )
             
             # ดึง session ใหม่เพื่อให้ได้ค่าที่อัปเดตแล้ว
             session = db.get_or_create_session(user_id)
